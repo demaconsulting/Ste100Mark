@@ -153,6 +153,32 @@ dictionary allowances supplied via a matching `Profile`'s `dictionary.allow`/
 `Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic`, and
 `Evaluate_ExtraAllowedTermsUnrelatedTerm_StillFlagsOtherDisallowedTerm`.
 
+**Template-Linting-DictionaryPosVerblessSegment**: The whole-segment "no finite verb anywhere"
+noun signal is verified in isolation for a verbless table cell, a verbless list-item fragment, a
+verbless comma-separated list fragment, and a verbless heading fragment, plus its correct
+interaction with stronger and weaker verb signals: it does not out-vote a strong match-local verb
+signal (preceded by the infinitive marker "to"), it correctly leaves the mode-dependent imperative
+signal to resolve confidently rather than being silently overridden, and it does not fire when a
+recognized finite verb form is present elsewhere in the segment. This scenario is tested by
+`Guess_VerblessTableCellFragment_ReturnsNoun`, `Guess_VerblessListItemFragment_ReturnsNoun`,
+`Guess_VerblessCommaSeparatedList_ReturnsNoun`, `Guess_VerblessHeadingFragment_ReturnsNoun`,
+`Guess_VerblessSegmentButPrecededByTo_ReturnsVerb`,
+`Guess_ImperativeInVerblessSegment_ReturnsVerb`, and
+`Guess_SegmentHasFiniteVerbElsewhere_MatchStillAmbiguous`. End-to-end behavior through
+`DictionaryChecker`, using a fixture dictionary matching the reported ASD-STE100 corpus shape
+(verb-only entries for "wash"/"pump"/"probe"/"function", and noun-sense entries for
+"arrangement"/"state"), is verified by `Evaluate_VerblessTableCellNounPhrase_NotFlagged`,
+`Evaluate_VerblessTableHeaderCell_NotFlagged`, `Evaluate_VerblessListItemNounPhrase_NotFlagged`,
+`Evaluate_VerblessCommaSeparatedListFragment_NotFlagged`,
+`Evaluate_VerblessHeadingFragment_NotFlagged`,
+`Evaluate_VerblessCellWithNounSenseTerm_StillFlagsNounSenseTerm` and
+`Evaluate_VerblessCellWithStateNounSense_StillFlagsFinding` (confirming that a noun-sense entry
+is still reported inside the same verbless cell that suppresses adjacent verb-only entries),
+`Evaluate_ImperativeVerblessSentenceInProcedureMode_StillFlagsVerbUsage` (confirming an imperative
+instruction with no other finite verb is still flagged as a verb usage), and
+`Evaluate_SubjectNounWithDeterminerAndFollowingVerb_NotFlagged` (a determiner/finite-verb-follows
+regression guard).
+
 **Template-Linting-Configuration**: YAML configuration loading and resolution are verified for
 defaults, malformed files, missing files, complete schemas, first-match-wins mode profiles,
 and layered rules/dictionary profile deltas. This scenario is tested by

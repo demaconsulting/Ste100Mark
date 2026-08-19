@@ -348,9 +348,10 @@ public class DictionaryCheckerTests
     [Fact]
     public void Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous()
     {
-        // Arrange: "Impact" with no preceding or following signal word, referred to mid-sentence
+        // Arrange: no signal word around the match; adding a finite verb elsewhere in the segment
+        // keeps the whole-segment noun signal from firing here.
         var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
-        IReadOnlyList<ProseSegment> segments = [new ProseSegment("They discuss Impact sometimes.", 1, SegmentRole.Paragraph)];
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("They discuss Impact sometimes. The team operates daily.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
@@ -459,7 +460,7 @@ public class DictionaryCheckerTests
             }
         };
         var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
-        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Deploy happens soon.", 1, SegmentRole.Paragraph)];
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Deploy happens soon. The team operates daily.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
@@ -528,5 +529,206 @@ public class DictionaryCheckerTests
 
         // Assert: exactly one diagnostic, for the prose occurrence
         Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Shared verbless-segment noun-signal fixture: <c>wash</c>, <c>pump</c> and <c>probe</c>
+    ///     each have a single verb-only sense, while <c>arrangement</c> and <c>state</c> each have
+    ///     a noun sense - matching the reported ASD-STE100 corpus false-positive shape (verb-only
+    ///     entries used as nouns in verbless fragments alongside genuine noun-sense findings in
+    ///     the same cell).
+    /// </summary>
+    private static LintDictionary VerblessSegmentFixtureDictionary()
+    {
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["wash"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["clean"] }],
+                    ["pump"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["move"] }],
+                    ["probe"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["find"] }],
+                    ["function"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["operate"] }],
+                    ["arrangement"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["configuration"] }],
+                    ["state"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["condition"] }]
+                }
+            }
+        };
+        return LintDictionary.Load(config, Directory.GetCurrentDirectory());
+    }
+
+    /// <summary>
+    ///     Test that a verbless table-row cell using verb-only dictionary terms as a noun phrase
+    ///     produces no diagnostics, for both the "wash" and "pump" terms in the same cell.
+    /// </summary>
+    [Fact]
+    public void Evaluate_VerblessTableCellNounPhrase_NotFlagged()
+    {
+        // Arrange: "Wash pump" - a verbless noun-phrase cell
+        var dictionary = VerblessSegmentFixtureDictionary();
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Wash pump", 1, SegmentRole.TableRow)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a verbless table-header cell using a verb-only dictionary term as a noun
+    ///     label produces no diagnostic.
+    /// </summary>
+    [Fact]
+    public void Evaluate_VerblessTableHeaderCell_NotFlagged()
+    {
+        // Arrange: "Function" as a bare table header label
+        var dictionary = VerblessSegmentFixtureDictionary();
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Function", 1, SegmentRole.TableRow)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a verbless list-item noun-phrase fragment using a verb-only dictionary term
+    ///     produces no diagnostic.
+    /// </summary>
+    [Fact]
+    public void Evaluate_VerblessListItemNounPhrase_NotFlagged()
+    {
+        // Arrange: "Probe geometry and diameter." - no finite verb anywhere in the fragment
+        var dictionary = VerblessSegmentFixtureDictionary();
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Probe geometry and diameter.", 1, SegmentRole.ListItem)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a verbless comma-separated list fragment using a verb-only dictionary term
+    ///     produces no diagnostic.
+    /// </summary>
+    [Fact]
+    public void Evaluate_VerblessCommaSeparatedListFragment_NotFlagged()
+    {
+        // Arrange: "Holds. Metering device, probe, coupling, fluid." - no finite verb anywhere
+        var dictionary = VerblessSegmentFixtureDictionary();
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Holds. Metering device, probe, coupling, fluid.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a verbless heading fragment using a verb-only dictionary term produces no
+    ///     diagnostic.
+    /// </summary>
+    [Fact]
+    public void Evaluate_VerblessHeadingFragment_NotFlagged()
+    {
+        // Arrange: "Wash Tower" - a heading fragment with no finite verb anywhere
+        var dictionary = VerblessSegmentFixtureDictionary();
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Wash Tower", 1, SegmentRole.Heading)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a genuine noun-sense finding ("arrangement") is still flagged even inside a
+    ///     verbless table cell that also contains verb-only terms ("wash", "pump") that must be
+    ///     suppressed - the discriminator is the individual term's sense set, not the segment kind.
+    /// </summary>
+    [Fact]
+    public void Evaluate_VerblessCellWithNounSenseTerm_StillFlagsNounSenseTerm()
+    {
+        // Arrange: "Drive arrangement for the wash pump" - "arrangement" has a noun sense and
+        // must still be reported, while "wash" and "pump" (verb-only) must not be
+        var dictionary = VerblessSegmentFixtureDictionary();
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Drive arrangement for the wash pump", 1, SegmentRole.TableRow)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: only "arrangement" is reported
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("configuration", diagnostic.Suggestion);
+    }
+
+    /// <summary>
+    ///     Test that a genuine noun-sense finding ("state") is still flagged in a verbless
+    ///     multi-cell table row fragment.
+    /// </summary>
+    [Fact]
+    public void Evaluate_VerblessCellWithStateNounSense_StillFlagsFinding()
+    {
+        // Arrange: "Bears on | State" - "state" has a noun sense and must still be reported
+        var dictionary = VerblessSegmentFixtureDictionary();
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("State", 1, SegmentRole.TableRow)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("condition", diagnostic.Suggestion);
+    }
+
+    /// <summary>
+    ///     Test that an imperative instruction using a verb-only dictionary term in Procedure mode
+    ///     is still flagged as a verb usage, even though the sentence otherwise contains no other
+    ///     finite verb - the imperative signal must not be silently overridden by the
+    ///     verbless-segment noun signal.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ImperativeVerblessSentenceInProcedureMode_StillFlagsVerbUsage()
+    {
+        // Arrange: "Wash the probe before each run." - imperative instruction, Procedure mode
+        var dictionary = VerblessSegmentFixtureDictionary();
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Wash the probe before each run.", 1, SegmentRole.ListItem)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Procedure);
+
+        // Assert: "wash" (imperative verb usage) is flagged
+        Assert.Contains(diagnostics, d => d.Suggestion == "clean");
+    }
+
+    /// <summary>
+    ///     Test that a determiner/finite-verb-follows sentence with a verb-only dictionary term
+    ///     used as the subject remains a non-finding regression guard: "pump" is preceded by "The"
+    ///     (article) and followed by "moves" (finite verb), both confident noun signals, so it is
+    ///     correctly suppressed regardless of the new verbless-segment signal.
+    /// </summary>
+    [Fact]
+    public void Evaluate_SubjectNounWithDeterminerAndFollowingVerb_NotFlagged()
+    {
+        // Arrange: "The pump moves fluid to the tower." - "pump" is the subject, not a verb usage
+        var dictionary = VerblessSegmentFixtureDictionary();
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("The pump moves fluid to the tower.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
     }
 }

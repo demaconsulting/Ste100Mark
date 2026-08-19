@@ -160,8 +160,10 @@ internal static class PartOfSpeechGuesser
         var followingWord = FollowingWord(segmentText, matchIndex + matchLength);
         var isSentenceStart = IsSentenceStart(segmentText, matchIndex);
 
-        var hasVerb = HasVerbSignal(matchText, precedingWord, isSentenceStart, mode);
-        var hasNoun = HasNounSignal(matchText, precedingWord, governingWord, followingWord);
+        var isImperative = isSentenceStart && mode == LintMode.Procedure;
+        var hasOtherVerbSignal = HasOtherVerbSignal(matchText, precedingWord, followingWord);
+        var hasVerb = isImperative || hasOtherVerbSignal;
+        var hasNoun = HasNounSignal(matchText, precedingWord, governingWord, followingWord, segmentText, hasVerb);
 
         if (hasVerb && !hasNoun)
         {
@@ -178,16 +180,16 @@ internal static class PartOfSpeechGuesser
     }
 
     /// <summary>
-    ///     Evaluates every verb-leaning signal in the rule set as a set (any one hit is
-    ///     sufficient).
+    ///     Evaluates every verb-leaning signal in the rule set that is anchored to the match's own
+    ///     local context (infinitive marker, modal auxiliary, progressive auxiliary, verb
+    ///     inflection suffix) - excluding the mode-dependent imperative-sentence-start signal.
+    ///     These signals are strong enough that the whole-segment
+    ///     <c>VerblessSegment</c> noun signal (see <see cref="HasNounSignal"/>) must not be allowed
+    ///     to out-vote them; the weaker imperative signal, by contrast, may still conflict with it
+    ///     (see <see cref="Guess"/>).
     /// </summary>
-    private static bool HasVerbSignal(string matchText, string? precedingWord, bool isSentenceStart, LintMode mode)
+    private static bool HasOtherVerbSignal(string matchText, string? precedingWord, string? followingWord)
     {
-        if (isSentenceStart && mode == LintMode.Procedure)
-        {
-            return true; // ImperativeSentenceStart
-        }
-
         if (string.Equals(precedingWord, "to", StringComparison.OrdinalIgnoreCase))
         {
             return true; // InfinitiveMarker
@@ -210,6 +212,11 @@ internal static class PartOfSpeechGuesser
             return true; // VerbInflectionSuffix
         }
 
+        if (followingWord is not null && Articles.Contains(followingWord))
+        {
+            return true; // FollowedByArticle (match takes a direct object noun phrase, e.g. "utilize the tool")
+        }
+
         return false;
     }
 
@@ -217,7 +224,13 @@ internal static class PartOfSpeechGuesser
     ///     Evaluates every noun-leaning signal in the rule set as a set (any one hit is
     ///     sufficient).
     /// </summary>
-    private static bool HasNounSignal(string matchText, string? precedingWord, string? governingWord, string? followingWord)
+    private static bool HasNounSignal(
+        string matchText,
+        string? precedingWord,
+        string? governingWord,
+        string? followingWord,
+        string segmentText,
+        bool hasOtherVerbSignal)
     {
         if (precedingWord is not null && Articles.Contains(precedingWord))
         {
@@ -265,7 +278,25 @@ internal static class PartOfSpeechGuesser
             return true; // FollowedByFiniteVerb (match is the subject of the sentence)
         }
 
+        if (!hasOtherVerbSignal && !HasAnyFiniteVerb(segmentText))
+        {
+            return true; // VerblessSegment (no finite verb anywhere: cannot be verb-only usage)
+        }
+
         return false;
+    }
+
+    /// <summary>
+    ///     Determines whether any whitespace-delimited token in the segment looks like a finite
+    ///     verb form (see <see cref="IsFiniteVerbForm"/>). Used as a whole-segment noun signal:
+    ///     a segment such as a table cell, list item, or heading fragment that contains no finite
+    ///     verb at all cannot be using any of its words as a finite verb, so a verb-only
+    ///     dictionary entry cannot apply within it.
+    /// </summary>
+    private static bool HasAnyFiniteVerb(string segmentText)
+    {
+        var tokens = segmentText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return tokens.Any(rawToken => IsFiniteVerbForm(Normalize(rawToken)));
     }
 
     /// <summary>

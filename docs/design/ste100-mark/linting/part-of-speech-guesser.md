@@ -66,6 +66,7 @@ condition as `SentenceAnalyzer`):
 | Verb | ModalAuxiliary | `precedingWord` is in `ModalAuxiliaries` |
 | Verb | ProgressiveAuxiliary | `precedingWord` is in `BeAuxiliaries` and `matchText` ends with `ing` |
 | Verb | VerbInflectionSuffix | `matchText` ends with `ed` or `ing` |
+| Verb | FollowedByArticle | `followingWord` is in `Articles` (direct-object noun phrase, e.g. "utilize the tool") |
 | Noun | Article | `precedingWord` is in `Articles` |
 | Noun | Possessive | `precedingWord` is in `PossessivePronouns`, or ends with `'s` |
 | Noun | QuantifierOrDemonstrative | `precedingWord` is in `QuantifiersOrDemonstratives` |
@@ -74,10 +75,34 @@ condition as `SentenceAnalyzer`):
 | Noun | PluralNounSuffix | `matchText` ends with `s` and not `ss` |
 | Noun | NounPhraseContinuation | `followingWord == "of"` |
 | Noun | FollowedByFiniteVerb | `followingWord` is a modal/`"to be"` auxiliary or in `FiniteVerbForms` |
+| Noun | VerblessSegment | no other Verb-category signal fired anywhere in `segmentText` (see `HasAnyFiniteVerb`) |
 
 See **Data Model** above for the exact word lists behind `ModalAuxiliaries`, `BeAuxiliaries`,
 `Articles`, `PossessivePronouns`, `QuantifiersOrDemonstratives`, `Prepositions`, and
 `FiniteVerbForms`.
+
+The Verb category is itself split internally into two tiers so the whole-segment
+`VerblessSegment` noun signal cannot silently out-vote a strong, match-local verb signal:
+`HasOtherVerbSignal` evaluates `InfinitiveMarker`, `ModalAuxiliary`, `ProgressiveAuxiliary`,
+`VerbInflectionSuffix`, and `FollowedByArticle` (all anchored to the match itself); the
+mode-dependent `ImperativeSentenceStart` signal is evaluated separately in `Guess`. `HasNounSignal`
+only evaluates `VerblessSegment` when `HasOtherVerbSignal` did *not* fire, so a confidently-verb
+match (for example "to wash" or "utilize the tool") is never contradicted by the absence of a
+recognized finite verb elsewhere in the segment. The weaker `ImperativeSentenceStart` signal, by
+contrast, may still conflict with `VerblessSegment` (both fire, `Guess` returns `null`) - for
+example an imperative list item with no other finite verb resolves as ambiguous rather than
+silently becoming `Noun`, since `Guess`'s conflict rule (`null` when both categories fire) is the
+safe default.
+
+**HasAnyFiniteVerb**: Determines whether any whitespace-delimited token anywhere in
+`segmentText` looks like a finite verb form (`IsFiniteVerbForm`: a modal/`"to be"` auxiliary, or
+a closed-class third-person-singular `FiniteVerbForms` entry). Used only by the `VerblessSegment`
+noun signal: a segment - typically a table cell, list item, or heading fragment - containing no
+finite verb anywhere cannot be using any of its words as a finite verb, so a verb-only dictionary
+entry matched within it must be a noun usage (for example "wash" in "Wash pump", or "probe" in
+"Probe geometry and diameter."). An entry with a noun or adjective sense still matches normally
+in the same segment (for example "arrangement" in "Drive arrangement for the wash pump" is still
+reported), since the discriminator is the *entry's* available senses, not the segment kind.
 
 **GoverningDeterminer**: Scans backward from a match, past a bounded run of
 adjective/participle/proper-noun modifier tokens, to find a determiner/possessive/quantifier/

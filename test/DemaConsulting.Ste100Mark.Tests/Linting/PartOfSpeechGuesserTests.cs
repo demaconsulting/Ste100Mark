@@ -122,8 +122,11 @@ public class PartOfSpeechGuesserTests
     [Fact]
     public void Guess_SentenceStartInDescriptiveMode_ReturnsNull()
     {
-        // Arrange: identical text/position as the Procedure-mode test, but Descriptive mode
-        const string text = "Function the panel before use.";
+        // Arrange: identical structure as the Procedure-mode test, but Descriptive mode, with the
+        // match followed by a neutral word (not an article) so only the sentence-start/mode
+        // behavior is exercised; a finite verb elsewhere in the segment keeps the new
+        // verbless-segment noun signal from firing.
+        const string text = "Function occurs regularly. The system operates continuously.";
         var index = text.IndexOf("Function", StringComparison.Ordinal);
 
         // Act: execute the operation being tested
@@ -260,8 +263,10 @@ public class PartOfSpeechGuesserTests
     [Fact]
     public void Guess_NoSignals_ReturnsNull()
     {
-        // Arrange: "impact" with no preceding or following signal word
-        const string text = "Reports impact daily readers.";
+        // Arrange: "impact" with no preceding or following signal word; a finite verb elsewhere
+        // in the segment ("operates") keeps the new verbless-segment noun signal from firing, so
+        // only the no-signal path for the match itself is exercised.
+        const string text = "Reports impact daily readers. The system operates continuously.";
         var index = text.IndexOf("impact", StringComparison.Ordinal);
 
         // Act: execute the operation being tested
@@ -333,8 +338,10 @@ public class PartOfSpeechGuesserTests
     [Fact]
     public void Guess_DeterminerBeyondMaxScanDistance_DoesNotGovern()
     {
-        // Arrange: five unrelated words separate "the" from "impact", exceeding the scan bound
-        const string text = "Reports show the metering custom coated impact daily.";
+        // Arrange: five unrelated words separate "the" from "impact", exceeding the scan bound.
+        // A trailing finite verb sentence keeps the verbless-segment noun signal from firing, so
+        // only the determiner-scan-distance behavior is exercised.
+        const string text = "Reports show the metering custom coated impact daily. The pump operates.";
         var index = text.IndexOf("impact", StringComparison.Ordinal);
 
         // Act: execute the operation being tested
@@ -361,5 +368,132 @@ public class PartOfSpeechGuesserTests
 
         // Assert: verify expected behavior
         Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a match in a verbless table-cell fragment resolves as a noun, because no
+    ///     finite verb appears anywhere in the segment (the verbless-segment signal).
+    /// </summary>
+    [Fact]
+    public void Guess_VerblessTableCellFragment_ReturnsNoun()
+    {
+        // Arrange: "Wash pump" - a two-word noun-phrase cell with no finite verb anywhere
+        const string text = "Wash pump";
+        var index = text.IndexOf("pump", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "pump".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a match in a verbless list-item fragment resolves as a noun.
+    /// </summary>
+    [Fact]
+    public void Guess_VerblessListItemFragment_ReturnsNoun()
+    {
+        // Arrange: "Probe geometry and diameter." has no finite verb anywhere
+        const string text = "Probe geometry and diameter.";
+        var index = text.IndexOf("Probe", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Probe".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a bare comma-separated list fragment with no finite verb resolves each
+    ///     dictionary term as a noun.
+    /// </summary>
+    [Fact]
+    public void Guess_VerblessCommaSeparatedList_ReturnsNoun()
+    {
+        // Arrange: "Holds. Metering device, probe, coupling, fluid." - no finite verb anywhere
+        const string text = "Holds. Metering device, probe, coupling, fluid.";
+        var index = text.IndexOf("probe", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "probe".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a verbless heading fragment resolves the match as a noun.
+    /// </summary>
+    [Fact]
+    public void Guess_VerblessHeadingFragment_ReturnsNoun()
+    {
+        // Arrange: "Wash Tower" - a heading fragment with no finite verb anywhere
+        const string text = "Wash Tower";
+        var index = text.IndexOf("Wash", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Wash".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that the verbless-segment noun signal does not out-vote a strong match-local verb
+    ///     signal: preceded by "to" (infinitive marker) still resolves as a verb even though the
+    ///     segment otherwise contains no other finite verb.
+    /// </summary>
+    [Fact]
+    public void Guess_VerblessSegmentButPrecededByTo_ReturnsVerb()
+    {
+        // Arrange: "to wash" inside an otherwise verbless fragment
+        const string text = "Instructions to wash pump parts.";
+        var index = text.IndexOf("wash", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "wash".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that an imperative sentence start in Procedure mode still resolves as a verb even
+    ///     when the segment otherwise contains no finite verb - the imperative signal is not
+    ///     suppressed by the verbless-segment noun signal (they only conflict to null, they do not
+    ///     let the noun signal win outright).
+    /// </summary>
+    [Fact]
+    public void Guess_ImperativeInVerblessSegment_ReturnsVerb()
+    {
+        // Arrange: "Wash the probe." - an imperative instruction with no other finite verb
+        const string text = "Wash the probe.";
+        var index = text.IndexOf("Wash", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Wash".Length, LintMode.Procedure);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that a segment containing a finite verb elsewhere does not trigger the
+    ///     verbless-segment signal, so a match with no other signal remains ambiguous.
+    /// </summary>
+    [Fact]
+    public void Guess_SegmentHasFiniteVerbElsewhere_MatchStillAmbiguous()
+    {
+        // Arrange: "pump" has no local signal, but "operates" elsewhere is a recognized finite verb
+        const string text = "Consider pump behavior. The system operates continuously.";
+        var index = text.IndexOf("pump", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "pump".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Null(result);
     }
 }
