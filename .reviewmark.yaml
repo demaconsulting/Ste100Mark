@@ -25,7 +25,7 @@ needs-review:
 # and an index.json before enforcement (--enforce flag) can be enabled in the pipeline.
 evidence-source:
   type: url
-  location: https://raw.githubusercontent.com/demaconsulting/TemplateDotNetTool/reviews/index.json
+  location: https://raw.githubusercontent.com/demaconsulting/Ste100Mark/reviews/index.json
 
 # Context included for all reviews.
 context:
@@ -45,7 +45,7 @@ reviews:
 
   # Decomposition Review (only one per repository)
   - id: Decomposition
-    title: Review that TemplateDotNetTool Decomposition Addresses the Stated Purpose
+    title: Review that Ste100Mark Decomposition Addresses the Stated Purpose
     context:
       - README.md
       - "docs/user_guide/**/*.md"
@@ -54,127 +54,127 @@ reviews:
       - docs/design/introduction.md
       - "docs/sysml2/**/*.sysml"
 
-  # TemplateTool - Specials
-  - id: TemplateTool-Architecture
-    title: Review of Template DotNet Tool system architecture and operational validation
+  # Ste100Mark - Specials
+  - id: Ste100Mark-Architecture
+    title: Review of Ste100Mark system architecture and operational validation
     context:
       - README.md
       - "docs/user_guide/**/*.md"
     paths:
-      - "docs/reqstream/template-dot-net-tool.yaml"
+      - "docs/reqstream/ste100-mark.yaml"
       - "docs/design/introduction.md"
-      - "docs/design/template-dot-net-tool.md"
+      - "docs/design/ste100-mark.md"
       - "docs/verification/introduction.md"
-      - "docs/verification/template-dot-net-tool.md"
+      - "docs/verification/ste100-mark.md"
       - "test/**/IntegrationTests.cs"
 
-  - id: TemplateTool-Design
-    title: Review of Template DotNet Tool architectural and design consistency
+  - id: Ste100Mark-Design
+    title: Review of Ste100Mark architectural and design consistency
     context:
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/reqstream/ste100-mark.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/platform-requirements.yaml"
+      - "docs/reqstream/ste100-mark/platform-requirements.yaml"
       - "docs/design/introduction.md"
-      - "docs/design/template-dot-net-tool/**/*.md"
+      - "docs/design/ste100-mark/**/*.md"
       - "docs/design/ots.md"
       - "docs/verification/ots.md"
 
-  - id: TemplateTool-AllRequirements
-    title: Review of Template DotNet Tool requirements quality and traceability
+  - id: Ste100Mark-AllRequirements
+    title: Review of Ste100Mark requirements quality and traceability
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/design/ste100-mark.md
+      - docs/reqstream/ste100-mark.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/**/*.yaml"
+      - "docs/reqstream/ste100-mark/**/*.yaml"
 
-  # TemplateTool - Program
-  - id: TemplateTool-Program
-    title: Review of Template DotNet Tool Program unit implementation
+  # Ste100Mark - Program
+  - id: Ste100Mark-Program
+    title: Review of Ste100Mark Program unit implementation
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/design/ste100-mark.md
+      - docs/reqstream/ste100-mark.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/program.yaml"
-      - "docs/design/template-dot-net-tool/program.md"
-      - "docs/verification/template-dot-net-tool/program.md"
+      - "docs/reqstream/ste100-mark/program.yaml"
+      - "docs/design/ste100-mark/program.md"
+      - "docs/verification/ste100-mark/program.md"
       - "src/**/Program.cs"
       - "test/**/ProgramTests.cs"
 
-  # TemplateTool - Cli
-  - id: TemplateTool-Cli
-    title: Review of Template DotNet Tool Cli subsystem architecture and interfaces
+  # Ste100Mark - Cli
+  - id: Ste100Mark-Cli
+    title: Review of Ste100Mark Cli subsystem architecture and interfaces
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/design/ste100-mark.md
+      - docs/reqstream/ste100-mark.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/cli.yaml"
-      - "docs/design/template-dot-net-tool/cli.md"
-      - "docs/verification/template-dot-net-tool/cli.md"
+      - "docs/reqstream/ste100-mark/cli.yaml"
+      - "docs/design/ste100-mark/cli.md"
+      - "docs/verification/ste100-mark/cli.md"
       - "test/**/Cli/CliSubsystemTests.cs"
 
-  - id: TemplateTool-Cli-Context
-    title: Review of Template DotNet Tool Context unit implementation
+  - id: Ste100Mark-Cli-Context
+    title: Review of Ste100Mark Context unit implementation
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
-      - docs/design/template-dot-net-tool/cli.md
-      - docs/reqstream/template-dot-net-tool/cli.yaml
+      - docs/design/ste100-mark.md
+      - docs/reqstream/ste100-mark.yaml
+      - docs/design/ste100-mark/cli.md
+      - docs/reqstream/ste100-mark/cli.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/cli/context.yaml"
-      - "docs/design/template-dot-net-tool/cli/context.md"
-      - "docs/verification/template-dot-net-tool/cli/context.md"
+      - "docs/reqstream/ste100-mark/cli/context.yaml"
+      - "docs/design/ste100-mark/cli/context.md"
+      - "docs/verification/ste100-mark/cli/context.md"
       - "src/**/Cli/Context.cs"
       - "test/**/Cli/ContextTests.cs"
 
-  # TemplateTool - SelfTest
-  - id: TemplateTool-SelfTest
-    title: Review of Template DotNet Tool SelfTest subsystem architecture and interfaces
+  # Ste100Mark - SelfTest
+  - id: Ste100Mark-SelfTest
+    title: Review of Ste100Mark SelfTest subsystem architecture and interfaces
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/design/ste100-mark.md
+      - docs/reqstream/ste100-mark.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/self-test.yaml"
-      - "docs/design/template-dot-net-tool/self-test.md"
-      - "docs/verification/template-dot-net-tool/self-test.md"
+      - "docs/reqstream/ste100-mark/self-test.yaml"
+      - "docs/design/ste100-mark/self-test.md"
+      - "docs/verification/ste100-mark/self-test.md"
       - "test/**/SelfTest/SelfTestSubsystemTests.cs"
 
-  - id: TemplateTool-SelfTest-Validation
-    title: Review of Template DotNet Tool Validation unit implementation
+  - id: Ste100Mark-SelfTest-Validation
+    title: Review of Ste100Mark Validation unit implementation
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
-      - docs/design/template-dot-net-tool/self-test.md
-      - docs/reqstream/template-dot-net-tool/self-test.yaml
+      - docs/design/ste100-mark.md
+      - docs/reqstream/ste100-mark.yaml
+      - docs/design/ste100-mark/self-test.md
+      - docs/reqstream/ste100-mark/self-test.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/self-test/validation.yaml"
-      - "docs/design/template-dot-net-tool/self-test/validation.md"
-      - "docs/verification/template-dot-net-tool/self-test/validation.md"
+      - "docs/reqstream/ste100-mark/self-test/validation.yaml"
+      - "docs/design/ste100-mark/self-test/validation.md"
+      - "docs/verification/ste100-mark/self-test/validation.md"
       - "src/**/SelfTest/Validation.cs"
       - "test/**/SelfTest/ValidationTests.cs"
 
-  # TemplateTool - Utilities
-  - id: TemplateTool-Utilities
-    title: Review of Template DotNet Tool Utilities subsystem architecture and interfaces
+  # Ste100Mark - Utilities
+  - id: Ste100Mark-Utilities
+    title: Review of Ste100Mark Utilities subsystem architecture and interfaces
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/design/ste100-mark.md
+      - docs/reqstream/ste100-mark.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/utilities.yaml"
-      - "docs/design/template-dot-net-tool/utilities.md"
-      - "docs/verification/template-dot-net-tool/utilities.md"
+      - "docs/reqstream/ste100-mark/utilities.yaml"
+      - "docs/design/ste100-mark/utilities.md"
+      - "docs/verification/ste100-mark/utilities.md"
       - "test/**/Utilities/UtilitiesSubsystemTests.cs"
 
-  - id: TemplateTool-Utilities-PathHelpers
-    title: Review of Template DotNet Tool PathHelpers unit implementation
+  - id: Ste100Mark-Utilities-PathHelpers
+    title: Review of Ste100Mark PathHelpers unit implementation
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
-      - docs/design/template-dot-net-tool/utilities.md
-      - docs/reqstream/template-dot-net-tool/utilities.yaml
+      - docs/design/ste100-mark.md
+      - docs/reqstream/ste100-mark.yaml
+      - docs/design/ste100-mark/utilities.md
+      - docs/reqstream/ste100-mark/utilities.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/utilities/path-helpers.yaml"
-      - "docs/design/template-dot-net-tool/utilities/path-helpers.md"
-      - "docs/verification/template-dot-net-tool/utilities/path-helpers.md"
+      - "docs/reqstream/ste100-mark/utilities/path-helpers.yaml"
+      - "docs/design/ste100-mark/utilities/path-helpers.md"
+      - "docs/verification/ste100-mark/utilities/path-helpers.md"
       - "src/**/Utilities/PathHelpers.cs"
       - "test/**/Utilities/PathHelpersTests.cs"
 

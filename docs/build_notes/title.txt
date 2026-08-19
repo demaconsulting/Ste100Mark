@@ -1,11 +1,11 @@
 ---
-title: Template DotNet Tool
+title: Ste100Mark
 subtitle: Build Notes
 author: DEMA Consulting
-description: Build notes for the Template DotNet Tool reference implementation
+description: Build notes for the Ste100Mark reference implementation
 lang: en-US
 keywords:
-  - Template DotNet Tool
+  - Ste100Mark
   - Build Notes
   - Release Notes
   - C#
