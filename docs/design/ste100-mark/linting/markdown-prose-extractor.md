@@ -8,7 +8,10 @@
 strips content that should not affect linguistic rules. Fenced code blocks and link
 destination URLs are removed entirely; inline code spans are retained verbatim (Rule 8.6
 treats a technical literal as one word), so downstream consumers can display them in
-diagnostics while still excluding their content from grammar-sensitive checks. Its single
+diagnostics while still excluding their content from grammar-sensitive checks. Table rows are
+split into one segment per cell rather than merged into a paragraph, since concatenating
+several rows would corrupt sentence/word counting with pipe characters and unrelated cell
+text; the header separator row is skipped entirely because it carries no prose. Its single
 responsibility is to turn a raw Markdown document into ordered `ProseSegment` values.
 
 #### Data Model
@@ -17,14 +20,15 @@ responsibility is to turn a raw Markdown document into ordered `ProseSegment` va
 
 - `Heading` - ATX heading line.
 - `ListItem` - one bulleted or numbered list item line.
-- `Paragraph` - one or more consecutive non-heading, non-list-item lines.
+- `TableRow` - one cell of a Markdown table row (the header separator row is skipped entirely).
+- `Paragraph` - one or more consecutive non-heading, non-list-item, non-table-row lines.
 
 **ProseSegment**: immutable record describing one extracted prose run.
 
 - `Text`: `string` - cleaned prose text with fenced code blocks and link destinations
   removed; inline code spans are retained verbatim (backticks included).
 - `LineNumber`: `int` - 1-based source line where the segment begins.
-- `Role`: `SegmentRole` - heading, list item, or paragraph.
+- `Role`: `SegmentRole` - heading, list item, table row, or paragraph.
 
 **Regex set**: compiled regexes for fences, headings, list items, inline code (`InlineCodeSpanRegex`,
 `internal`, shared with `SentenceAnalyzer`/`StructuralRules`/`DictionaryChecker`), inline
@@ -38,8 +42,9 @@ links, and blank lines. Each regex uses a one-second timeout.
 - *Returns*: `IReadOnlyList<ProseSegment>` - extracted segments in document order.
 - *Preconditions*: `markdown` is not null.
 - *Postconditions*: Fenced code blocks are skipped, inline code spans are retained verbatim,
-  paragraphs are merged across adjacent lines, list items remain separate, and segment line
-  numbers point to the start of each emitted segment.
+  paragraphs are merged across adjacent lines, list items remain separate, each table row cell
+  becomes its own segment (the separator row is skipped), and segment line numbers point to the
+  start of each emitted segment.
 
 **CleanLine**: Rewrites inline links to keep visible text, leaving inline code spans
 untouched.
@@ -47,6 +52,12 @@ untouched.
 - *Parameters*: `string line` - raw source line.
 - *Returns*: `string` - line with link destinations removed; inline code spans retained
   verbatim.
+
+**SplitTableRowCells**: Splits a table row into its cell texts, trimming the leading/trailing
+`|` delimiters. A `|` inside an inline code span is not treated as a cell separator.
+
+- *Parameters*: `string row` - a single table row line (already known to start with `|`).
+- *Returns*: `IEnumerable<string>` - the non-empty, trimmed text of each cell, in column order.
 
 **FindInlineCodeSpans**: Locates every inline code span's character offsets in a verbatim
 segment or sentence text, for callers (`StructuralRules`, `DictionaryChecker`) that must test

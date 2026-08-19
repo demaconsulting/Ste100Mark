@@ -36,6 +36,9 @@ internal enum SegmentRole
     /// <summary>A single bulleted or numbered list item line.</summary>
     ListItem,
 
+    /// <summary>A single Markdown table row line (a line whose first non-whitespace character is <c>|</c>).</summary>
+    TableRow,
+
     /// <summary>One or more consecutive non-heading, non-list-item lines forming a paragraph.</summary>
     Paragraph
 }
@@ -94,6 +97,20 @@ internal static class MarkdownProseExtractor
 
     /// <summary>Matches a bulleted or numbered list item line, capturing the item text.</summary>
     private static readonly Regex ListItemRegex = new(@"^\s{0,3}(?:[-*+]|\d+[.)])\s+(?<text>.*)$", RegexOptions.Compiled, RegexTimeout);
+
+    /// <summary>
+    ///     Matches a Markdown table row line (a line whose first non-whitespace character is
+    ///     <c>|</c>). Used to keep table rows out of the paragraph accumulator, since concatenating
+    ///     several rows into one run-on "sentence" would corrupt sentence/word counting (the pipe
+    ///     characters and multiple cells are not natural-language prose).
+    /// </summary>
+    private static readonly Regex TableRowRegex = new(@"^\s{0,3}\|", RegexOptions.Compiled, RegexTimeout);
+
+    /// <summary>
+    ///     Matches a Markdown table delimiter/separator row (for example <c>| --- | :-- |</c>),
+    ///     which contains no prose and should be skipped entirely rather than emitted as a segment.
+    /// </summary>
+    private static readonly Regex TableSeparatorRowRegex = new(@"^\s{0,3}\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
     ///     Matches an inline code span (single backtick-delimited run with no embedded backtick).
@@ -179,6 +196,32 @@ internal static class MarkdownProseExtractor
                 continue;
             }
 
+            if (TableRowRegex.IsMatch(cleaned))
+            {
+                // Table rows are never merged into a paragraph or across rows: without this, several
+                // consecutive rows collapse into one run-on "sentence" containing every pipe
+                // character and cell from multiple rows, corrupting sentence/word counting. The
+                // separator row (e.g. "| --- | :-- |") carries no prose and is skipped entirely.
+                // Each cell is emitted as its own segment (mirroring the Rule 8.4 list-item
+                // rationale: a short cell such as "Path to config file" is not itself a full
+                // sentence and should not be merged with unrelated cells), so a cell with a few
+                // words is checked on its own terms, while a cell containing a genuine descriptive
+                // paragraph is still fully checked.
+                FlushParagraph(segments, paragraphBuffer, ref paragraphStartLine);
+                if (!TableSeparatorRowRegex.IsMatch(cleaned))
+                {
+                    foreach (var cell in SplitTableRowCells(cleaned))
+                    {
+                        if (cell.Length > 0)
+                        {
+                            segments.Add(new ProseSegment(cell, lineNumber, SegmentRole.TableRow));
+                        }
+                    }
+                }
+
+                continue;
+            }
+
             // Any other non-blank line accumulates into the current paragraph buffer.
             if (paragraphBuffer.Length == 0)
             {
@@ -204,6 +247,36 @@ internal static class MarkdownProseExtractor
     /// <param name="line">Raw source line.</param>
     /// <returns>Line with link destinations removed; inline code spans retained verbatim.</returns>
     private static string CleanLine(string line) => InlineLinkRegex.Replace(line, m => m.Groups["text"].Value);
+
+    /// <summary>
+    ///     Splits a Markdown table row into its cell texts, trimming surrounding whitespace and the
+    ///     leading/trailing <c>|</c> delimiters. A <c>|</c> inside an inline code span (for example
+    ///     <c>`a|b`</c>) is not treated as a cell separator, matching how Markdown table syntax
+    ///     itself distinguishes escaped/code-span pipes from real column delimiters.
+    /// </summary>
+    /// <param name="row">A single table row line (already known to start with <c>|</c>).</param>
+    /// <returns>The non-empty, trimmed text of each cell in the row, in column order.</returns>
+    private static IEnumerable<string> SplitTableRowCells(string row)
+    {
+        var codeSpans = FindInlineCodeSpans(row);
+        var cells = new List<string>();
+        var cellStart = 0;
+
+        for (var i = 0; i < row.Length; i++)
+        {
+            if (row[i] != '|' || OverlapsInlineCodeSpan(i, 1, codeSpans))
+            {
+                continue;
+            }
+
+            cells.Add(row[cellStart..i].Trim());
+            cellStart = i + 1;
+        }
+
+        cells.Add(row[cellStart..].Trim());
+
+        return cells.Where(cell => cell.Length > 0);
+    }
 
     /// <summary>
     ///     Locates every inline code span in <paramref name="text"/>, preserving their character

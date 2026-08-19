@@ -73,6 +73,96 @@ public class MarkdownProseExtractorTests
     }
 
     /// <summary>
+    ///     Test that each cell of a Markdown table row becomes its own table-row segment, rather than
+    ///     being merged into a paragraph with other rows (which would corrupt sentence/word counting
+    ///     with pipe characters and unrelated cell text from multiple rows).
+    /// </summary>
+    [Fact]
+    public void Extract_TableRow_ReturnsOneSegmentPerCell()
+    {
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract("| `--config <file>` | Path to config file |");
+
+        // Assert: two cells, each its own table-row segment, code span preserved verbatim
+        Assert.Equal(2, segments.Count);
+        Assert.All(segments, s => Assert.Equal(SegmentRole.TableRow, s.Role));
+        Assert.Equal("`--config <file>`", segments[0].Text);
+        Assert.Equal("Path to config file", segments[1].Text);
+    }
+
+    /// <summary>
+    ///     Test that a table header separator row (e.g. <c>| --- | --- |</c>) produces no segments at
+    ///     all, since it carries no prose.
+    /// </summary>
+    [Fact]
+    public void Extract_TableSeparatorRow_ProducesNoSegments()
+    {
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract("| --- | :-- | --:|");
+
+        // Assert: verify expected behavior
+        Assert.Empty(segments);
+    }
+
+    /// <summary>
+    ///     Test that consecutive table rows do not merge into one paragraph across rows: this is a
+    ///     regression test for a bug where table rows fell through to the generic paragraph
+    ///     accumulator, concatenating multiple rows (with pipe characters and cell separators) into
+    ///     one run-on "sentence" that corrupted the word-count check.
+    /// </summary>
+    [Fact]
+    public void Extract_ConsecutiveTableRows_DoNotMergeAcrossRows()
+    {
+        // Arrange: a small table, as commonly used for a CLI options reference
+        const string markdown = "| Option | Description |\n| --- | --- |\n| `--strict` | Treat warnings as errors |";
+
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: no segment contains a pipe character (which would indicate rows were merged)
+        Assert.All(segments, s => Assert.DoesNotContain('|', s.Text));
+        Assert.All(segments, s => Assert.Equal(SegmentRole.TableRow, s.Role));
+    }
+
+    /// <summary>
+    ///     Test that a table cell containing a genuinely long descriptive paragraph is still fully
+    ///     checked on its own terms (not skipped), proving the table-row handling does not suppress
+    ///     legitimate findings within a single cell.
+    /// </summary>
+    [Fact]
+    public void Extract_TableCellWithLongParagraph_PreservedAsOwnSegment()
+    {
+        // Arrange: a table row whose second cell is a long descriptive sentence
+        const string longCell =
+            "This cell has a very long descriptive paragraph that should still be linted because it "
+            + "exceeds the twenty five word limit comfortably in any reasonable interpretation";
+        var markdown = $"| Notes | {longCell} |";
+
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: the long cell survives as its own segment with its full text intact
+        Assert.Equal(2, segments.Count);
+        Assert.Equal(longCell, segments[1].Text);
+    }
+
+    /// <summary>
+    ///     Test that a pipe character inside an inline code span within a table cell is not
+    ///     mistaken for a column delimiter (for example a regex alternation like <c>`a|b`</c>).
+    /// </summary>
+    [Fact]
+    public void Extract_TableRowWithPipeInsideInlineCode_NotTreatedAsColumnSeparator()
+    {
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract("| Pattern | Matches `a|b` exactly |");
+
+        // Assert: the code span's internal pipe does not split the second cell in two
+        Assert.Equal(2, segments.Count);
+        Assert.Equal("Pattern", segments[0].Text);
+        Assert.Equal("Matches `a|b` exactly", segments[1].Text);
+    }
+
+    /// <summary>
     ///     Test that consecutive plain text lines are merged into a single paragraph segment.
     /// </summary>
     [Fact]
