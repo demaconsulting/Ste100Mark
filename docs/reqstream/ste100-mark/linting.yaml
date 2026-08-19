@@ -33,8 +33,8 @@ sections:
           - Evaluate_SentenceExceedingProcedureLimit_FlagsOnlyInProcedureMode
 
       - id: Template-Linting-Semicolons
-        title: The Linting subsystem shall report semicolons in prose as Rule 8.1 violations unless the rule is explicitly
-          disabled.
+        title: The Linting subsystem shall report semicolons in prose as Rule 8.1
+          violations unless the rule is explicitly disabled.
         justification: |
           ASD-STE100 Rule 8.1 prohibits semicolons in controlled prose. The subsystem must
           report the violation consistently while still allowing projects to disable the
@@ -46,8 +46,8 @@ sections:
           - Ste100Mark_LintFileWithSemicolon_ReportsErrorAndReturnsNonZero
 
       - id: Template-Linting-Contractions
-        title: The Linting subsystem shall report contractions in prose as Rule 4.2 violations unless the rule is explicitly
-          disabled.
+        title: The Linting subsystem shall report contractions in prose as Rule 4.2
+          violations unless the rule is explicitly disabled.
         justification: |
           ASD-STE100 Rule 4.2 requires expanded forms rather than contractions. The
           subsystem must detect common contraction forms and report them as build-breaking
@@ -80,7 +80,8 @@ sections:
           - Evaluate_WasOpened_StillFlagsPassiveVoice
 
       - id: Template-Linting-ComplexVerbAdvisory
-        title: The Linting subsystem shall provide a configurable complex-verb (perfect/modal-perfect tense) advisory heuristic.
+        title: The Linting subsystem shall provide a configurable complex-verb
+          (perfect/modal-perfect tense) advisory heuristic.
         justification: |
           Perfect and modal-perfect tense verb constructions (for example "has opened" or
           "would have written") are discouraged by ASD-STE100 in favor of simple present,

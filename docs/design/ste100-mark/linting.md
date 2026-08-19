@@ -103,16 +103,20 @@ flowchart TD
 
 The subsystem reports the following rule codes:
 
-| Rule code | Description | Status |
-| --- | --- | --- |
-| `STE100-4.1` | Sentence word-count limit, using the counting rules implemented for Rules 8.4-8.7 | Official STE100 rule |
-| `STE100-8.1` | Semicolon prohibition in prose | Official STE100 rule |
-| `STE100-4.2` | Contraction prohibition in prose | Official STE100 rule |
-| `STE100-ADV-PARA` | Paragraph sentence-count cap | Advisory heuristic; not an official STE100 rule |
-| `STE100-ADV-PASSIVE` | Passive-voice detection (`to be` + past participle heuristic) | Advisory heuristic; not an official STE100 rule |
-| `STE100-ADV-COMPLEXVERB` | Perfect and modal-perfect tense detection | Advisory heuristic; not an official STE100 rule |
-| `STE100-ADV-INGFORM` | -ing form detection | Advisory heuristic; not an official STE100 rule |
-| `STE100-DICT` | Effective dictionary/disallow-list enforcement | Tool-defined dictionary check; reported as an error |
+- `STE100-4.1` — Sentence word-count limit, using the counting rules
+  implemented for Rules 8.4-8.7. Official STE100 rule.
+- `STE100-8.1` — Semicolon prohibition in prose. Official STE100 rule.
+- `STE100-4.2` — Contraction prohibition in prose. Official STE100 rule.
+- `STE100-ADV-PARA` — Paragraph sentence-count cap. Advisory heuristic; not
+  an official STE100 rule.
+- `STE100-ADV-PASSIVE` — Passive-voice detection (`to be` + past participle
+  heuristic). Advisory heuristic; not an official STE100 rule.
+- `STE100-ADV-COMPLEXVERB` — Perfect and modal-perfect tense detection.
+  Advisory heuristic; not an official STE100 rule.
+- `STE100-ADV-INGFORM` — -ing form detection. Advisory heuristic; not an
+  official STE100 rule.
+- `STE100-DICT` — Effective dictionary/disallow-list enforcement. Tool-defined
+  dictionary check; reported as an error.
 
 `STE100-4.1`, `STE100-8.1`, and `STE100-4.2` are always emitted at error severity when the
 corresponding check is enabled. `STE100-ADV-PARA` emits a warning when

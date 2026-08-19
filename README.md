@@ -178,7 +178,7 @@ reported severity.
 
 | Option | Description |
 | --- | --- |
-| `[globs...]` | Optional Markdown glob patterns to lint. When omitted, configuration `include` and `exclude` patterns are used. |
+| `[globs...]` | Optional Markdown globs to lint. Defaults to configuration `include`/`exclude` patterns. |
 | `-v`, `--version` | Display version information |
 | `-?`, `-h`, `--help` | Display help message |
 | `--silent` | Suppress console output |

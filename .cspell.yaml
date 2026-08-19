@@ -14,25 +14,31 @@ language: en
 
 # Project-specific technical terms and tool names
 words:
+  - backticked
   - Blockquotes
-  - Postconditions
   - buildmark
   - buildtransitive
+  - COMPLEXVERB
   - contentfiles
   - dcterms
   - DEMA
+  - Defence
   - Dema
   - demaconsulting
   - doctitle
   - docversion
   - errorlevel
   - fileassert
+  - froobnicate
+  - INGFORM
   - licence
   - xunit
   - nameof
   - nominalized
   - pagetitle
   - Pandoc
+  - parentheticals
+  - Postconditions
   - Qube
   - reqstream
   - reviewmark
@@ -44,6 +50,7 @@ words:
   - sysml
   - sysml2tools
   - ste100mark
+  - undercounts
   - utilise
   - venv
   - versionmark
