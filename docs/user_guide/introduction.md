@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Template DotNet Tool is a demonstration project that showcases best practices for DEMA
+Ste100Mark is a demonstration project that showcases best practices for DEMA
 Consulting DotNet Tools.
 
 ## Scope
@@ -34,7 +34,7 @@ compliance evidence is generated automatically on every CI run.
 Install the tool globally using the .NET CLI:
 
 ```bash
-dotnet tool install -g DemaConsulting.TemplateDotNetTool
+dotnet tool install -g DemaConsulting.Ste100Mark
 ```
 
 # Usage
@@ -44,7 +44,7 @@ dotnet tool install -g DemaConsulting.TemplateDotNetTool
 Display the tool version:
 
 ```bash
-templatetool --version
+ste100mark --version
 ```
 
 ## Default Behavior
@@ -52,7 +52,7 @@ templatetool --version
 When invoked with no arguments, the tool displays the banner and copyright notice:
 
 ```bash
-templatetool
+ste100mark
 ```
 
 ## Display Help
@@ -60,12 +60,12 @@ templatetool
 Display usage information:
 
 ```bash
-templatetool --help
+ste100mark --help
 ```
 
 ## Self-Validation
 
-Self-validation produces a report demonstrating that Template DotNet Tool is functioning
+Self-validation produces a report demonstrating that Ste100Mark is functioning
 correctly. This is useful in regulated industries where tool validation evidence is required.
 
 ### Running Validation
@@ -73,13 +73,13 @@ correctly. This is useful in regulated industries where tool validation evidence
 To perform self-validation:
 
 ```bash
-templatetool --validate
+ste100mark --validate
 ```
 
 To save validation results to a file:
 
 ```bash
-templatetool --validate --results results.trx
+ste100mark --validate --results results.trx
 ```
 
 The `--result` option is an accepted alias for `--results`.
@@ -94,7 +94,7 @@ This is useful when embedding the validation report into a larger markdown docum
 
 ```bash
 # Embed validation at heading level 2
-templatetool --validate --depth 2
+ste100mark --validate --depth 2
 ```
 
 ### Validation Report
@@ -105,7 +105,7 @@ The validation report contains the tool version, machine name, operating system 
 Example validation report:
 
 ```text
-# DEMA Consulting Template DotNet Tool
+# DEMA Consulting Ste100Mark
 
 | Information         | Value                                              |
 | :------------------ | :------------------------------------------------- |
@@ -115,8 +115,8 @@ Example validation report:
 | DotNet Runtime      | .NET 10.0.0                                        |
 | Time Stamp          | 2024-01-15 10:30:00 UTC                            |
 
-✓ TemplateTool_VersionDisplay - Passed
-✓ TemplateTool_HelpDisplay - Passed
+✓ Ste100Mark_VersionDisplay - Passed
+✓ Ste100Mark_HelpDisplay - Passed
 
 Total Tests: 2
 Passed: 2
@@ -127,15 +127,15 @@ Failed: 0
 
 Each test proves specific functionality works correctly:
 
-- **`TemplateTool_VersionDisplay`** - `--version` outputs a valid version string.
-- **`TemplateTool_HelpDisplay`** - `--help` outputs usage and options information.
+- **`Ste100Mark_VersionDisplay`** - `--version` outputs a valid version string.
+- **`Ste100Mark_HelpDisplay`** - `--help` outputs usage and options information.
 
 ## Silent Mode
 
 Suppress console output:
 
 ```bash
-templatetool --silent
+ste100mark --silent
 ```
 
 ## Logging
@@ -143,7 +143,7 @@ templatetool --silent
 Write output to a log file:
 
 ```bash
-templatetool --log output.log
+ste100mark --log output.log
 ```
 
 ## Error Handling
@@ -177,19 +177,19 @@ The following command-line options are supported:
 ## Example 1: Basic Usage
 
 ```bash
-templatetool
+ste100mark
 ```
 
 ## Example 2: Self-Validation with Results
 
 ```bash
-templatetool --validate --results validation-results.trx
+ste100mark --validate --results validation-results.trx
 ```
 
 ## Example 3: Silent Mode with Logging
 
 ```bash
-templatetool --silent --log tool-output.log
+ste100mark --silent --log tool-output.log
 ```
 
 ## References
