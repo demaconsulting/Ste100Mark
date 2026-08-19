@@ -194,8 +194,27 @@ and layered rules/dictionary profile deltas. This scenario is tested by
 `ResolveRules_MultipleMatchingProfiles_LayersAllDeltasInOrder`,
 `ResolveAllowedTerms_NoMatchingProfile_ReturnsGlobalTermsOnly`,
 `ResolveAllowedTerms_MatchingProfile_UnionsWithGlobalAllowList`,
+`ResolveAllowedPhrases_NoMatchingProfile_ReturnsGlobalPhrasesOnly`,
+`ResolveAllowedPhrases_MatchingProfile_UnionsWithGlobalPhraseList`,
 `Run_ProcedureModeOverride_AppliesStricterWordLimit`, and
 `Run_ProfileDictionaryAllowList_PermitsTermOnlyWithinProfileGlob`.
+
+**Template-Linting-DictionaryPhraseScopedAllowance**: The `dictionary.allow-in-phrase`
+phrase-scoped allowance is verified for suppressing a disallowed term only when the match falls
+entirely inside a configured phrase while the same term elsewhere in the same segment is still
+flagged, case-insensitive matching, matching across whitespace variation consistent with a
+multi-word `Disallow` term, an unrelated configured phrase not suppressing an unmatched
+occurrence, and omitting the `allowedPhrases` argument entirely (the default) not suppressing
+any match. This scenario is tested by
+`Evaluate_TermInsideAllowedPhrase_NotFlaggedButSameTermElsewhereStillFlagged`,
+`Evaluate_TermInsideAllowedPhraseDifferentCasing_StillSuppressesDiagnostic`,
+`Evaluate_AllowedPhraseMatchesAcrossWhitespace_SuppressesDiagnostic`,
+`Evaluate_AllowedPhrasesUnrelatedPhrase_StillFlagsDisallowedTerm`, and
+`Evaluate_NoAllowedPhrasesSupplied_StillFlagsTermInsideWouldBePhrase`. Configuration resolution
+of the global `dictionary.allow-in-phrase` list unioned with a matching profile's
+`dictionary.allow-in-phrase` delta is verified by
+`ResolveAllowedPhrases_NoMatchingProfile_ReturnsGlobalPhrasesOnly` and
+`ResolveAllowedPhrases_MatchingProfile_UnionsWithGlobalPhraseList` (listed above).
 
 **Template-Linting-CliIntegration**: The lint-specific CLI surface is verified for positional
 globs, `--config`, `--format`, `--strict`, and default dispatch through `Program.Run`. This

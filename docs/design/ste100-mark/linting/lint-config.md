@@ -58,6 +58,8 @@ files it matches.
   global `DictionaryConfig.Allow`.
 - `Ignore`: `List<string>?` - additional terms ignored for matching files, unioned with the
   global `DictionaryConfig.Ignore`. Applied identically to `Allow`.
+- `AllowInPhrase`: `List<string>?` - additional phrase-scoped allowances for matching files,
+  unioned with the global `DictionaryConfig.AllowInPhrase`.
 
 **Profile**: glob-scoped mode/rules/dictionary tuning entry (the `profiles:` list item type).
 
@@ -66,8 +68,8 @@ files it matches.
   resolution to `DefaultMode` or another matching profile.
 - `Rules`: `RulesOverride?` - partial rule-tuning delta applied for files matching `Glob`, or
   `null` for no rule changes.
-- `Dictionary`: `DictionaryOverride?` - additional dictionary allow/ignore terms for files
-  matching `Glob`, or `null` for no dictionary changes.
+- `Dictionary`: `DictionaryOverride?` - additional dictionary allow/ignore/allow-in-phrase terms
+  for files matching `Glob`, or `null` for no dictionary changes.
 
 **DictionaryConfig**: global dictionary merge settings.
 
@@ -77,6 +79,9 @@ files it matches.
 - `Allow`: `List<string>?` - terms to remove from the effective dictionary, project-wide.
 - `Ignore`: `List<string>?` - terms excluded for documentation clarity but removed the same
   way as `Allow`.
+- `AllowInPhrase`: `List<string>?` - phrases within which a disallowed term match is
+  suppressed, without suppressing the same term elsewhere in the segment; unlike `Allow`/
+  `Ignore`, does not remove the term from the effective dictionary project-wide.
 - `UseEmbedded`: `bool` - default `true`; disables the embedded illustrative baseline when
   `false`.
 
@@ -143,15 +148,27 @@ path.
   `extraAllowedTerms`, so it suppresses matches for this file only without altering the
   merged `LintDictionary` used for every other file.
 
+**ResolveAllowedPhrases**: Resolves the phrase-scoped dictionary allowances for one file path.
+
+- *Parameters*: `string relativeFilePath` - file path relative to the profile glob base.
+- *Returns*: `IReadOnlyCollection<string>` - the global `Dictionary.AllowInPhrase` phrases,
+  unioned with the `Dictionary.AllowInPhrase` phrases of every matching profile,
+  case-insensitively de-duplicated.
+- *Preconditions*: `relativeFilePath` is not null.
+- *Postconditions*: The returned set is passed to `DictionaryChecker.Evaluate` as
+  `allowedPhrases`, so a term match falling wholly inside one of these phrases is suppressed
+  for this file only, without suppressing the same term elsewhere in the segment or altering
+  the merged `LintDictionary` used for every other file.
+
 Creates a fresh `Matcher` per profile glob check (via the private `MatchesGlob` helper) so
 each glob is evaluated independently.
 
 #### Error Handling
 
 `Load` throws `InvalidOperationException` when `path` is non-null but the file does not
-exist, or when YamlDotNet fails to parse the file. `ResolveMode`, `ResolveRules`, and
-`ResolveAllowedTerms` do not catch matcher or null-argument failures; `ArgumentNullException`
-propagates for a null path.
+exist, or when YamlDotNet fails to parse the file. `ResolveMode`, `ResolveRules`,
+`ResolveAllowedTerms`, and `ResolveAllowedPhrases` do not catch matcher or null-argument
+failures; `ArgumentNullException` propagates for a null path.
 
 #### Dependencies
 
@@ -165,5 +182,5 @@ propagates for a null path.
 - **Linter** - loads the configuration and resolves each file's lint mode, effective rules,
   and per-file dictionary allowances.
 - **LintDictionary** - consumes the global `DictionaryConfig` during dictionary merge.
-- **DictionaryChecker** - consumes the per-file `ResolveAllowedTerms` result as
-  `extraAllowedTerms`.
+- **DictionaryChecker** - consumes the per-file `ResolveAllowedTerms`/`ResolveAllowedPhrases`
+  results as `extraAllowedTerms`/`allowedPhrases`.

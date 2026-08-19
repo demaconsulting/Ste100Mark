@@ -190,6 +190,12 @@ internal sealed class DictionaryOverride
     ///     <see cref="DictionaryConfig.Ignore"/> list. Applied identically to <see cref="Allow"/>.
     /// </summary>
     public List<string>? Ignore { get; set; }
+
+    /// <summary>
+    ///     Additional phrase-scoped allowances applied for files matching this profile, unioned
+    ///     with the global <see cref="DictionaryConfig.AllowInPhrase"/> list.
+    /// </summary>
+    public List<string>? AllowInPhrase { get; set; }
 }
 
 /// <summary>
@@ -271,6 +277,18 @@ internal sealed class DictionaryConfig
     ///     documentation clarity in the configuration file.
     /// </summary>
     public List<string>? Ignore { get; set; }
+
+    /// <summary>
+    ///     Multi-word phrases (for example <c>"swish mix"</c>) whose disallowed sub-terms (for
+    ///     example <c>"mix"</c>) are suppressed only when the match falls entirely inside an
+    ///     occurrence of one of these phrases, leaving the same term still flagged everywhere else
+    ///     it appears. Unlike <see cref="Allow"/>/<see cref="Ignore"/>, which suppress a term
+    ///     project-wide regardless of context, this expresses "this exact phrase is the approved
+    ///     name of a thing" without also silently permitting the disallowed word on its own.
+    ///     Matching is case-insensitive and whitespace-tolerant, identical to a multi-word
+    ///     <see cref="Disallow"/> term.
+    /// </summary>
+    public List<string>? AllowInPhrase { get; set; }
 
     /// <summary>
     ///     When <see langword="false"/>, the embedded illustrative default dictionary is not loaded
@@ -474,6 +492,39 @@ internal sealed class LintConfig
 
             AddTerms(allowed, profile.Dictionary.Allow);
             AddTerms(allowed, profile.Dictionary.Ignore);
+        }
+
+        return allowed;
+    }
+
+    /// <summary>
+    ///     Resolves the phrase-scoped dictionary allowances that apply to a specific file, unioning
+    ///     the global <see cref="DictionaryConfig.AllowInPhrase"/> list with every matching
+    ///     <see cref="Profiles"/> entry's <see cref="Profile.Dictionary"/>
+    ///     <see cref="DictionaryOverride.AllowInPhrase"/> delta.
+    /// </summary>
+    /// <param name="relativeFilePath">
+    ///     File path, relative to the same base directory the profile globs are written against.
+    /// </param>
+    /// <returns>
+    ///     Every phrase within which a disallowed term match should be suppressed for this file,
+    ///     case-insensitively de-duplicated. See <see cref="DictionaryConfig.AllowInPhrase"/> for
+    ///     matching semantics.
+    /// </returns>
+    public IReadOnlyCollection<string> ResolveAllowedPhrases(string relativeFilePath)
+    {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        AddTerms(allowed, Dictionary?.AllowInPhrase);
+
+        foreach (var profile in Profiles)
+        {
+            if (profile.Dictionary is null || !MatchesGlob(profile.Glob, relativeFilePath))
+            {
+                continue;
+            }
+
+            AddTerms(allowed, profile.Dictionary.AllowInPhrase);
         }
 
         return allowed;

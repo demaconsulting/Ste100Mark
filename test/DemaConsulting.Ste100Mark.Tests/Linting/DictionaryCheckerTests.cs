@@ -731,4 +731,158 @@ public class DictionaryCheckerTests
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
     }
+
+    /// <summary>
+    ///     Test that a disallowed single-word term is suppressed only when the match falls
+    ///     entirely inside a configured <c>allow-in-phrase</c> phrase, without suppressing the
+    ///     same term elsewhere in the segment.
+    /// </summary>
+    [Fact]
+    public void Evaluate_TermInsideAllowedPhrase_NotFlaggedButSameTermElsewhereStillFlagged()
+    {
+        // Arrange: "mix" is disallowed; "swish mix" is an approved phrase (the name of a thing),
+        // while a bare "mix" elsewhere in the same segment must still be reported
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
+                },
+                AllowInPhrase = ["swish mix"]
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Fill the swish mix tank, then check the fuel mix.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["swish mix"]);
+
+        // Assert: only the "fuel mix" occurrence is reported, not the "swish mix" occurrence
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("combination", diagnostic.Suggestion);
+    }
+
+    /// <summary>
+    ///     Test that <c>allow-in-phrase</c> matching is case-insensitive, consistent with every
+    ///     other dictionary term comparison in this checker.
+    /// </summary>
+    [Fact]
+    public void Evaluate_TermInsideAllowedPhraseDifferentCasing_StillSuppressesDiagnostic()
+    {
+        // Arrange: the configured phrase is lower-case, but the prose capitalizes it
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
+                },
+                AllowInPhrase = ["swish mix"]
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Fill the Swish Mix tank.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["swish mix"]);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that an <c>allow-in-phrase</c> entry matches across normal whitespace variation,
+    ///     consistent with multi-word <see cref="DictionaryConfig.Disallow"/> term matching.
+    /// </summary>
+    [Fact]
+    public void Evaluate_AllowedPhraseMatchesAcrossWhitespace_SuppressesDiagnostic()
+    {
+        // Arrange: extra whitespace between the phrase's words
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
+                },
+                AllowInPhrase = ["swish mix"]
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Fill the swish  mix tank.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["swish mix"]);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that supplying an unrelated <c>allowedPhrases</c> entry does not suppress a
+    ///     disallowed term that does not occur within any configured phrase.
+    /// </summary>
+    [Fact]
+    public void Evaluate_AllowedPhrasesUnrelatedPhrase_StillFlagsDisallowedTerm()
+    {
+        // Arrange: "swish mix" is an allowed phrase, but the prose never contains it
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
+                },
+                AllowInPhrase = ["swish mix"]
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Check the fuel mix.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["swish mix"]);
+
+        // Assert: verify expected behavior
+        Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that omitting <c>allowedPhrases</c> (the default) does not suppress any term, even
+    ///     one that happens to appear inside what would otherwise be an allowed phrase - the
+    ///     allowance only applies when explicitly resolved and passed in.
+    /// </summary>
+    [Fact]
+    public void Evaluate_NoAllowedPhrasesSupplied_StillFlagsTermInsideWouldBePhrase()
+    {
+        // Arrange: no allowedPhrases argument supplied
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
+                },
+                AllowInPhrase = ["swish mix"]
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Fill the swish mix tank.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested (allowedPhrases omitted)
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Single(diagnostics);
+    }
 }

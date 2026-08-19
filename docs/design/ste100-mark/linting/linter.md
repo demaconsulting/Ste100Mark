@@ -37,10 +37,10 @@ user-fixable configuration problems become normal lint errors rather than top-le
   according to error and strict-mode semantics.
 
 `RunCore` resolves the configuration path, loads `LintConfig` and `LintDictionary`, resolves
-files, reads file contents, extracts prose, resolves each file's mode/rules/allowed-terms via
-`LintConfig.ResolveMode`/`ResolveRules`/`ResolveAllowedTerms` (applying any matching
-`Profile` deltas), evaluates structural and dictionary rules against that per-file
-configuration, and reports the aggregated diagnostics.
+files, reads file contents, extracts prose, resolves each file's mode/rules/allowed-terms/
+allowed-phrases via `LintConfig.ResolveMode`/`ResolveRules`/`ResolveAllowedTerms`/
+`ResolveAllowedPhrases` (applying any matching `Profile` deltas), evaluates structural and
+dictionary rules against that per-file configuration, and reports the aggregated diagnostics.
 
 **ResolveConfigPath**: Chooses the configuration file path.
 

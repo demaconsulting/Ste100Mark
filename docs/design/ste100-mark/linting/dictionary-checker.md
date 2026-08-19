@@ -37,6 +37,17 @@ consideration before matching runs, letting a `Profile`'s `dictionary.allow`/`di
 delta permit a term (for example "shall" for a requirements-documents profile) without
 altering the merged `LintDictionary` used for every other file.
 
+**Phrase-scoped allowance**: an optional `allowedPhrases` collection (typically
+`LintConfig.ResolveAllowedPhrases`, populated from `dictionary.allow-in-phrase`) is converted
+into whole-phrase regex spans (`FindAllowedPhraseSpans`, using the same pattern shape as a
+multi-word `Disallow` term) per segment; a term match falling wholly inside one of these spans
+is excluded before a diagnostic is built, using the same "falls entirely inside" containment
+test (`MarkdownProseExtractor.OverlapsInlineCodeSpan`) as the inline-code-span exclusion below.
+Unlike `extraAllowedTerms`, this does not remove the term from consideration project-wide: the
+same disallowed word elsewhere in the same segment, outside any listed phrase, is still
+flagged. This lets a project declare a specific approved phrase (for example "swish mix" as the
+approved name of a thing) without silently permitting the disallowed word ("mix") on its own.
+
 **Inline code exclusion**: matches falling wholly inside an inline code span (per
 `MarkdownProseExtractor.FindInlineCodeSpans`/`OverlapsInlineCodeSpan`) are ignored before a
 diagnostic is built, so a disallowed term that appears only inside inline code (for example, a
@@ -52,13 +63,22 @@ code span in the same segment is still flagged normally.
   file's resolved writing mode, forwarded to `PartOfSpeechGuesser.Guess`;
   `IReadOnlyCollection<string>? extraAllowedTerms` - optional additional per-file allowed
   terms (typically `LintConfig.ResolveAllowedTerms`), defaulting to `null` (no per-file
-  allowance).
+  allowance); `IReadOnlyCollection<string>? allowedPhrases` - optional phrase-scoped
+  allowances (typically `LintConfig.ResolveAllowedPhrases`), defaulting to `null` (no
+  phrase-scoped allowance).
 - *Returns*: `IReadOnlyList<Diagnostic>` - one diagnostic per matched occurrence, excluding
-  matches suppressed by a confident-but-non-matching POS guess or by `extraAllowedTerms`.
+  matches suppressed by a confident-but-non-matching POS guess, by `extraAllowedTerms`, or by
+  falling wholly inside an `allowedPhrases` occurrence.
 - *Preconditions*: `file`, `segments`, and `dictionary` are non-null.
 - *Postconditions*: Matches are returned in segment order, excluding any match that falls
-  wholly inside an inline code span; every diagnostic uses severity `Error`, rule code
-  `STE100-DICT`, and a suggestion string when alternatives are present.
+  wholly inside an inline code span or an allowed-phrase occurrence; every diagnostic uses
+  severity `Error`, rule code `STE100-DICT`, and a suggestion string when alternatives are
+  present.
+
+**FindAllowedPhraseSpans**: Locates every occurrence of every configured `allowedPhrases` entry
+within a segment's text, using the same case-insensitive, whitespace-tolerant pattern shape as
+a multi-word `Disallow` term, returning the spans `Evaluate` tests each dictionary-term match
+against.
 
 **BuildDiagnostic**: Selects the applicable sense(s) for one match and builds its diagnostic,
 or returns `null` when a confident POS guess rules out every sense (the term is not
@@ -101,7 +121,7 @@ one-second timeout and no local exception handling.
 - **MarkdownProseExtractor** - supplies segment text and line numbers, and the
   `FindInlineCodeSpans`/`OverlapsInlineCodeSpan` helpers used to exclude inline-code matches.
 - **LintConfig** - supplies the `LintMode` forwarded to `PartOfSpeechGuesser`, and the
-  per-file `extraAllowedTerms` via `ResolveAllowedTerms`.
+  per-file `extraAllowedTerms`/`allowedPhrases` via `ResolveAllowedTerms`/`ResolveAllowedPhrases`.
 - **Diagnostic** and **Severity** - encode the reported finding.
 - **.NET BCL** - regex construction and matching.
 

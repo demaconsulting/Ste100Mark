@@ -151,6 +151,8 @@ dictionary:
     - ste100mark
   ignore:
     - api
+  allow-in-phrase:
+    - swish mix
 ```
 
 Configuration fields:
@@ -161,7 +163,8 @@ Configuration fields:
 - `profiles` - glob-scoped mode/rules/dictionary tuning; see "Profiles" below
 - `rules` - global rule tuning for sentence limits, semicolons, contractions, paragraph
   cap, and passive voice
-- `dictionary` - project dictionary file plus inline allow/disallow/ignore tuning
+- `dictionary` - project dictionary file plus inline allow/disallow/ignore/allow-in-phrase
+  tuning
 
 ## Profiles
 
@@ -180,11 +183,12 @@ dictionary. Each entry in `profiles` may set:
   knobs you list change, everything else keeps its global value. When a file matches
   multiple profiles that set `rules`, every matching profile's delta applies in
   declaration order, so a later profile wins on any single knob both profiles set.
-- `dictionary.allow` / `dictionary.ignore` (optional) - additional terms allowed for
-  matching files only, unioned with the top-level `dictionary.allow`/`dictionary.ignore`
-  lists. A profile cannot supply its own `file`/`disallow`/`use-embedded` dictionary
-  source - the merged term-to-sense dictionary is always the same project-wide; profiles
-  only add per-file allowances on top of it.
+- `dictionary.allow` / `dictionary.ignore` / `dictionary.allow-in-phrase` (optional) -
+  additional terms/phrases allowed for matching files only, unioned with the
+  corresponding top-level `dictionary` lists. A profile cannot supply its own
+  `file`/`disallow`/`use-embedded` dictionary source - the merged term-to-sense
+  dictionary is always the same project-wide; profiles only add per-file allowances on
+  top of it.
 
 ## Project Dictionary Files
 
@@ -243,6 +247,32 @@ feature and provide a reasonable default — it is **not** a substitute for the 
 Any organization that requires true ASD-STE100 compliance must obtain its own license from
 ASD and supply its own dictionary file, in the format shown above, via the `dictionary.file`
 configuration option.
+
+## Phrase-Scoped Allowances
+
+`dictionary.allow`/`dictionary.ignore` suppress a term project-wide, regardless of context -
+useful for a term that is simply never a problem in your project (for example a product name).
+Sometimes, though, a disallowed word is genuinely fine as part of one specific approved phrase,
+but should still be flagged everywhere else it appears on its own. `dictionary.allow-in-phrase`
+expresses exactly that: a match is suppressed only when it falls entirely inside an occurrence
+of one of the listed phrases.
+
+```yaml
+dictionary:
+  allow-in-phrase:
+    - swish mix
+    - primary mix
+    - air gap
+    - probe tip
+    - motion profile
+```
+
+For example, if `mix` is a disallowed term, `allow-in-phrase: [swish mix]` suppresses the
+finding in "Fill the swish mix tank" (where "swish mix" is the name of a thing) while still
+flagging "check the fuel mix" elsewhere in the same document. Matching is case-insensitive and
+tolerant of extra whitespace, identical to a multi-word `dictionary.disallow` term. Like
+`dictionary.allow`/`dictionary.ignore`, `dictionary.allow-in-phrase` can also be layered per
+profile (see "Profiles" above) to scope a phrase allowance to matching files only.
 
 # Usage
 

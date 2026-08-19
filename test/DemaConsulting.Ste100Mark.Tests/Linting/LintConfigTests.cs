@@ -334,4 +334,63 @@ public class LintConfigTests
         Assert.Contains("Shall", allowed, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(2, allowed.Count);
     }
+
+    /// <summary>
+    ///     Test that ResolveAllowedPhrases returns only the global allow-in-phrase list when no
+    ///     profile matches.
+    /// </summary>
+    [Fact]
+    public void ResolveAllowedPhrases_NoMatchingProfile_ReturnsGlobalPhrasesOnly()
+    {
+        // Arrange: a global allow-in-phrase list plus one unrelated profile
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig { AllowInPhrase = ["swish mix"] },
+            Profiles =
+            [
+                new Profile
+                {
+                    Glob = "docs/requirements/**/*.md",
+                    Dictionary = new DictionaryOverride { AllowInPhrase = ["motion profile"] }
+                }
+            ]
+        };
+
+        // Act: execute the operation being tested
+        var allowed = config.ResolveAllowedPhrases("docs/overview.md");
+
+        // Assert: verify expected behavior
+        Assert.Equal(["swish mix"], allowed);
+    }
+
+    /// <summary>
+    ///     Test that ResolveAllowedPhrases unions a matching profile's phrase allowance with the
+    ///     global allow-in-phrase list, case-insensitively.
+    /// </summary>
+    [Fact]
+    public void ResolveAllowedPhrases_MatchingProfile_UnionsWithGlobalPhraseList()
+    {
+        // Arrange: a global allow-in-phrase list plus a requirements profile allowing an
+        // additional phrase
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig { AllowInPhrase = ["swish mix"] },
+            Profiles =
+            [
+                new Profile
+                {
+                    Glob = "docs/requirements/**/*.md",
+                    Dictionary = new DictionaryOverride { AllowInPhrase = ["motion profile"] }
+                }
+            ]
+        };
+
+        // Act: execute the operation being tested
+        var allowed = config.ResolveAllowedPhrases("docs/requirements/spec.md");
+
+        // Assert: both the global and profile-specific phrases are allowed
+        Assert.Contains("swish mix", allowed);
+        Assert.Contains("Motion Profile", allowed, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(2, allowed.Count);
+    }
 }

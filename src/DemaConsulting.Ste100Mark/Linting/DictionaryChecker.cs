@@ -51,6 +51,14 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     same way they are excluded from the contraction and semicolon checks in
 ///     <see cref="StructuralRules"/>. The same term appearing outside a code span in the same
 ///     segment is still flagged normally.
+///
+///     A match that falls entirely inside an occurrence of a project-supplied allowed phrase (see
+///     <see cref="DictionaryConfig.AllowInPhrase"/>, resolved per-file into
+///     <c>allowedPhrases</c>) is also ignored, using the same "falls entirely inside" containment
+///     test as the inline-code-span exclusion. This lets a project declare that a specific phrase
+///     (for example "swish mix") is the approved name of a thing, without also silently permitting
+///     the disallowed word ("mix") everywhere else it appears - unlike
+///     <see cref="LintConfig.ResolveAllowedTerms"/>, which suppresses a term unconditionally.
 /// </remarks>
 internal static class DictionaryChecker
 {
@@ -71,13 +79,20 @@ internal static class DictionaryChecker
     ///     permitting "shall" only for a requirements-documents profile). Pass <see langword="null"/>
     ///     or an empty collection when no per-file allowance applies.
     /// </param>
+    /// <param name="allowedPhrases">
+    ///     Phrases (see <see cref="DictionaryConfig.AllowInPhrase"/>, resolved per-file
+    ///     via <see cref="LintConfig.ResolveAllowedPhrases"/>) within which a disallowed term match
+    ///     is suppressed, without suppressing the same term elsewhere in the segment. Pass
+    ///     <see langword="null"/> or an empty collection when no phrase-scoped allowance applies.
+    /// </param>
     /// <returns>One diagnostic per matched occurrence, in segment order.</returns>
     public static IReadOnlyList<Diagnostic> Evaluate(
         string file,
         IReadOnlyList<ProseSegment> segments,
         LintDictionary dictionary,
         LintMode mode,
-        IReadOnlyCollection<string>? extraAllowedTerms = null)
+        IReadOnlyCollection<string>? extraAllowedTerms = null,
+        IReadOnlyCollection<string>? allowedPhrases = null)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(segments);
@@ -100,6 +115,7 @@ internal static class DictionaryChecker
         foreach (var segment in segments)
         {
             var codeSpans = MarkdownProseExtractor.FindInlineCodeSpans(segment.Text);
+            var phraseSpans = FindAllowedPhraseSpans(segment.Text, allowedPhrases);
 
             foreach (var entry in entries)
             {
@@ -107,6 +123,11 @@ internal static class DictionaryChecker
                 foreach (Match match in Regex.Matches(segment.Text, pattern, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1)))
                 {
                     if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, codeSpans))
+                    {
+                        continue;
+                    }
+
+                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, phraseSpans))
                     {
                         continue;
                     }
@@ -121,6 +142,35 @@ internal static class DictionaryChecker
         }
 
         return diagnostics;
+    }
+
+    /// <summary>
+    ///     Locates every occurrence of every phrase in <paramref name="allowedPhrases"/> within
+    ///     <paramref name="segmentText"/>, using the same case-insensitive, whitespace-tolerant
+    ///     matching as a multi-word <see cref="DictionaryConfig.Disallow"/> term, so
+    ///     callers can test whether a dictionary-term match falls entirely inside an approved
+    ///     phrase (see <see cref="DictionaryConfig.AllowInPhrase"/>).
+    /// </summary>
+    private static IReadOnlyList<(int Start, int Length)> FindAllowedPhraseSpans(
+        string segmentText,
+        IReadOnlyCollection<string>? allowedPhrases)
+    {
+        if (allowedPhrases is not { Count: > 0 })
+        {
+            return [];
+        }
+
+        var spans = new List<(int Start, int Length)>();
+        foreach (var phrase in allowedPhrases)
+        {
+            var pattern = $@"(?<![\w-]){Regex.Escape(phrase).Replace(@"\ ", @"\s+", StringComparison.Ordinal)}(?![\w-])";
+            foreach (Match match in Regex.Matches(segmentText, pattern, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1)))
+            {
+                spans.Add((match.Index, match.Length));
+            }
+        }
+
+        return spans;
     }
 
     /// <summary>
