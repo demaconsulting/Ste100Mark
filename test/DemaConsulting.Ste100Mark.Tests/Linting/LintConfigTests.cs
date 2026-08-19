@@ -67,7 +67,7 @@ public class LintConfigTests
             include: ["docs/**/*.md", "README.md"]
             exclude: ["**/generated/**"]
             default-mode: descriptive
-            overrides:
+            profiles:
               - glob: "docs/user_guide/procedures/**/*.md"
                 mode: procedure
             rules:
@@ -95,9 +95,9 @@ public class LintConfigTests
             Assert.Equal(["docs/**/*.md", "README.md"], config.Include);
             Assert.Equal(["**/generated/**"], config.Exclude);
             Assert.Equal(LintMode.Descriptive, config.DefaultMode);
-            Assert.Single(config.Overrides);
-            Assert.Equal("docs/user_guide/procedures/**/*.md", config.Overrides[0].Glob);
-            Assert.Equal(LintMode.Procedure, config.Overrides[0].Mode);
+            Assert.Single(config.Profiles);
+            Assert.Equal("docs/user_guide/procedures/**/*.md", config.Profiles[0].Glob);
+            Assert.Equal(LintMode.Procedure, config.Profiles[0].Mode);
             Assert.Equal(18, config.Rules.MaxWordsProcedure);
             Assert.Equal(22, config.Rules.MaxWordsDescriptive);
             Assert.True(config.Rules.AllowSemicolons);
@@ -138,16 +138,16 @@ public class LintConfigTests
     }
 
     /// <summary>
-    ///     Test that ResolveMode returns the default mode when no override matches.
+    ///     Test that ResolveMode returns the default mode when no profile matches.
     /// </summary>
     [Fact]
-    public void ResolveMode_NoMatchingOverride_ReturnsDefaultMode()
+    public void ResolveMode_NoMatchingProfile_ReturnsDefaultMode()
     {
-        // Arrange: a config with a default mode and one unrelated override
+        // Arrange: a config with a default mode and one unrelated profile
         var config = new LintConfig
         {
             DefaultMode = LintMode.Descriptive,
-            Overrides = [new ModeOverride { Glob = "procedures/**/*.md", Mode = LintMode.Procedure }]
+            Profiles = [new Profile { Glob = "procedures/**/*.md", Mode = LintMode.Procedure }]
         };
 
         // Act: execute the operation being tested
@@ -158,16 +158,16 @@ public class LintConfigTests
     }
 
     /// <summary>
-    ///     Test that ResolveMode returns the overridden mode for a file matching an override glob.
+    ///     Test that ResolveMode returns the overridden mode for a file matching a profile glob.
     /// </summary>
     [Fact]
-    public void ResolveMode_MatchingOverrideGlob_ReturnsOverriddenMode()
+    public void ResolveMode_MatchingProfileGlob_ReturnsOverriddenMode()
     {
-        // Arrange: a config with a procedure-mode override for a specific folder
+        // Arrange: a config with a procedure-mode profile for a specific folder
         var config = new LintConfig
         {
             DefaultMode = LintMode.Descriptive,
-            Overrides = [new ModeOverride { Glob = "procedures/**/*.md", Mode = LintMode.Procedure }]
+            Profiles = [new Profile { Glob = "procedures/**/*.md", Mode = LintMode.Procedure }]
         };
 
         // Act: execute the operation being tested
@@ -178,19 +178,20 @@ public class LintConfigTests
     }
 
     /// <summary>
-    ///     Test that ResolveMode uses the first matching override when multiple overrides are present.
+    ///     Test that ResolveMode uses the first matching profile that specifies a mode when
+    ///     multiple profiles are present.
     /// </summary>
     [Fact]
-    public void ResolveMode_MultipleOverrides_UsesFirstMatch()
+    public void ResolveMode_MultipleProfiles_UsesFirstMatch()
     {
-        // Arrange: two overrides that could both match; the first declared should win
+        // Arrange: two profiles that could both match; the first declared should win
         var config = new LintConfig
         {
             DefaultMode = LintMode.Descriptive,
-            Overrides =
+            Profiles =
             [
-                new ModeOverride { Glob = "procedures/**/*.md", Mode = LintMode.Procedure },
-                new ModeOverride { Glob = "**/*.md", Mode = LintMode.Descriptive }
+                new Profile { Glob = "procedures/**/*.md", Mode = LintMode.Procedure },
+                new Profile { Glob = "**/*.md", Mode = LintMode.Descriptive }
             ]
         };
 
@@ -199,5 +200,138 @@ public class LintConfigTests
 
         // Assert: verify expected behavior
         Assert.Equal(LintMode.Procedure, mode);
+    }
+
+    /// <summary>
+    ///     Test that ResolveMode skips a matching profile that carries only rule/dictionary deltas
+    ///     (a null Mode), falling through to the default mode or a later matching profile.
+    /// </summary>
+    [Fact]
+    public void ResolveMode_MatchingProfileWithNullMode_FallsThroughToDefault()
+    {
+        // Arrange: a requirements profile with no Mode set, only a Rules delta
+        var config = new LintConfig
+        {
+            DefaultMode = LintMode.Descriptive,
+            Profiles = [new Profile { Glob = "docs/requirements/**/*.md", Rules = new RulesOverride { PassiveVoice = Severity.Off } }]
+        };
+
+        // Act: execute the operation being tested
+        var mode = config.ResolveMode("docs/requirements/spec.md");
+
+        // Assert: the profile matches but has no Mode, so the default mode applies
+        Assert.Equal(LintMode.Descriptive, mode);
+    }
+
+    /// <summary>
+    ///     Test that ResolveRules returns the unmodified global rules when no profile matches.
+    /// </summary>
+    [Fact]
+    public void ResolveRules_NoMatchingProfile_ReturnsGlobalRules()
+    {
+        // Arrange: a config with global rules and one unrelated profile
+        var config = new LintConfig
+        {
+            Rules = new RulesConfig { PassiveVoice = Severity.Warn },
+            Profiles = [new Profile { Glob = "procedures/**/*.md", Rules = new RulesOverride { PassiveVoice = Severity.Off } }]
+        };
+
+        // Act: execute the operation being tested
+        var rules = config.ResolveRules("docs/overview.md");
+
+        // Assert: verify expected behavior
+        Assert.Equal(Severity.Warn, rules.PassiveVoice);
+    }
+
+    /// <summary>
+    ///     Test that ResolveRules layers a single matching profile's rule delta on top of the
+    ///     global rules, leaving unspecified knobs at their global value.
+    /// </summary>
+    [Fact]
+    public void ResolveRules_MatchingProfile_LayersDeltaOverGlobalRules()
+    {
+        // Arrange: a requirements profile that only disables the passive-voice heuristic
+        var config = new LintConfig
+        {
+            Rules = new RulesConfig { PassiveVoice = Severity.Warn, MaxWordsDescriptive = 25 },
+            Profiles = [new Profile { Glob = "docs/requirements/**/*.md", Rules = new RulesOverride { PassiveVoice = Severity.Off } }]
+        };
+
+        // Act: execute the operation being tested
+        var rules = config.ResolveRules("docs/requirements/spec.md");
+
+        // Assert: the specified knob is overridden; the unspecified knob keeps its global value
+        Assert.Equal(Severity.Off, rules.PassiveVoice);
+        Assert.Equal(25, rules.MaxWordsDescriptive);
+    }
+
+    /// <summary>
+    ///     Test that ResolveRules layers every matching profile's delta in declaration order, so a
+    ///     file matching two profiles picks up both, with the later profile winning on conflicts.
+    /// </summary>
+    [Fact]
+    public void ResolveRules_MultipleMatchingProfiles_LayersAllDeltasInOrder()
+    {
+        // Arrange: two profiles that both match "docs/requirements/spec.md"
+        var config = new LintConfig
+        {
+            Rules = new RulesConfig { PassiveVoice = Severity.Warn, MaxSentencesParagraph = 6 },
+            Profiles =
+            [
+                new Profile { Glob = "docs/requirements/**/*.md", Rules = new RulesOverride { PassiveVoice = Severity.Off } },
+                new Profile { Glob = "**/*.md", Rules = new RulesOverride { MaxSentencesParagraph = 10, PassiveVoice = Severity.Error } }
+            ]
+        };
+
+        // Act: execute the operation being tested
+        var rules = config.ResolveRules("docs/requirements/spec.md");
+
+        // Assert: both deltas apply; the later profile's PassiveVoice value wins
+        Assert.Equal(Severity.Error, rules.PassiveVoice);
+        Assert.Equal(10, rules.MaxSentencesParagraph);
+    }
+
+    /// <summary>
+    ///     Test that ResolveAllowedTerms returns only the global allow/ignore terms when no
+    ///     profile matches.
+    /// </summary>
+    [Fact]
+    public void ResolveAllowedTerms_NoMatchingProfile_ReturnsGlobalTermsOnly()
+    {
+        // Arrange: a global allow list plus one unrelated profile
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig { Allow = ["ste100mark"] },
+            Profiles = [new Profile { Glob = "docs/requirements/**/*.md", Dictionary = new DictionaryOverride { Allow = ["shall"] } }]
+        };
+
+        // Act: execute the operation being tested
+        var allowed = config.ResolveAllowedTerms("docs/overview.md");
+
+        // Assert: verify expected behavior
+        Assert.Equal(["ste100mark"], allowed);
+    }
+
+    /// <summary>
+    ///     Test that ResolveAllowedTerms unions a matching profile's dictionary allowance with the
+    ///     global allow list, case-insensitively - the "shall" for requirements documents scenario.
+    /// </summary>
+    [Fact]
+    public void ResolveAllowedTerms_MatchingProfile_UnionsWithGlobalAllowList()
+    {
+        // Arrange: a global allow list plus a requirements profile allowing "shall"
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig { Allow = ["ste100mark"] },
+            Profiles = [new Profile { Glob = "docs/requirements/**/*.md", Dictionary = new DictionaryOverride { Allow = ["shall"] } }]
+        };
+
+        // Act: execute the operation being tested
+        var allowed = config.ResolveAllowedTerms("docs/requirements/spec.md");
+
+        // Assert: both the global and profile-specific terms are allowed
+        Assert.Contains("ste100mark", allowed);
+        Assert.Contains("Shall", allowed, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(2, allowed.Count);
     }
 }

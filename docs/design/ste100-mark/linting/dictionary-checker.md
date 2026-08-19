@@ -20,14 +20,22 @@ before matching so multi-word phrases are preferred over shorter overlapping ter
 **Pattern shape**: each term is converted into a whole-word/whole-phrase regex using
 negative lookbehind/lookahead for `\w` and `-`, with spaces widened to `\s+`.
 
-**Sense selection**: a term with exactly one sense is always reported using that sense - no
-ambiguity is possible. A term with multiple senses is resolved by calling
-`PartOfSpeechGuesser.Guess` with the segment text and match position: a confident `Noun` or
+**Sense selection**: every match (including single-sense terms) is resolved by calling
+`PartOfSpeechGuesser.Guess` with the segment text and match position. A confident `Noun` or
 `Verb` guess narrows the candidate senses to those matching that role (plus any `Any`-pos
-sense); an inconclusive guess, or a guess that matches no sense in the schema, keeps every
-sense as a candidate. Exactly one surviving candidate is reported confidently, with the
-sense's `Pos` named in the message (`Any` renders as "general"); more than one surviving
-candidate is reported as one ambiguous diagnostic listing every candidate sense.
+sense); when the guess is confident but matches no sense in the schema, the term is not being
+used in a role ASD-STE100 restricts here, and no diagnostic is reported at all. An
+inconclusive guess keeps every sense as a candidate. Exactly one surviving candidate is
+reported confidently (labeled with the sense's `Pos` in the message only when the entry has
+more than one sense, so a single-sense entry's message stays unqualified; `Any` renders as
+"general"); more than one surviving candidate is reported as one ambiguous diagnostic listing
+every candidate sense.
+
+**Per-file dictionary allowance**: an optional `extraAllowedTerms` collection (typically
+`LintConfig.ResolveAllowedTerms` for the file being checked) removes matching entries from
+consideration before matching runs, letting a `Profile`'s `dictionary.allow`/`dictionary.ignore`
+delta permit a term (for example "shall" for a requirements-documents profile) without
+altering the merged `LintDictionary` used for every other file.
 
 **Inline code exclusion**: matches falling wholly inside an inline code span (per
 `MarkdownProseExtractor.FindInlineCodeSpans`/`OverlapsInlineCodeSpan`) are ignored before a
@@ -41,14 +49,20 @@ code span in the same segment is still flagged normally.
 
 - *Parameters*: `string file` - file path for diagnostics; `IReadOnlyList<ProseSegment> segments`
   - prose segments; `LintDictionary dictionary` - merged dictionary; `LintMode mode` - the
-  file's resolved writing mode, forwarded to `PartOfSpeechGuesser.Guess`.
-- *Returns*: `IReadOnlyList<Diagnostic>` - one diagnostic per matched occurrence.
+  file's resolved writing mode, forwarded to `PartOfSpeechGuesser.Guess`;
+  `IReadOnlyCollection<string>? extraAllowedTerms` - optional additional per-file allowed
+  terms (typically `LintConfig.ResolveAllowedTerms`), defaulting to `null` (no per-file
+  allowance).
+- *Returns*: `IReadOnlyList<Diagnostic>` - one diagnostic per matched occurrence, excluding
+  matches suppressed by a confident-but-non-matching POS guess or by `extraAllowedTerms`.
 - *Preconditions*: `file`, `segments`, and `dictionary` are non-null.
 - *Postconditions*: Matches are returned in segment order, excluding any match that falls
   wholly inside an inline code span; every diagnostic uses severity `Error`, rule code
   `STE100-DICT`, and a suggestion string when alternatives are present.
 
-**BuildDiagnostic**: Selects the applicable sense(s) for one match and builds its diagnostic.
+**BuildDiagnostic**: Selects the applicable sense(s) for one match and builds its diagnostic,
+or returns `null` when a confident POS guess rules out every sense (the term is not
+disallowed in the grammatical role it is being used in here).
 
 **ConfidentDiagnostic**: Builds a diagnostic for a single resolved sense (single-sense term, or
 the sole surviving candidate of a multi-sense term), optionally labeling the sense's `Pos` in
@@ -86,7 +100,8 @@ one-second timeout and no local exception handling.
 - **PartOfSpeechGuesser** - selects the applicable sense(s) of a multi-sense entry.
 - **MarkdownProseExtractor** - supplies segment text and line numbers, and the
   `FindInlineCodeSpans`/`OverlapsInlineCodeSpan` helpers used to exclude inline-code matches.
-- **LintConfig** - supplies the `LintMode` forwarded to `PartOfSpeechGuesser`.
+- **LintConfig** - supplies the `LintMode` forwarded to `PartOfSpeechGuesser`, and the
+  per-file `extraAllowedTerms` via `ResolveAllowedTerms`.
 - **Diagnostic** and **Severity** - encode the reported finding.
 - **.NET BCL** - regex construction and matching.
 

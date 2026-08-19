@@ -106,24 +106,133 @@ internal sealed class RulesConfig
     ///     best-effort regex heuristic that may produce false positives and negatives.
     /// </summary>
     public Severity IngForm { get; set; } = Severity.Warn;
+
+    /// <summary>
+    ///     Returns a copy of this configuration with every non-null field of
+    ///     <paramref name="overrideValues"/> applied on top, used to layer a matching
+    ///     <see cref="Profile"/>'s <c>rules</c> deltas over the global defaults. Fields left
+    ///     <see langword="null"/> in <paramref name="overrideValues"/> keep this instance's value.
+    /// </summary>
+    /// <param name="overrideValues">Partial rule overrides from a matching profile, or <see langword="null"/>.</param>
+    /// <returns>A new <see cref="RulesConfig"/> with the overrides layered on top of this instance.</returns>
+    public RulesConfig WithOverrides(RulesOverride? overrideValues)
+    {
+        if (overrideValues is null)
+        {
+            return this;
+        }
+
+        return new RulesConfig
+        {
+            MaxWordsProcedure = overrideValues.MaxWordsProcedure ?? MaxWordsProcedure,
+            MaxWordsDescriptive = overrideValues.MaxWordsDescriptive ?? MaxWordsDescriptive,
+            AllowSemicolons = overrideValues.AllowSemicolons ?? AllowSemicolons,
+            AllowContractions = overrideValues.AllowContractions ?? AllowContractions,
+            MaxSentencesParagraph = overrideValues.MaxSentencesParagraph ?? MaxSentencesParagraph,
+            PassiveVoice = overrideValues.PassiveVoice ?? PassiveVoice,
+            ComplexVerb = overrideValues.ComplexVerb ?? ComplexVerb,
+            IngForm = overrideValues.IngForm ?? IngForm
+        };
+    }
 }
 
 /// <summary>
-///     Maps a glob pattern to the <see cref="LintMode"/> that files matching it should be checked
-///     against, overriding <see cref="LintConfig.DefaultMode"/>.
+///     Partial rule tuning deltas bound from a <see cref="Profile"/>'s <c>rules:</c> section.
+///     Every property is nullable so that a profile only needs to state the knobs it changes;
+///     unset (<see langword="null"/>) properties fall through to the global
+///     <see cref="LintConfig.Rules"/> value via <see cref="RulesConfig.WithOverrides"/>.
 /// </summary>
-internal sealed class ModeOverride
+internal sealed class RulesOverride
+{
+    /// <summary>Overrides <see cref="RulesConfig.MaxWordsProcedure"/> for matching files, when set.</summary>
+    public int? MaxWordsProcedure { get; set; }
+
+    /// <summary>Overrides <see cref="RulesConfig.MaxWordsDescriptive"/> for matching files, when set.</summary>
+    public int? MaxWordsDescriptive { get; set; }
+
+    /// <summary>Overrides <see cref="RulesConfig.AllowSemicolons"/> for matching files, when set.</summary>
+    public bool? AllowSemicolons { get; set; }
+
+    /// <summary>Overrides <see cref="RulesConfig.AllowContractions"/> for matching files, when set.</summary>
+    public bool? AllowContractions { get; set; }
+
+    /// <summary>Overrides <see cref="RulesConfig.MaxSentencesParagraph"/> for matching files, when set.</summary>
+    public int? MaxSentencesParagraph { get; set; }
+
+    /// <summary>Overrides <see cref="RulesConfig.PassiveVoice"/> for matching files, when set.</summary>
+    public Severity? PassiveVoice { get; set; }
+
+    /// <summary>Overrides <see cref="RulesConfig.ComplexVerb"/> for matching files, when set.</summary>
+    public Severity? ComplexVerb { get; set; }
+
+    /// <summary>Overrides <see cref="RulesConfig.IngForm"/> for matching files, when set.</summary>
+    public Severity? IngForm { get; set; }
+}
+
+/// <summary>
+///     Partial dictionary deltas bound from a <see cref="Profile"/>'s <c>dictionary:</c> section.
+///     Unlike the top-level <see cref="DictionaryConfig"/>, a profile cannot supply a
+///     <c>file</c>/<c>disallow</c>/<c>use-embedded</c> source (those remain global so that the
+///     merged term-to-sense mapping is identical everywhere); it can only layer additional
+///     <see cref="Allow"/>/<see cref="Ignore"/> terms on top of the global dictionary for files
+///     it matches, for example to permit "shall" in requirements documents.
+/// </summary>
+internal sealed class DictionaryOverride
+{
+    /// <summary>
+    ///     Additional terms to allow (not report) for files matching this profile, unioned with
+    ///     the global <see cref="DictionaryConfig.Allow"/> list.
+    /// </summary>
+    public List<string>? Allow { get; set; }
+
+    /// <summary>
+    ///     Additional terms to ignore for files matching this profile, unioned with the global
+    ///     <see cref="DictionaryConfig.Ignore"/> list. Applied identically to <see cref="Allow"/>.
+    /// </summary>
+    public List<string>? Ignore { get; set; }
+}
+
+/// <summary>
+///     Maps a glob pattern to a <see cref="LintMode"/> and/or a set of rule/dictionary deltas that
+///     files matching it should be checked against, overriding <see cref="LintConfig.DefaultMode"/>,
+///     <see cref="LintConfig.Rules"/>, and <see cref="LintConfig.Dictionary"/> for those files.
+/// </summary>
+/// <remarks>
+///     A profile lets a project vary linting behavior by document type or location without
+///     duplicating the whole configuration - for example, procedural documents needing the
+///     shorter Rule 4.1 sentence limit, or a requirements folder that legitimately uses the word
+///     "shall" and would otherwise be flagged by a project's dictionary. <see cref="Mode"/> is
+///     resolved by first-declared-match-wins (see <see cref="LintConfig.ResolveMode"/>), while
+///     <see cref="Rules"/> and <see cref="Dictionary"/> deltas from every matching profile are
+///     layered together (see <see cref="LintConfig.ResolveRules"/> and
+///     <see cref="LintConfig.ResolveAllowedTerms"/>), so a file can pick up a mode from one
+///     profile and a dictionary allowance from another.
+/// </remarks>
+internal sealed class Profile
 {
     /// <summary>
     ///     Glob pattern (relative to the configuration file's directory) identifying the files this
-    ///     override applies to, for example <c>docs/user_guide/procedures/**/*.md</c>.
+    ///     profile applies to, for example <c>docs/user_guide/procedures/**/*.md</c>.
     /// </summary>
     public string Glob { get; set; } = string.Empty;
 
     /// <summary>
-    ///     The mode to apply to files matching <see cref="Glob"/>.
+    ///     The mode to apply to files matching <see cref="Glob"/>, or <see langword="null"/> to
+    ///     leave the mode resolution to the default mode or another matching profile.
     /// </summary>
-    public LintMode Mode { get; set; }
+    public LintMode? Mode { get; set; }
+
+    /// <summary>
+    ///     Partial rule tuning deltas applied on top of <see cref="LintConfig.Rules"/> for files
+    ///     matching <see cref="Glob"/>, or <see langword="null"/> for no rule changes.
+    /// </summary>
+    public RulesOverride? Rules { get; set; }
+
+    /// <summary>
+    ///     Additional dictionary allow/ignore terms applied for files matching <see cref="Glob"/>,
+    ///     or <see langword="null"/> for no dictionary changes.
+    /// </summary>
+    public DictionaryOverride? Dictionary { get; set; }
 }
 
 /// <summary>
@@ -192,15 +301,19 @@ internal sealed class LintConfig
     public List<string> Exclude { get; set; } = [];
 
     /// <summary>
-    ///     Writing mode applied to files that do not match any pattern in <see cref="Overrides"/>.
-    ///     Default <see cref="LintMode.Descriptive"/>.
+    ///     Writing mode applied to files that do not match a <see cref="Profile.Mode"/> in
+    ///     <see cref="Profiles"/>. Default <see cref="LintMode.Descriptive"/>.
     /// </summary>
     public LintMode DefaultMode { get; set; } = LintMode.Descriptive;
 
     /// <summary>
-    ///     Glob-to-mode overrides evaluated in declaration order; the first matching pattern wins.
+    ///     Glob-scoped profiles evaluated in declaration order. Each profile may set a
+    ///     <see cref="Profile.Mode"/> (first matching profile with a non-null mode wins) and/or
+    ///     <see cref="Profile.Rules"/>/<see cref="Profile.Dictionary"/> deltas (every matching
+    ///     profile's deltas are layered together; see <see cref="ResolveMode"/>,
+    ///     <see cref="ResolveRules"/>, and <see cref="ResolveAllowedTerms"/>).
     /// </summary>
-    public List<ModeOverride> Overrides { get; set; } = [];
+    public List<Profile> Profiles { get; set; } = [];
 
     /// <summary>
     ///     Mechanical and advisory rule tuning. Defaults to <see cref="RulesConfig"/>'s own defaults
@@ -268,33 +381,133 @@ internal sealed class LintConfig
     }
 
     /// <summary>
-    ///     Resolves the <see cref="LintMode"/> that applies to a specific file, per the glob-mapping
-    ///     rules in <see cref="Overrides"/>.
+    ///     Resolves the <see cref="LintMode"/> that applies to a specific file: the first
+    ///     <see cref="Profiles"/> entry (in declaration order) that both matches the file's glob
+    ///     and specifies a non-null <see cref="Profile.Mode"/> wins; profiles that only carry
+    ///     <see cref="Profile.Rules"/>/<see cref="Profile.Dictionary"/> deltas are skipped for mode
+    ///     resolution and considered separately by <see cref="ResolveRules"/>/
+    ///     <see cref="ResolveAllowedTerms"/>.
     /// </summary>
-    /// <remarks>
-    ///     Only <see cref="Overrides"/> glob mapping is used for v1 mode resolution — there is no
-    ///     per-file Markdown front-matter override, per the feature's explicit scope decision.
-    /// </remarks>
     /// <param name="relativeFilePath">
-    ///     File path, relative to the same base directory the override globs are written against
+    ///     File path, relative to the same base directory the profile globs are written against
     ///     (typically the current working directory), using forward slashes.
     /// </param>
     /// <returns>
-    ///     The <see cref="LintMode"/> of the first matching entry in <see cref="Overrides"/>, or
-    ///     <see cref="DefaultMode"/> when no override matches.
+    ///     The <see cref="LintMode"/> of the first matching profile that specifies one, or
+    ///     <see cref="DefaultMode"/> when no matching profile specifies a mode.
     /// </returns>
     public LintMode ResolveMode(string relativeFilePath)
     {
-        foreach (var over in Overrides)
+        foreach (var profile in Profiles)
         {
-            var matcher = new Matcher();
-            matcher.AddInclude(over.Glob);
-            if (matcher.Match(relativeFilePath).HasMatches)
+            if (profile.Mode is not { } mode || !MatchesGlob(profile.Glob, relativeFilePath))
             {
-                return over.Mode;
+                continue;
             }
+
+            return mode;
         }
 
         return DefaultMode;
     }
+
+    /// <summary>
+    ///     Resolves the effective <see cref="RulesConfig"/> for a specific file by layering every
+    ///     matching <see cref="Profiles"/> entry's <see cref="Profile.Rules"/> delta, in
+    ///     declaration order, on top of the global <see cref="Rules"/>.
+    /// </summary>
+    /// <remarks>
+    ///     Unlike <see cref="ResolveMode"/> (first match wins), every matching profile contributes:
+    ///     a file can match a "procedures" profile that sets <see cref="RulesOverride.MaxWordsProcedure"/>
+    ///     and, separately, a "requirements" profile that sets
+    ///     <see cref="RulesOverride.PassiveVoice"/>, and both deltas apply together. Later matching
+    ///     profiles win over earlier ones for any single knob both set.
+    /// </remarks>
+    /// <param name="relativeFilePath">
+    ///     File path, relative to the same base directory the profile globs are written against.
+    /// </param>
+    /// <returns>The effective rules for this file.</returns>
+    public RulesConfig ResolveRules(string relativeFilePath)
+    {
+        var resolved = Rules;
+        foreach (var profile in Profiles)
+        {
+            if (profile.Rules is null || !MatchesGlob(profile.Glob, relativeFilePath))
+            {
+                continue;
+            }
+
+            resolved = resolved.WithOverrides(profile.Rules);
+        }
+
+        return resolved;
+    }
+
+    /// <summary>
+    ///     Resolves the additional dictionary allow/ignore terms that apply to a specific file by
+    ///     unioning every matching <see cref="Profiles"/> entry's <see cref="Profile.Dictionary"/>
+    ///     delta with the global <see cref="DictionaryConfig.Allow"/>/<see cref="DictionaryConfig.Ignore"/>
+    ///     lists.
+    /// </summary>
+    /// <param name="relativeFilePath">
+    ///     File path, relative to the same base directory the profile globs are written against.
+    /// </param>
+    /// <returns>
+    ///     Every term to treat as allowed for this file: the global <see cref="Dictionary"/>'s
+    ///     <see cref="DictionaryConfig.Allow"/>/<see cref="DictionaryConfig.Ignore"/> entries plus
+    ///     the <see cref="DictionaryOverride.Allow"/>/<see cref="DictionaryOverride.Ignore"/>
+    ///     entries of every matching profile, case-insensitively de-duplicated.
+    /// </returns>
+    public IReadOnlyCollection<string> ResolveAllowedTerms(string relativeFilePath)
+    {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        AddTerms(allowed, Dictionary?.Allow);
+        AddTerms(allowed, Dictionary?.Ignore);
+
+        foreach (var profile in Profiles)
+        {
+            if (profile.Dictionary is null || !MatchesGlob(profile.Glob, relativeFilePath))
+            {
+                continue;
+            }
+
+            AddTerms(allowed, profile.Dictionary.Allow);
+            AddTerms(allowed, profile.Dictionary.Ignore);
+        }
+
+        return allowed;
+    }
+
+    /// <summary>
+    ///     Adds every term in <paramref name="terms"/> to <paramref name="target"/>, if any.
+    /// </summary>
+    /// <param name="target">Set to add to.</param>
+    /// <param name="terms">Terms to add, or <see langword="null"/> for no-op.</param>
+    private static void AddTerms(HashSet<string> target, IEnumerable<string>? terms)
+    {
+        if (terms is null)
+        {
+            return;
+        }
+
+        foreach (var term in terms)
+        {
+            target.Add(term);
+        }
+    }
+
+    /// <summary>
+    ///     Tests whether <paramref name="relativeFilePath"/> matches <paramref name="glob"/>.
+    /// </summary>
+    /// <param name="glob">Glob pattern to match against.</param>
+    /// <param name="relativeFilePath">File path to test.</param>
+    /// <returns><see langword="true"/> if the glob matches.</returns>
+    private static bool MatchesGlob(string glob, string relativeFilePath)
+    {
+        var matcher = new Matcher();
+        matcher.AddInclude(glob);
+        return matcher.Match(relativeFilePath).HasMatches;
+    }
 }
+

@@ -123,9 +123,14 @@ include:
 exclude:
   - docs/**/generated/**
 default-mode: descriptive
-overrides:
+profiles:
   - glob: docs/user_guide/procedures/**/*.md
     mode: procedure
+  - glob: docs/requirements/**/*.md
+    dictionary:
+      allow: [shall]
+    rules:
+      passive-voice: off
 rules:
   max-words-procedure: 20
   max-words-descriptive: 25
@@ -153,10 +158,33 @@ Configuration fields:
 - `include` - file-selection globs used when no positional globs are supplied
 - `exclude` - exclusions applied to `include`
 - `default-mode` - `descriptive` or `procedure`
-- `overrides` - first-match-wins glob-to-mode mappings
-- `rules` - rule tuning for sentence limits, semicolons, contractions, paragraph cap, and
-  passive voice
+- `profiles` - glob-scoped mode/rules/dictionary tuning; see "Profiles" below
+- `rules` - global rule tuning for sentence limits, semicolons, contractions, paragraph
+  cap, and passive voice
 - `dictionary` - project dictionary file plus inline allow/disallow/ignore tuning
+
+## Profiles
+
+A repository often mixes document types that need different linting behavior: procedural
+step-by-step guides need the shorter Rule 4.1 sentence limit, while a requirements folder
+legitimately uses the word "shall" in every entry and would otherwise trip a project's
+dictionary. Each entry in `profiles` may set:
+
+- `glob` (required) - the pattern (relative to the configuration file's directory)
+  identifying the files the profile applies to.
+- `mode` (optional) - sets the writing mode for matching files. When a file matches more
+  than one profile, the **first** declared profile that specifies a `mode` wins; a
+  profile with no `mode` is skipped for mode resolution and falls through to
+  `default-mode` or a later matching profile.
+- `rules` (optional) - a partial override of the top-level `rules` section: only the
+  knobs you list change, everything else keeps its global value. When a file matches
+  multiple profiles that set `rules`, every matching profile's delta applies in
+  declaration order, so a later profile wins on any single knob both profiles set.
+- `dictionary.allow` / `dictionary.ignore` (optional) - additional terms allowed for
+  matching files only, unioned with the top-level `dictionary.allow`/`dictionary.ignore`
+  lists. A profile cannot supply its own `file`/`disallow`/`use-embedded` dictionary
+  source - the merged term-to-sense dictionary is always the same project-wide; profiles
+  only add per-file allowances on top of it.
 
 ## Project Dictionary Files
 

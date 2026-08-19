@@ -118,10 +118,12 @@ same segment. This scenario is tested by `Extract_InlineCodeSpan_KeptVerbatimInP
 **Template-Linting-DictionaryPos**: Part-of-speech sense selection is verified for every
 heuristic signal in isolation (infinitive marker, modal auxiliary, progressive auxiliary,
 verb-inflection suffix, imperative sentence start in both Procedure and Descriptive mode,
-article, possessive, quantifier/demonstrative, preposition, plural-noun suffix, and
-noun-phrase continuation), plus the conflicting-signal and no-signal ambiguous fallbacks, and
-end-to-end through `DictionaryChecker` for single-sense terms, confident noun/verb contexts,
-an ambiguous context, and a single-sense `pos: any` connector phrase. This scenario is tested
+article, possessive, quantifier/demonstrative, preposition, plural-noun suffix, noun-phrase
+continuation, a determiner governing through a participle/adjective/proper-noun modifier
+bounded by a maximum scan distance, and a match followed by a finite verb form), plus the
+conflicting-signal and no-signal ambiguous fallbacks, and end-to-end through
+`DictionaryChecker` for single-sense terms, confident noun/verb contexts, an ambiguous
+context, and a single-sense `pos: any` connector phrase. This scenario is tested
 by `Guess_PrecededByTo_ReturnsVerb`, `Guess_PrecededByModal_ReturnsVerb`,
 `Guess_PrecededByBeAuxiliaryWithIngSuffix_ReturnsVerb`, `Guess_InflectionSuffixAlone_ReturnsVerb`,
 `Guess_ImperativeSentenceStartInProcedureMode_ReturnsVerb`,
@@ -129,26 +131,45 @@ by `Guess_PrecededByTo_ReturnsVerb`, `Guess_PrecededByModal_ReturnsVerb`,
 `Guess_PrecededByPossessive_ReturnsNoun`, `Guess_PrecededByQuantifier_ReturnsNoun`,
 `Guess_PrecededByPreposition_ReturnsNoun`, `Guess_PluralSuffix_ReturnsNoun`,
 `Guess_FollowedByOf_ReturnsNoun`, `Guess_ConflictingSignals_ReturnsNull`,
-`Guess_NoSignals_ReturnsNull`, `Evaluate_SingleSenseTerm_AlwaysReportedRegardlessOfContext`,
+`Guess_NoSignals_ReturnsNull`, `Guess_ArticleThenParticipleModifier_ReturnsNoun`,
+`Guess_ArticleThenProperNounModifier_ReturnsNoun`,
+`Guess_ArticleThenAdjectiveModifier_ReturnsNoun`,
+`Guess_DeterminerBeyondMaxScanDistance_DoesNotGovern`,
+`Guess_FollowedByFiniteVerb_ReturnsNoun`,
+`Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel`,
+`Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged`,
 `Evaluate_MultiSenseTerm_NounContext_ReportsNounSense`,
 `Evaluate_MultiSenseTerm_VerbContext_ReportsVerbSense`,
-`Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous`, and
+`Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous`,
+`Evaluate_MultiSenseTerm_ConfidentGuessMatchesNoSense_NotFlagged`, and
 `Evaluate_AnyPosSingleSenseTerm_AlwaysReported`. Natural "or"/Oxford-comma phrasing of a
 sense's alternatives within the diagnostic message, for both the confident and ambiguous
 paths, is additionally verified by `Evaluate_ConfidentSenseSingleAlternative_NoOrInMessage`,
 `Evaluate_ConfidentSenseTwoAlternatives_JoinsWithOrNoOxfordComma`,
 `Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr`, and
-`Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin`.
+`Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin`. Per-file
+dictionary allowances supplied via a matching `Profile`'s `dictionary.allow`/
+`dictionary.ignore` are verified by `Evaluate_TermInExtraAllowedTerms_NotFlagged`,
+`Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic`, and
+`Evaluate_ExtraAllowedTermsUnrelatedTerm_StillFlagsOtherDisallowedTerm`.
 
-**Template-Linting-Configuration**: YAML configuration loading and override resolution are
-verified for defaults, malformed files, missing files, complete schemas, and first-match-wins
-mode overrides. This scenario is tested by `Load_NullPath_ReturnsDefaultConfiguration`,
+**Template-Linting-Configuration**: YAML configuration loading and resolution are verified for
+defaults, malformed files, missing files, complete schemas, first-match-wins mode profiles,
+and layered rules/dictionary profile deltas. This scenario is tested by
+`Load_NullPath_ReturnsDefaultConfiguration`,
 `Load_NonExistentPath_ThrowsInvalidOperationException`,
 `Load_FullConfigurationFile_ParsesAllSections`, `Load_MalformedYaml_ThrowsInvalidOperationException`,
-`ResolveMode_NoMatchingOverride_ReturnsDefaultMode`,
-`ResolveMode_MatchingOverrideGlob_ReturnsOverriddenMode`,
-`ResolveMode_MultipleOverrides_UsesFirstMatch`, and
-`Run_ProcedureModeOverride_AppliesStricterWordLimit`.
+`ResolveMode_NoMatchingProfile_ReturnsDefaultMode`,
+`ResolveMode_MatchingProfileGlob_ReturnsOverriddenMode`,
+`ResolveMode_MultipleProfiles_UsesFirstMatch`,
+`ResolveMode_MatchingProfileWithNullMode_FallsThroughToDefault`,
+`ResolveRules_NoMatchingProfile_ReturnsGlobalRules`,
+`ResolveRules_MatchingProfile_LayersDeltaOverGlobalRules`,
+`ResolveRules_MultipleMatchingProfiles_LayersAllDeltasInOrder`,
+`ResolveAllowedTerms_NoMatchingProfile_ReturnsGlobalTermsOnly`,
+`ResolveAllowedTerms_MatchingProfile_UnionsWithGlobalAllowList`,
+`Run_ProcedureModeOverride_AppliesStricterWordLimit`, and
+`Run_ProfileDictionaryAllowList_PermitsTermOnlyWithinProfileGlob`.
 
 **Template-Linting-CliIntegration**: The lint-specific CLI surface is verified for positional
 globs, `--config`, `--format`, `--strict`, and default dispatch through `Program.Run`. This

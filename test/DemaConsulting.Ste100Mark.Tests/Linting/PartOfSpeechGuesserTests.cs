@@ -270,4 +270,96 @@ public class PartOfSpeechGuesserTests
         // Assert: verify expected behavior
         Assert.Null(result);
     }
+
+    /// <summary>
+    ///     Test that a determiner still governs the match as a noun when a participle modifier
+    ///     ("metering") sits between the determiner and the match.
+    /// </summary>
+    [Fact]
+    public void Guess_ArticleThenParticipleModifier_ReturnsNoun()
+    {
+        // Arrange: "The metering impact moves" - article governs through the participle modifier
+        const string text = "The metering impact moves to the tower.";
+        var index = text.IndexOf("impact", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "impact".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a determiner still governs the match as a noun when a capitalized
+    ///     proper-noun modifier (a product name) sits between the determiner and the match.
+    /// </summary>
+    [Fact]
+    public void Guess_ArticleThenProperNounModifier_ReturnsNoun()
+    {
+        // Arrange: "The Vantage impact moves" - article governs through the proper-noun modifier
+        const string text = "The Vantage impact moves to the tower.";
+        var index = text.IndexOf("impact", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "impact".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a determiner still governs the match as a noun when an adjective modifier
+    ///     ("custom") sits between the determiner and the match.
+    /// </summary>
+    [Fact]
+    public void Guess_ArticleThenAdjectiveModifier_ReturnsNoun()
+    {
+        // Arrange: "Install a custom impact" - article governs through the adjective modifier
+        const string text = "Install a custom impact in the holder.";
+        var index = text.IndexOf("impact", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "impact".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that the modifier-scan-back distance is bounded: an unrelated determiner earlier
+    ///     in the sentence, separated by more than the maximum modifier scan distance, does not
+    ///     falsely resolve the match as a noun.
+    /// </summary>
+    [Fact]
+    public void Guess_DeterminerBeyondMaxScanDistance_DoesNotGovern()
+    {
+        // Arrange: five unrelated words separate "the" from "impact", exceeding the scan bound
+        const string text = "Reports show the metering custom coated impact daily.";
+        var index = text.IndexOf("impact", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "impact".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    ///     Test that a term followed by a finite verb form ("moves") is guessed as a noun,
+    ///     because the match is the subject of the clause.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByFiniteVerb_ReturnsNoun()
+    {
+        // Arrange: "impact moves" - the match is the subject, preceded by a neutral word so only
+        // the following-finite-verb signal is exercised.
+        const string text = "Consider impact moves quickly.";
+        var index = text.IndexOf("impact", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "impact".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
 }

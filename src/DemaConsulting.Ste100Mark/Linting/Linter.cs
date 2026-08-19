@@ -93,10 +93,12 @@ internal static class Linter
             var relativePath = Path.GetRelativePath(Directory.GetCurrentDirectory(), file).Replace('\\', '/');
             var content = File.ReadAllText(file);
             var mode = config.ResolveMode(relativePath);
+            var rules = config.ResolveRules(relativePath);
+            var allowedTerms = config.ResolveAllowedTerms(relativePath);
             var segments = MarkdownProseExtractor.Extract(content);
 
-            diagnostics.AddRange(StructuralRules.Evaluate(relativePath, segments, mode, config.Rules));
-            diagnostics.AddRange(DictionaryChecker.Evaluate(relativePath, segments, dictionary, mode));
+            diagnostics.AddRange(StructuralRules.Evaluate(relativePath, segments, mode, rules));
+            diagnostics.AddRange(DictionaryChecker.Evaluate(relativePath, segments, dictionary, mode, allowedTerms));
         }
 
         DiagnosticReporter.Report(context, diagnostics, files.Count);

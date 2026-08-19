@@ -83,9 +83,14 @@ include:
 exclude:
   - docs/**/generated/**
 default-mode: descriptive
-overrides:
+profiles:
   - glob: docs/user_guide/procedures/**/*.md
     mode: procedure
+  - glob: docs/requirements/**/*.md
+    dictionary:
+      allow: [shall]
+    rules:
+      passive-voice: off
 rules:
   max-words-procedure: 20
   max-words-descriptive: 25
@@ -113,6 +118,44 @@ Mechanical rules reported by the linter are `STE100-4.1` (sentence length), `STE
 Advisory heuristics are `STE100-ADV-PARA` (paragraph length), `STE100-ADV-PASSIVE`
 (passive voice), `STE100-ADV-COMPLEXVERB` (perfect/modal-perfect tense), and
 `STE100-ADV-INGFORM` (`-ing` form).
+
+### Profiles
+
+A repository often has more than one kind of Markdown document, and each kind may need
+different linting behavior. For example, procedural step-by-step guides need the shorter
+Rule 4.1 sentence limit, while a requirements folder legitimately uses the word "shall" in
+every entry and would otherwise trip a project's dictionary. The `profiles` list lets a
+project vary the writing `mode`, rule tuning, and dictionary allowances by glob, without
+duplicating the whole configuration file per document type:
+
+```yaml
+profiles:
+  - glob: docs/user_guide/procedures/**/*.md
+    mode: procedure
+  - glob: docs/requirements/**/*.md
+    dictionary:
+      allow: [shall]
+    rules:
+      passive-voice: off
+```
+
+Each profile entry supports:
+
+- `glob` (required): the pattern (relative to the configuration file's directory)
+  identifying the files the profile applies to.
+- `mode` (optional): sets the writing mode (`procedure` or `descriptive`) for matching
+  files. When more than one profile matches a file, the **first** declared profile that
+  specifies a `mode` wins; profiles without a `mode` are skipped for this resolution step
+  and fall through to `default-mode` or a later matching profile.
+- `rules` (optional): a partial override of the top-level `rules` section (only the knobs
+  you list are changed; everything else keeps its global value). When a file matches
+  **multiple** profiles that set `rules`, every matching profile's delta is applied in
+  declaration order, so later profiles win on any single knob both profiles set.
+- `dictionary.allow` / `dictionary.ignore` (optional): additional terms to allow for
+  matching files only, unioned with the top-level `dictionary.allow`/`dictionary.ignore`
+  lists (not a full replacement). A profile cannot supply its own `file`/`disallow`/
+  `use-embedded` dictionary source - the merged term-to-sense dictionary is always the
+  same project-wide; profiles only add per-file allowances on top of it.
 
 > **Important dictionary notice:** The embedded default dictionary is a small,
 > originally-authored, illustrative and representative example. It is **not** the official

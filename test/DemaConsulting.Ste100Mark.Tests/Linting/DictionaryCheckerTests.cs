@@ -164,26 +164,141 @@ public class DictionaryCheckerTests
     }
 
     /// <summary>
-    ///     Test that a single-sense term is always reported using its one sense, even when it
-    ///     appears in a context whose signals would otherwise suggest the opposite grammatical
-    ///     role - proving the "one sense means no ambiguity is possible" short-circuit.
+    ///     Test that a term is not flagged when it appears in the per-file
+    ///     <c>extraAllowedTerms</c> collection, even though the merged dictionary itself still
+    ///     disallows it - the mechanism <see cref="LintConfig.ResolveAllowedTerms"/> uses to permit
+    ///     "shall" for a requirements-documents profile without allow-listing it project-wide.
     /// </summary>
     [Fact]
-    public void Evaluate_SingleSenseTerm_AlwaysReportedRegardlessOfContext()
+    public void Evaluate_TermInExtraAllowedTerms_NotFlagged()
     {
-        // Arrange: "utilize" is a single-sense, verb-only embedded entry, placed here after "the"
-        // (a noun-leaning signal) which would otherwise conflict with its verb-only sense.
+        // Arrange: "utilize" remains disallowed in the merged dictionary, but is passed as a
+        // per-file allowed term (simulating a matching profile's dictionary allow delta)
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, LintMode.Descriptive, extraAllowedTerms: ["utilize"]);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that <c>extraAllowedTerms</c> matching is case-insensitive, consistent with every
+    ///     other dictionary term comparison in this checker.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic()
+    {
+        // Arrange: the extra-allowed term is supplied in a different case than the dictionary key
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, LintMode.Descriptive, extraAllowedTerms: ["UTILIZE"]);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that supplying an unrelated <c>extraAllowedTerms</c> entry does not suppress a
+    ///     different disallowed term still present in the segment.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ExtraAllowedTermsUnrelatedTerm_StillFlagsOtherDisallowedTerm()
+    {
+        // Arrange: allow "shall" (not present in this prose) while "utilize" remains disallowed
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, LintMode.Descriptive, extraAllowedTerms: ["shall"]);
+
+        // Assert: "utilize" is still reported since it was not in the extra-allowed set
+        Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a single-sense term is still reported using its one sense when the guesser
+    ///     is inconclusive (no confident signal either way), and that a single-sense entry's
+    ///     message is never POS-labeled.
+    /// </summary>
+    [Fact]
+    public void Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel()
+    {
+        // Arrange: "utilize" is a single-sense, verb-only embedded entry; "Please" triggers no
+        // noun or verb signal, so the guesser is inconclusive and the sole sense is reported.
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: reported with its one sense's suggestion, no POS label
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("use", diagnostic.Suggestion);
+        Assert.DoesNotContain("used as a", diagnostic.Message);
+        Assert.DoesNotContain("ambiguous", diagnostic.Message);
+    }
+
+    /// <summary>
+    ///     Test that a single-sense term is suppressed (no diagnostic) when the guesser
+    ///     confidently resolves a grammatical role that the term's one sense does not restrict -
+    ///     the regression case for the "POS fallback never runs for single-sense entries" bug.
+    /// </summary>
+    [Fact]
+    public void Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged()
+    {
+        // Arrange: "utilize" is a single-sense, verb-only embedded entry. Preceded by "the" (an
+        // article, a confident noun signal) and followed by a noun, the guesser confidently
+        // resolves Noun, which the verb-only entry does not restrict.
         var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Check the utilize option.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
 
-        // Assert: reported unconditionally with its one sense's suggestion, no POS label
-        var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("use", diagnostic.Suggestion);
-        Assert.DoesNotContain("used as a", diagnostic.Message);
-        Assert.DoesNotContain("ambiguous", diagnostic.Message);
+        // Assert: not disallowed in this (noun) role, so no diagnostic is reported
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a multi-sense term is suppressed (no diagnostic) when the guesser confidently
+    ///     resolves a grammatical role that none of the term's senses cover (for example, an
+    ///     entry with only adjective/verb senses matched in a confident noun context).
+    /// </summary>
+    [Fact]
+    public void Evaluate_MultiSenseTerm_ConfidentGuessMatchesNoSense_NotFlagged()
+    {
+        // Arrange: a project-supplied entry with adjective and verb senses only (no noun sense).
+        // "The reverse" is preceded by an article, a confident noun signal that matches neither.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["reverse"] =
+                    [
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Adjective, Alternatives = ["opposite"] },
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["turn around"] }
+                    ]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Set the reverse to neutral.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: the confident noun guess matches neither the adjective nor verb sense
+        Assert.Empty(diagnostics);
     }
 
     /// <summary>
@@ -233,9 +348,9 @@ public class DictionaryCheckerTests
     [Fact]
     public void Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous()
     {
-        // Arrange: bare "Impact" with no surrounding noun or verb signal words
+        // Arrange: "Impact" with no preceding or following signal word, referred to mid-sentence
         var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
-        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Impact is important.", 1, SegmentRole.Paragraph)];
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("They discuss Impact sometimes.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
@@ -344,7 +459,7 @@ public class DictionaryCheckerTests
             }
         };
         var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
-        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Deploy is next.", 1, SegmentRole.Paragraph)];
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Deploy happens soon.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);

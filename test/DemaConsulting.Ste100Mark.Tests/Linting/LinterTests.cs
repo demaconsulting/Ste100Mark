@@ -237,7 +237,7 @@ public sealed class LinterTests : IDisposable
         File.WriteAllText(Path.Combine(_tempDirectory.FullName, "procedures", "step.md"), $"# Title\n\n{sentence}\n");
         File.WriteAllText(
             Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"),
-            "default-mode: descriptive\noverrides:\n  - glob: \"procedures/**/*.md\"\n    mode: procedure\n");
+            "default-mode: descriptive\nprofiles:\n  - glob: \"procedures/**/*.md\"\n    mode: procedure\n");
 
         var originalOut = Console.Out;
         try
@@ -252,6 +252,60 @@ public sealed class LinterTests : IDisposable
             // Assert: the word-limit rule fired because procedure mode (20-word limit) applied
             var output = outWriter.ToString();
             Assert.Contains("STE100-4.1", output);
+            Assert.Equal(1, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that a profile's dictionary allow-list delta permits a term for files matching its
+    ///     glob (a requirements-documents profile allowing "shall"), while the same term is still
+    ///     flagged for a file outside that profile - proving the allowance is scoped to the profile,
+    ///     not applied globally.
+    /// </summary>
+    [Fact]
+    public void Run_ProfileDictionaryAllowList_PermitsTermOnlyWithinProfileGlob()
+    {
+        // Arrange: a project-wide disallowed "shall" term, allowed only under docs/requirements/
+        Directory.CreateDirectory(Path.Combine(_tempDirectory.FullName, "requirements"));
+        Directory.CreateDirectory(Path.Combine(_tempDirectory.FullName, "docs"));
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, "requirements", "spec.md"),
+            "# Title\n\nThe system shall report every error.\n");
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, "docs", "overview.md"),
+            "# Title\n\nThe system shall not be used here.\n");
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"),
+            """
+            dictionary:
+              disallow:
+                shall:
+                  - pos: verb
+                    alternatives: [will]
+            profiles:
+              - glob: "requirements/**/*.md"
+                dictionary:
+                  allow: [shall]
+            """);
+
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["requirements/spec.md", "docs/overview.md"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: "shall" is not flagged in the requirements profile, but is flagged elsewhere
+            var output = outWriter.ToString();
+            Assert.Contains("docs/overview.md", output);
+            Assert.DoesNotContain("requirements/spec.md", output);
             Assert.Equal(1, context.ExitCode);
         }
         finally

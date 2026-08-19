@@ -33,8 +33,8 @@ sections:
           - Evaluate_SentenceExceedingProcedureLimit_FlagsOnlyInProcedureMode
 
       - id: Template-Linting-Semicolons
-        title: The Linting subsystem shall report semicolons in prose as Rule 8.1 violations
-          unless the rule is explicitly disabled.
+        title: The Linting subsystem shall report semicolons in prose as Rule 8.1
+          violations unless the rule is explicitly disabled.
         justification: |
           ASD-STE100 Rule 8.1 prohibits semicolons in controlled prose. The subsystem must
           report the violation consistently while still allowing projects to disable the
@@ -46,8 +46,8 @@ sections:
           - Ste100Mark_LintFileWithSemicolon_ReportsErrorAndReturnsNonZero
 
       - id: Template-Linting-Contractions
-        title: The Linting subsystem shall report contractions in prose as Rule 4.2 violations
-          unless the rule is explicitly disabled.
+        title: The Linting subsystem shall report contractions in prose as Rule 4.2
+          violations unless the rule is explicitly disabled.
         justification: |
           ASD-STE100 Rule 4.2 requires expanded forms rather than contractions. The
           subsystem must detect common contraction forms and report them as build-breaking
@@ -170,14 +170,24 @@ sections:
       - id: Template-Linting-DictionaryPos
         title: >-
           The Linting subsystem shall select the applicable part-of-speech-tagged sense(s) of a
-          multi-sense disallowed term using a deterministic heuristic, reporting every sense as
-          ambiguous when the heuristic cannot decide confidently.
+          disallowed term using a deterministic heuristic - including recognizing a determiner
+          that governs the match through an intervening adjective/participle/proper-noun
+          modifier, and a match followed by a finite verb form - suppressing the match when the
+          heuristic confidently resolves a role that none of the term's senses restrict, and
+          reporting every remaining sense as ambiguous when the heuristic cannot decide
+          confidently.
         justification: |
           A single disallowed term can have distinct noun and verb senses with different
-          approved alternatives (for example "impact" as a noun versus as a verb). Reporting
-          the wrong sense's alternative would be misleading, so the subsystem must use
-          surrounding sentence context to pick the correct sense when possible, and fall back
-          to reporting every sense, clearly labeled as ambiguous, when the context does not
+          approved alternatives (for example "impact" as a noun versus as a verb), and some
+          terms restrict only one grammatical role (for example a verb-only entry). Reporting
+          the wrong sense's alternative, or reporting a term used in a role it does not
+          restrict, would be misleading. Technical writing is dense with noun phrases built from
+          modifiers (for example "the metering probe" or "the Vantage probe"), and the
+          heuristic must recognize a determiner's reach through such a modifier, not just an
+          immediately preceding word, to avoid over-reporting subject nouns as unqualified
+          matches. The subsystem must use surrounding sentence context to pick the correct
+          sense (or determine that no sense applies) when possible, and fall back to reporting
+          every remaining sense, clearly labeled as ambiguous, when the context does not
           confidently indicate one grammatical role.
         tests:
           - Guess_PrecededByTo_ReturnsVerb
@@ -194,7 +204,14 @@ sections:
           - Guess_FollowedByOf_ReturnsNoun
           - Guess_ConflictingSignals_ReturnsNull
           - Guess_NoSignals_ReturnsNull
-          - Evaluate_SingleSenseTerm_AlwaysReportedRegardlessOfContext
+          - Guess_ArticleThenParticipleModifier_ReturnsNoun
+          - Guess_ArticleThenProperNounModifier_ReturnsNoun
+          - Guess_ArticleThenAdjectiveModifier_ReturnsNoun
+          - Guess_DeterminerBeyondMaxScanDistance_DoesNotGovern
+          - Guess_FollowedByFiniteVerb_ReturnsNoun
+          - Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel
+          - Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged
+          - Evaluate_MultiSenseTerm_ConfidentGuessMatchesNoSense_NotFlagged
           - Evaluate_MultiSenseTerm_NounContext_ReportsNounSense
           - Evaluate_MultiSenseTerm_VerbContext_ReportsVerbSense
           - Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous
@@ -207,20 +224,43 @@ sections:
       - id: Template-Linting-Configuration
         title: >-
           The Linting subsystem shall load YAML configuration for include/exclude patterns,
-          mode overrides, rule tuning, and dictionary settings.
+          default mode, rule tuning, and dictionary settings.
         justification: |
-          Projects need a repeatable way to control file scope, writing mode, rule severity,
-          and vocabulary policy without recompiling the tool. YAML configuration provides a
-          human-editable, repository-local contract for those settings.
+          Projects need a repeatable way to control file scope, default writing mode, rule
+          severity, and vocabulary policy without recompiling the tool. YAML configuration
+          provides a human-editable, repository-local contract for those settings.
         tests:
           - Load_NullPath_ReturnsDefaultConfiguration
           - Load_NonExistentPath_ThrowsInvalidOperationException
           - Load_FullConfigurationFile_ParsesAllSections
           - Load_MalformedYaml_ThrowsInvalidOperationException
-          - ResolveMode_NoMatchingOverride_ReturnsDefaultMode
-          - ResolveMode_MatchingOverrideGlob_ReturnsOverriddenMode
-          - ResolveMode_MultipleOverrides_UsesFirstMatch
+
+      - id: Template-Linting-Profiles
+        title: >-
+          The Linting subsystem shall resolve per-file writing mode, rule tuning, and dictionary
+          allowances from glob-scoped profiles, using first-match-wins for mode and layered
+          deltas for rules and dictionary allowances.
+        justification: |
+          A repository often mixes document types with different requirements: procedural
+          guides need a shorter sentence limit, while a requirements folder legitimately uses
+          restricted words such as "shall" in every entry. Profiles let a project express these
+          differences per glob without duplicating the whole configuration file, and without
+          weakening vocabulary or rule enforcement for the rest of the project.
+        tests:
+          - ResolveMode_NoMatchingProfile_ReturnsDefaultMode
+          - ResolveMode_MatchingProfileGlob_ReturnsOverriddenMode
+          - ResolveMode_MultipleProfiles_UsesFirstMatch
+          - ResolveMode_MatchingProfileWithNullMode_FallsThroughToDefault
+          - ResolveRules_NoMatchingProfile_ReturnsGlobalRules
+          - ResolveRules_MatchingProfile_LayersDeltaOverGlobalRules
+          - ResolveRules_MultipleMatchingProfiles_LayersAllDeltasInOrder
+          - ResolveAllowedTerms_NoMatchingProfile_ReturnsGlobalTermsOnly
+          - ResolveAllowedTerms_MatchingProfile_UnionsWithGlobalAllowList
           - Run_ProcedureModeOverride_AppliesStricterWordLimit
+          - Run_ProfileDictionaryAllowList_PermitsTermOnlyWithinProfileGlob
+          - Evaluate_TermInExtraAllowedTerms_NotFlagged
+          - Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic
+          - Evaluate_ExtraAllowedTermsUnrelatedTerm_StillFlagsOtherDisallowedTerm
 
       - id: Template-Linting-CliIntegration
         title: >-

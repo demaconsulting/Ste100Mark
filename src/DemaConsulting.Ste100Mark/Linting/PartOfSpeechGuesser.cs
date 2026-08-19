@@ -98,6 +98,43 @@ internal static class PartOfSpeechGuesser
         };
 
     /// <summary>
+    ///     Closed-class, third-person-singular-present finite verb forms that signal the
+    ///     preceding match is the subject of a clause (for example "probe moves", "probe has").
+    ///     Deliberately excludes any "-s" content word, which would be indistinguishable from the
+    ///     plural noun suffix; see <see cref="HasNounSignal"/>'s separate <c>PluralNounSuffix</c>
+    ///     signal for that case.
+    /// </summary>
+    private static readonly HashSet<string> FiniteVerbForms =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "moves", "has", "does", "goes", "runs", "opens", "closes", "starts", "stops",
+            "operates", "requires", "indicates", "shows", "displays", "connects", "controls"
+        };
+
+    /// <summary>Words that end a determiner's reach through modifiers (conjunctions, clause markers).</summary>
+    private static readonly HashSet<string> ClauseBreakingWords =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "and", "or", "but", "so", "because", "if", "when", "while", "that", "which", "who",
+            "than", "as"
+        };
+
+    /// <summary>
+    ///     Closed-class adjectives commonly used as noun-phrase modifiers in technical writing
+    ///     that do not carry a recognizable participle suffix (compare <c>metering</c>/<c>coated</c>,
+    ///     detected separately by their <c>-ing</c>/<c>-ed</c> ending).
+    /// </summary>
+    private static readonly HashSet<string> CommonAdjectiveModifiers =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "custom", "manual", "automatic", "primary", "secondary", "standard", "digital",
+            "analog", "external", "internal", "optional", "additional", "main", "backup"
+        };
+
+    /// <summary>Maximum number of modifier tokens to scan past when looking for a governing determiner.</summary>
+    private const int MaxModifierScanDistance = 3;
+
+    /// <summary>
     ///     Guesses the grammatical role of one dictionary-term match within its surrounding
     ///     segment text.
     /// </summary>
@@ -119,11 +156,12 @@ internal static class PartOfSpeechGuesser
 
         var matchText = segmentText.Substring(matchIndex, matchLength);
         var precedingWord = PrecedingWord(segmentText, matchIndex);
+        var governingWord = GoverningDeterminer(segmentText, matchIndex);
         var followingWord = FollowingWord(segmentText, matchIndex + matchLength);
         var isSentenceStart = IsSentenceStart(segmentText, matchIndex);
 
         var hasVerb = HasVerbSignal(matchText, precedingWord, isSentenceStart, mode);
-        var hasNoun = HasNounSignal(matchText, precedingWord, followingWord);
+        var hasNoun = HasNounSignal(matchText, precedingWord, governingWord, followingWord);
 
         if (hasVerb && !hasNoun)
         {
@@ -179,7 +217,7 @@ internal static class PartOfSpeechGuesser
     ///     Evaluates every noun-leaning signal in the rule set as a set (any one hit is
     ///     sufficient).
     /// </summary>
-    private static bool HasNounSignal(string matchText, string? precedingWord, string? followingWord)
+    private static bool HasNounSignal(string matchText, string? precedingWord, string? governingWord, string? followingWord)
     {
         if (precedingWord is not null && Articles.Contains(precedingWord))
         {
@@ -203,6 +241,15 @@ internal static class PartOfSpeechGuesser
             return true; // Preposition
         }
 
+        if (governingWord is not null
+            && (Articles.Contains(governingWord)
+                || PossessivePronouns.Contains(governingWord)
+                || QuantifiersOrDemonstratives.Contains(governingWord)
+                || Prepositions.Contains(governingWord)))
+        {
+            return true; // DeterminerGovernsThroughModifiers
+        }
+
         if (matchText.EndsWith('s') && !matchText.EndsWith("ss", StringComparison.OrdinalIgnoreCase))
         {
             return true; // PluralNounSuffix
@@ -213,7 +260,105 @@ internal static class PartOfSpeechGuesser
             return true; // NounPhraseContinuation
         }
 
+        if (followingWord is not null && IsFiniteVerbForm(followingWord))
+        {
+            return true; // FollowedByFiniteVerb (match is the subject of the sentence)
+        }
+
         return false;
+    }
+
+    /// <summary>
+    ///     Determines whether a word looks like a finite (present-tense) verb form: a modal
+    ///     auxiliary, a "to be" auxiliary, or a third-person-singular "-s" inflection distinct
+    ///     from a plural noun suffix (matches "moves"/"has"/"is" style forms).
+    /// </summary>
+    private static bool IsFiniteVerbForm(string word)
+    {
+        if (ModalAuxiliaries.Contains(word) || BeAuxiliaries.Contains(word))
+        {
+            return true;
+        }
+
+        return FiniteVerbForms.Contains(word);
+    }
+
+    /// <summary>
+    ///     Scans backward from a match past a bounded run of adjective/participle/proper-noun
+    ///     modifier tokens (for example "metering", "custom", or a capitalized product name in
+    ///     "the Vantage probe") to find the determiner that still governs the match as the head
+    ///     noun of a compound noun phrase.
+    /// </summary>
+    /// <remarks>
+    ///     Only tokens that look like modifiers are skipped (see <see cref="LooksLikeModifier"/>);
+    ///     the scan stops, without finding a governing word, as soon as an ordinary word (a verb,
+    ///     ordinary noun, or clause-boundary word) is reached, and is additionally bounded by
+    ///     <see cref="MaxModifierScanDistance"/> tokens so a genuinely unrelated earlier word in
+    ///     the sentence can never be mistaken for a governing determiner.
+    /// </remarks>
+    private static string? GoverningDeterminer(string segmentText, int matchIndex)
+    {
+        var before = segmentText[..matchIndex];
+        var tokens = before.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+
+        var scanned = 0;
+        for (var i = tokens.Length - 1; i >= 0 && scanned < MaxModifierScanDistance; i--, scanned++)
+        {
+            var rawToken = tokens[i];
+            var normalized = Normalize(rawToken);
+
+            if (Articles.Contains(normalized)
+                || PossessivePronouns.Contains(normalized)
+                || normalized.EndsWith("'s", StringComparison.OrdinalIgnoreCase)
+                || QuantifiersOrDemonstratives.Contains(normalized)
+                || Prepositions.Contains(normalized))
+            {
+                return normalized;
+            }
+
+            if (!LooksLikeModifier(rawToken, normalized))
+            {
+                return null; // not a determiner and not a modifier: stop scanning
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    ///     Determines whether a token looks like an adjective/participle/proper-noun modifier
+    ///     that a determiner could still govern through (for example "custom", "metering", or a
+    ///     capitalized product name), rather than an ordinary word (a verb, or ordinary noun such
+    ///     as "system") that would break the determiner's reach. Deliberately conservative: an
+    ///     ordinary lower-case word that is none of these is treated as breaking the chain, so a
+    ///     sentence like "The system shall report..." does not let "the" reach past "system" to
+    ///     govern "shall".
+    /// </summary>
+    private static bool LooksLikeModifier(string rawToken, string normalized)
+    {
+        if (normalized.Length == 0
+            || ClauseBreakingWords.Contains(normalized)
+            || ModalAuxiliaries.Contains(normalized)
+            || BeAuxiliaries.Contains(normalized)
+            || string.Equals(normalized, "to", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (normalized.EndsWith("ing", StringComparison.OrdinalIgnoreCase)
+            || normalized.EndsWith("ed", StringComparison.OrdinalIgnoreCase))
+        {
+            return true; // participle modifier ("metering", "coated")
+        }
+
+        if (CommonAdjectiveModifiers.Contains(normalized))
+        {
+            return true; // closed-class adjective modifier ("custom", "manual")
+        }
+
+        // A capitalized word appearing mid-sentence (not itself sentence-initial capitalization)
+        // is treated as a proper-noun modifier, for example a product name in "the Vantage probe".
+        return rawToken.Length > 0 && char.IsUpper(rawToken[0]);
     }
 
     /// <summary>

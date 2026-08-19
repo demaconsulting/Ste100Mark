@@ -35,10 +35,15 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     "utilized" is not incorrectly flagged by a "utilize" entry unless "utilized" is itself
 ///     matched by the word-boundary regex (which it is not, since the boundary requires the exact
 ///     term). Multi-word terms match across the segment's normalized single-space-separated text.
-///     A term with exactly one sense is always reported using that sense, regardless of context,
-///     because no ambiguity is possible with a single sense. A term with multiple senses is
-///     resolved through <see cref="PartOfSpeechGuesser.Guess"/>: a confident guess selects the
-///     matching sense(s); an inconclusive guess reports every sense, labeled as ambiguous.
+///     A term is always evaluated through <see cref="PartOfSpeechGuesser.Guess"/>, even when it
+///     has only one sense: when the guesser confidently resolves a grammatical role (noun or
+///     verb) that none of the entry's senses restrict, the term is not being used in a
+///     disallowed role at this location and no diagnostic is reported. When the guess matches
+///     one sense, that sense's alternative(s) are reported (labeled with the resolved part of
+///     speech only when the entry has more than one sense, so a single-sense entry's message
+///     stays unqualified). When the guess is inconclusive (or the entry has multiple senses none
+///     of which the guess narrows to exactly one), every remaining candidate sense is reported,
+///     labeled as ambiguous.
 ///
 ///     A match that falls entirely inside an inline code span (for example, a disallowed term that
 ///     only appears as part of `` `some-cli-flag` ``) is ignored: inline code spans are technical
@@ -59,23 +64,37 @@ internal static class DictionaryChecker
     ///     The file's resolved <see cref="LintMode"/>, forwarded to <see cref="PartOfSpeechGuesser.Guess"/>
     ///     for the imperative-sentence-start signal.
     /// </param>
+    /// <param name="extraAllowedTerms">
+    ///     Additional terms to treat as allowed for this file only, on top of
+    ///     <paramref name="dictionary"/>'s own global allow/ignore lists - typically the file's
+    ///     resolved <see cref="LintConfig.ResolveAllowedTerms"/> profile deltas (for example,
+    ///     permitting "shall" only for a requirements-documents profile). Pass <see langword="null"/>
+    ///     or an empty collection when no per-file allowance applies.
+    /// </param>
     /// <returns>One diagnostic per matched occurrence, in segment order.</returns>
     public static IReadOnlyList<Diagnostic> Evaluate(
         string file,
         IReadOnlyList<ProseSegment> segments,
         LintDictionary dictionary,
-        LintMode mode)
+        LintMode mode,
+        IReadOnlyCollection<string>? extraAllowedTerms = null)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(segments);
         ArgumentNullException.ThrowIfNull(dictionary);
 
+        var allowedTerms = extraAllowedTerms is { Count: > 0 }
+            ? new HashSet<string>(extraAllowedTerms, StringComparer.OrdinalIgnoreCase)
+            : null;
+
         // Longer (more specific) terms are matched first so that a multi-word phrase like
         // "prior to" is reported once, rather than also triggering a shorter, unrelated
         // single-word entry that happens to overlap.
         var entries = dictionary.Entries
+            .Where(e => allowedTerms is null || !allowedTerms.Contains(e.Term))
             .OrderByDescending(e => e.Term.Length)
             .ToList();
+
 
         var diagnostics = new List<Diagnostic>();
         foreach (var segment in segments)
@@ -92,7 +111,11 @@ internal static class DictionaryChecker
                         continue;
                     }
 
-                    diagnostics.Add(BuildDiagnostic(file, segment, entry, match, mode));
+                    var diagnostic = BuildDiagnostic(file, segment, entry, match, mode);
+                    if (diagnostic is not null)
+                    {
+                        diagnostics.Add(diagnostic);
+                    }
                 }
             }
         }
@@ -102,33 +125,33 @@ internal static class DictionaryChecker
 
     /// <summary>
     ///     Builds the diagnostic for one matched occurrence, selecting the applicable sense(s) and
-    ///     the corresponding confident-or-ambiguous message/suggestion wording.
+    ///     the corresponding confident-or-ambiguous message/suggestion wording, or
+    ///     <see langword="null"/> when a confident guess rules out every sense (the term is not
+    ///     disallowed in the grammatical role it is being used in here).
     /// </summary>
-    private static Diagnostic BuildDiagnostic(
+    private static Diagnostic? BuildDiagnostic(
         string file,
         ProseSegment segment,
         DictionaryEntry entry,
         Match match,
         LintMode mode)
     {
-        if (entry.Senses.Count == 1)
-        {
-            return ConfidentDiagnostic(file, segment, match, entry.Senses[0], labelPos: false);
-        }
-
         var guess = PartOfSpeechGuesser.Guess(segment.Text, match.Index, match.Length, mode);
         var candidates = guess is null
             ? entry.Senses
             : entry.Senses.Where(s => s.Pos == guess || s.Pos == PartOfSpeech.Any).ToList();
 
-        if (candidates.Count == 0)
+        if (guess is not null && candidates.Count == 0)
         {
-            // The guessed POS did not match any sense in the schema: fall back to ambiguous-all.
-            candidates = entry.Senses;
+            // The guesser confidently resolved a grammatical role that none of the entry's
+            // senses restrict (for example, a verb-only entry matched where the term is used
+            // as a noun): the word is not being used in a role ASD-STE100 disallows here, so no
+            // diagnostic is reported.
+            return null;
         }
 
         return candidates.Count == 1
-            ? ConfidentDiagnostic(file, segment, match, candidates[0], labelPos: true)
+            ? ConfidentDiagnostic(file, segment, match, candidates[0], labelPos: entry.Senses.Count > 1)
             : AmbiguousDiagnostic(file, segment, match, candidates);
     }
 

@@ -29,8 +29,12 @@ the text" (`[.!?:]` followed by whitespace, at the end of the text preceding the
 from a token before keyword comparison.
 
 **ModalAuxiliaries**, **BeAuxiliaries**, **Articles**, **PossessivePronouns**,
-**QuantifiersOrDemonstratives**, **Prepositions**: closed keyword sets used by the noun/verb
-signal rules below.
+**QuantifiersOrDemonstratives**, **Prepositions**, **FiniteVerbForms**,
+**ClauseBreakingWords**, **CommonAdjectiveModifiers**: closed keyword sets used by the
+noun/verb signal rules below.
+
+**MaxModifierScanDistance**: `const int` (3) - maximum number of tokens `GoverningDeterminer`
+scans backward past modifiers before giving up on finding a governing determiner.
 
 #### Key Methods
 
@@ -50,9 +54,10 @@ segment text.
 
 The exact rule set, evaluated against `matchText` (the matched surface form), `precedingWord`
 (the last whitespace-delimited token strictly before the match, lower-cased and stripped of
-punctuation), `followingWord` (the first token strictly after the match, same normalization),
-and `isSentenceStart` (the match begins the segment, or immediately follows the same
-`[.!?:]` + whitespace boundary condition as `SentenceAnalyzer`):
+punctuation), `governingWord` (see `GoverningDeterminer` below), `followingWord` (the first
+token strictly after the match, same normalization as `precedingWord`), and `isSentenceStart`
+(the match begins the segment, or immediately follows the same `[.!?:]` + whitespace boundary
+condition as `SentenceAnalyzer`):
 
 | Category | Signal | Condition |
 | --- | --- | --- |
@@ -65,11 +70,39 @@ and `isSentenceStart` (the match begins the segment, or immediately follows the 
 | Noun | Possessive | `precedingWord` is in `PossessivePronouns`, or ends with `'s` |
 | Noun | QuantifierOrDemonstrative | `precedingWord` is in `QuantifiersOrDemonstratives` |
 | Noun | Preposition | `precedingWord` is in `Prepositions` |
+| Noun | DeterminerGovernsThroughModifiers | `governingWord` is a determiner/possessive/quantifier/preposition |
 | Noun | PluralNounSuffix | `matchText` ends with `s` and not `ss` |
 | Noun | NounPhraseContinuation | `followingWord == "of"` |
+| Noun | FollowedByFiniteVerb | `followingWord` is a modal/`"to be"` auxiliary or in `FiniteVerbForms` |
 
 See **Data Model** above for the exact word lists behind `ModalAuxiliaries`, `BeAuxiliaries`,
-`Articles`, `PossessivePronouns`, `QuantifiersOrDemonstratives`, and `Prepositions`.
+`Articles`, `PossessivePronouns`, `QuantifiersOrDemonstratives`, `Prepositions`, and
+`FiniteVerbForms`.
+
+**GoverningDeterminer**: Scans backward from a match, past a bounded run of
+adjective/participle/proper-noun modifier tokens, to find a determiner/possessive/quantifier/
+preposition that still governs the match as the head noun of a compound noun phrase (for
+example "the *metering* probe", "the *Vantage* probe", or "a *custom* probe" - the italicized
+word is the modifier between the determiner and the match).
+
+- *Parameters*: `string segmentText`, `int matchIndex` - same meaning as in `Guess`.
+- *Returns*: `string?` - the normalized governing word, or `null` when no determiner is found
+  within `MaxModifierScanDistance` tokens, or an ordinary (non-modifier) word is reached first.
+- *Postconditions*: Scans up to `MaxModifierScanDistance` tokens backward. At each token: if it
+  is a determiner/possessive/quantifier/preposition, that word is returned immediately. Otherwise,
+  if it does not look like a modifier (see `LooksLikeModifier`), the scan stops and returns `null`
+  - an ordinary word (for example "system" in "The system shall...") breaks the determiner's
+  reach, so it is never mistaken for governing a later word.
+
+**LooksLikeModifier**: Determines whether a token looks like a plausible noun-phrase modifier a
+determiner could still govern through, rather than an ordinary word that would break the
+chain. Returns `true` for: a participle (`-ing`/`-ed` suffix, for example "metering"/"coated"),
+a closed-class adjective in `CommonAdjectiveModifiers` (for example "custom", "manual"), or a
+word capitalized mid-sentence (a proper-noun modifier, for example a product name in "the
+Vantage probe"). Returns `false` for clause-boundary words (`ClauseBreakingWords`), auxiliary/
+modal verbs, and the infinitive marker "to", as well as any other ordinary lower-case word - this
+is deliberately conservative, so a sentence like "The system shall report..." does not let "the"
+reach past the ordinary noun "system" to govern "shall".
 
 `hasVerb` is true when any Verb-category signal fired; `hasNoun` is true when any Noun-category
 signal fired. `Guess` returns `Verb` when `hasVerb && !hasNoun`, `Noun` when
@@ -92,5 +125,5 @@ to one second per pattern match. No exceptions are caught locally.
 
 #### Callers
 
-- **DictionaryChecker** - calls `Guess` once per match of a multi-sense dictionary entry to
-  select the applicable sense(s).
+- **DictionaryChecker** - calls `Guess` once per match of a dictionary entry to select the
+  applicable sense(s).

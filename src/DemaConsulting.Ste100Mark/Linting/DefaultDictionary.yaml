@@ -27,10 +27,12 @@
 # Each sense has a `pos` (part of speech: `noun`, `verb`, `adjective`,
 # `adverb`, or `any` for a role-independent connector), an `alternatives`
 # list of suggested replacements for that sense, and an optional free-text
-# `note`. A term with exactly one sense is always reported using that sense.
-# A term with more than one sense is disambiguated at lint time by a
-# best-effort part-of-speech heuristic; when the heuristic cannot decide
-# confidently, every sense is reported, labeled as ambiguous.
+# `note`. Every match is checked against a best-effort part-of-speech
+# heuristic: when the heuristic confidently resolves a role (noun or verb)
+# that none of the term's senses restrict, the match is not reported (the
+# word is not being used in a disallowed role here). When the heuristic
+# cannot decide confidently, every remaining candidate sense is reported,
+# labeled as ambiguous.
 # ---------------------------------------------------------------------------
 
 utilize:
