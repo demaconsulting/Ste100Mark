@@ -75,12 +75,16 @@ public class ProgramTests
             // Act: execute the operation being tested
             Program.Run(context);
 
-            // Assert: verify expected behavior
+            // Assert: verify expected behavior, including new linting-related options
             var output = outWriter.ToString();
             Assert.Contains("Usage:", output);
             Assert.Contains("Options:", output);
             Assert.Contains("--version", output);
             Assert.Contains("--help", output);
+            Assert.Contains("--config", output);
+            Assert.Contains("--format", output);
+            Assert.Contains("--strict", output);
+            Assert.Contains("globs", output);
             Assert.Equal(0, context.ExitCode);
         }
         finally

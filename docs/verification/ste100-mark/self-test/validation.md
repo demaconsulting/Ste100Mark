@@ -52,3 +52,14 @@ with a context whose `ResultsFile` has a `.json` extension (unsupported); no fil
 no exception is thrown, and an error message indicating the unsupported format is written to
 the context. This scenario is tested by
 `Validation_Run_WithUnsupportedResultsFormat_DoesNotWriteFile`.
+
+**Template-Validation-LintSelfChecks**: `Validation.Run` invokes the tool's own lint workflow
+against a clean Markdown file (asserting a zero exit code), a Markdown file with known
+violations (asserting a non-zero exit code and the presence of `STE100-4.1`, `STE100-8.1`,
+`STE100-4.2`, and `STE100-DICT` in the log), and a Markdown file linted with `--format json`
+(asserting the log content parses as valid JSON). Each self-check runs through
+`Program.Run` without `--validate`, using a positional glob argument, and is recorded as an
+independent `TestResult` following the same pass/fail/exception-handling pattern as
+`RunVersionTest`/`RunHelpTest`. This scenario is tested by
+`Ste100Mark_LintCleanFileNoDiagnostics`, `Ste100Mark_LintViolationFileDetectsIssues`, and
+`Ste100Mark_LintJsonOutputIsValidJson`.

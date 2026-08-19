@@ -367,5 +367,134 @@ public class IntegrationTests
         Assert.Equal(0, exitCode);
         Assert.Contains("###", output);
     }
+
+    /// <summary>
+    ///     Test that linting a Markdown file with a semicolon violation exits non-zero and reports
+    ///     the violation in text format.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintFileWithSemicolon_ReportsErrorAndReturnsNonZero()
+    {
+        // Arrange: an isolated working directory containing a non-compliant Markdown file
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(workingDirectory, "doc.md"), "# Title\n\nOpen the panel; then close it.\n");
+
+            // Act: run the linter against the file
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "doc.md");
+
+            // Assert: verify expected behavior
+            Assert.NotEqual(0, exitCode);
+            Assert.Contains("STE100-8.1", output);
+            Assert.Contains("[ERROR]", output);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that linting a clean Markdown file exits zero.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintCleanFile_ReturnsZeroExitCode()
+    {
+        // Arrange: an isolated working directory containing a compliant Markdown file
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(workingDirectory, "doc.md"), "# Title\n\nOpen the panel.\n");
+
+            // Act: run the linter against the file
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "doc.md");
+
+            // Assert: verify expected behavior
+            Assert.Equal(0, exitCode);
+            Assert.Contains("0 error(s)", output);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that linting with --format json produces a single valid JSON document on stdout,
+    ///     with no banner text mixed in.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument()
+    {
+        // Arrange: an isolated working directory containing a non-compliant Markdown file
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(workingDirectory, "doc.md"), "# Title\n\nOpen the panel; then close it.\n");
+
+            // Act: run the linter against the file requesting JSON output
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "doc.md", "--format", "json");
+
+            // Assert: the entire output parses as a single JSON document (no banner text mixed in)
+            Assert.NotEqual(0, exitCode);
+            using var document = System.Text.Json.JsonDocument.Parse(output);
+            Assert.True(document.RootElement.GetProperty("errorCount").GetInt32() >= 1);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that --strict promotes an otherwise-passing advisory finding to a non-zero exit code.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithStrictFlag_PromotesWarningsToFailure()
+    {
+        // Arrange: an isolated working directory containing a file with only an advisory finding
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(workingDirectory, "doc.md"), "# Title\n\nThe report was written by the team.\n");
+
+            // Act: run without and with --strict
+            var withoutStrict = Runner.RunInDirectory(out _, workingDirectory, "dotnet", _dllPath, "doc.md");
+            var withStrict = Runner.RunInDirectory(out _, workingDirectory, "dotnet", _dllPath, "doc.md", "--strict");
+
+            // Assert: verify expected behavior
+            Assert.Equal(0, withoutStrict);
+            Assert.NotEqual(0, withStrict);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that an explicit --config pointing at a missing file reports an error and returns
+    ///     non-zero without crashing the process.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithMissingConfigFile_ReturnsNonZeroWithErrorMessage()
+    {
+        // Arrange: an isolated working directory with no configuration file present
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            // Act: run the linter with an explicit, non-existent configuration file
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "--config", "missing.yaml");
+
+            // Assert: verify expected behavior
+            Assert.NotEqual(0, exitCode);
+            Assert.Contains("missing.yaml", output);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
 }
 

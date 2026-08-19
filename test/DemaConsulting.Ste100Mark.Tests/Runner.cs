@@ -35,7 +35,19 @@ internal static class Runner
     /// <param name="arguments">Program arguments.</param>
     /// <returns>Program exit code.</returns>
     /// <exception cref="InvalidOperationException">Thrown when process fails to start.</exception>
-    public static int Run(out string output, string program, params string[] arguments)
+    public static int Run(out string output, string program, params string[] arguments) =>
+        RunInDirectory(out output, null, program, arguments);
+
+    /// <summary>
+    ///     Runs the specified program in a given working directory and captures its output.
+    /// </summary>
+    /// <param name="output">Program output (stdout and stderr combined).</param>
+    /// <param name="workingDirectory">Working directory for the process, or <see langword="null"/> to inherit the current one.</param>
+    /// <param name="program">Program name or path.</param>
+    /// <param name="arguments">Program arguments.</param>
+    /// <returns>Program exit code.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when process fails to start.</exception>
+    public static int RunInDirectory(out string output, string? workingDirectory, string program, params string[] arguments)
     {
         // Construct the start information
         var startInfo = new ProcessStartInfo(program)
@@ -45,6 +57,11 @@ internal static class Runner
             UseShellExecute = false,
             CreateNoWindow = true
         };
+
+        if (workingDirectory != null)
+        {
+            startInfo.WorkingDirectory = workingDirectory;
+        }
 
         // Add the arguments
         foreach (var argument in arguments)
@@ -70,3 +87,4 @@ internal static class Runner
         return process.ExitCode;
     }
 }
+

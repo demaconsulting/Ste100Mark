@@ -1,0 +1,29 @@
+---
+# Microsoft.Extensions.FileSystemGlobbing OTS Software Requirements
+#
+# Requirements for the Microsoft.Extensions.FileSystemGlobbing glob matching library
+# functionality.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: Microsoft.Extensions.FileSystemGlobbing Requirements
+        requirements:
+          - id: Template-OTS-FileSystemGlobbing
+            title: >-
+              Microsoft.Extensions.FileSystemGlobbing shall match file paths against
+              include/exclude glob patterns.
+            justification: |
+              Microsoft.Extensions.FileSystemGlobbing is the glob matching library used by the
+              Linting subsystem to resolve command-line and configuration-file include/exclude
+              patterns and the first-match-wins mode override patterns. Passing tests that
+              resolve mode overrides and file scope from glob patterns confirm the library
+              correctly matches, excludes, and orders pattern results.
+            tags: [ots]
+            tests:
+              - ResolveMode_NoMatchingOverride_ReturnsDefaultMode
+              - ResolveMode_MatchingOverrideGlob_ReturnsOverriddenMode
+              - ResolveMode_MultipleOverrides_UsesFirstMatch
+              - Run_PositionalGlobs_OverrideConfigInclude
+              - Run_ProcedureModeOverride_AppliesStricterWordLimit
+              - Run_CleanMarkdownFile_ProducesSuccessExitCode

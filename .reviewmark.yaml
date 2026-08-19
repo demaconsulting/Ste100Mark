@@ -178,6 +178,20 @@ reviews:
       - "src/**/Utilities/PathHelpers.cs"
       - "test/**/Utilities/PathHelpersTests.cs"
 
+  # Ste100Mark - Linting
+  - id: Ste100Mark-Linting
+    title: Review of Ste100Mark Linting subsystem architecture and interfaces
+    context:
+      - docs/design/ste100-mark.md
+      - docs/reqstream/ste100-mark.yaml
+    paths:
+      - "docs/reqstream/ste100-mark/linting.yaml"
+      - "docs/design/ste100-mark/linting.md"
+      - "docs/design/ste100-mark/linting/**/*.md"
+      - "docs/verification/ste100-mark/linting.md"
+      - "src/**/Linting/**/*.cs"
+      - "test/**/Linting/**/*.cs"
+
   # OTS Items
   - id: OTS-BuildMark
     title: Review of BuildMark OTS verification evidence
@@ -192,6 +206,13 @@ reviews:
       - "docs/reqstream/ots/fileassert.yaml"
       - "docs/design/ots/fileassert.md"
       - "docs/verification/ots/fileassert.md"
+
+  - id: OTS-FileSystemGlobbing
+    title: Review of Microsoft.Extensions.FileSystemGlobbing OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/file-system-globbing.yaml"
+      - "docs/design/ots/file-system-globbing.md"
+      - "docs/verification/ots/file-system-globbing.md"
 
   - id: OTS-Pandoc
     title: Review of Pandoc OTS verification evidence
@@ -255,3 +276,10 @@ reviews:
       - "docs/reqstream/ots/xunit.yaml"
       - "docs/design/ots/xunit.md"
       - "docs/verification/ots/xunit.md"
+
+  - id: OTS-YamlDotNet
+    title: Review of YamlDotNet OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/yamldotnet.yaml"
+      - "docs/design/ots/yamldotnet.md"
+      - "docs/verification/ots/yamldotnet.md"

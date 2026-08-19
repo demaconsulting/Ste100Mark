@@ -9,6 +9,7 @@ includes:
   - docs/reqstream/ste100-mark/self-test/validation.yaml
   - docs/reqstream/ste100-mark/utilities.yaml
   - docs/reqstream/ste100-mark/utilities/path-helpers.yaml
+  - docs/reqstream/ste100-mark/linting.yaml
   - docs/reqstream/ste100-mark/platform-requirements.yaml
   - docs/reqstream/ots/xunit.yaml
   - docs/reqstream/ots/reqstream.yaml
@@ -21,3 +22,5 @@ includes:
   - docs/reqstream/ots/weasyprint.yaml
   - docs/reqstream/ots/fileassert.yaml
   - docs/reqstream/ots/sysml2tools.yaml
+  - docs/reqstream/ots/yamldotnet.yaml
+  - docs/reqstream/ots/file-system-globbing.yaml

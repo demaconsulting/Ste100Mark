@@ -25,9 +25,9 @@ tool's requirements; it verifies that the tool behaves correctly in the deployme
   file has been written or an error has been recorded for an unsupported extension.
 
 Calls `PrintValidationHeader`, constructs a `TestResults` object named
-`"Ste100Mark Self-Validation"`, calls `RunVersionTest` and `RunHelpTest`, prints
-totals (using `WriteError` if any tests failed), and calls `WriteResultsFile` if
-`context.ResultsFile` is set.
+`"Ste100Mark Self-Validation"`, calls `RunVersionTest`, `RunHelpTest`, `RunLintCleanFileTest`,
+`RunLintViolationFileTest`, and `RunLintJsonOutputTest`, prints totals (using `WriteError` if
+any tests failed), and calls `WriteResultsFile` if `context.ResultsFile` is set.
 
 **RunVersionTest**: Verifies that `--version` produces a version string.
 
@@ -48,6 +48,42 @@ Creates a `TemporaryDirectory`, constructs a log path with `PathHelpers.SafePath
 invokes `Program.Run` with `["--silent", "--log", logFile, "--help"]`, reads the log, and
 asserts the content contains both `"Usage:"` and `"Options:"`. Records pass or fail. Any
 exception is caught by a broad `catch (Exception)` and recorded via `HandleTestException`.
+
+**RunLintCleanFileTest**: Verifies that linting a clean Markdown file produces a zero exit
+code.
+
+- *Parameters*: `Context context`, `DemaConsulting.TestResults.TestResults testResults`.
+- *Returns*: `void`.
+
+Creates a `TemporaryDirectory`, writes a short compliant Markdown file, temporarily switches
+the current directory to the temp directory (so the linter's glob resolution finds the file by
+its relative name), invokes `Program.Run` with
+`[relativeFile, "--silent", "--log", logFile]` (no `--validate`, so the run reaches
+`Linter.Run` instead of `Validation.Run`), and asserts `Context.ExitCode` is `0`. Records pass
+or fail. Any exception is caught by a broad `catch (Exception)` and recorded via
+`HandleTestException`.
+
+**RunLintViolationFileTest**: Verifies that linting a Markdown file with multiple known
+violations reports every expected rule code and returns a non-zero exit code.
+
+- *Parameters*: `Context context`, `DemaConsulting.TestResults.TestResults testResults`.
+- *Returns*: `void`.
+
+Writes a Markdown file containing a too-long sentence, a semicolon, a contraction, and a
+disallowed dictionary term ("utilize"), invokes the linter the same way as
+`RunLintCleanFileTest`, and asserts `Context.ExitCode` is non-zero and that the log content
+contains `STE100-4.1`, `STE100-8.1`, `STE100-4.2`, and `STE100-DICT`. Records pass or fail. Any
+exception is caught by a broad `catch (Exception)` and recorded via `HandleTestException`.
+
+**RunLintJsonOutputTest**: Verifies that `--format json` produces valid, parseable JSON.
+
+- *Parameters*: `Context context`, `DemaConsulting.TestResults.TestResults testResults`.
+- *Returns*: `void`.
+
+Writes a Markdown file, invokes the linter with `--format json` appended to the arguments,
+reads the log content, and parses it with `System.Text.Json.JsonDocument.Parse`. A
+`JsonException` on a parse failure is caught by the broad `catch (Exception)` and recorded via
+`HandleTestException` like any other test failure.
 
 **WriteResultsFile**: Serializes `testResults` to `context.ResultsFile`.
 

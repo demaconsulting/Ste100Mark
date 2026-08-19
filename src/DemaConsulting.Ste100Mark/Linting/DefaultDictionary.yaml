@@ -1,0 +1,1885 @@
+---
+# ---------------------------------------------------------------------------
+# Ste100Mark - Illustrative Default Dictionary
+# ---------------------------------------------------------------------------
+# IMPORTANT - READ BEFORE USE:
+#
+# This file is a SMALL, ORIGINALLY-AUTHORED, REPRESENTATIVE EXAMPLE of the
+# kind of word-substitution list used by ASD-STE100 (Simplified Technical
+# English) Issue 9. It was written from scratch for this open-source project
+# and is NOT the official ASD-STE100 Part 2 Dictionary.
+#
+# The genuine ASD-STE100 Part 2 Dictionary is commercially-licensed content
+# owned by ASD (Aerospace, Security and Defence Industries Association of
+# Europe). This repository is public and published to NuGet, so
+# redistributing ASD's dictionary content would infringe ASD's copyright.
+# Nothing in this file was transcribed or derived from the official
+# ASD-STE100 PDF or any other licensed source.
+#
+# Projects that require true ASD-STE100 Issue 9 compliance MUST supply their
+# own licensed dictionary file via the `dictionary.file` option in
+# `.ste100mark.yaml`, and SHOULD disable this illustrative dictionary with
+# `dictionary.use-embedded: false` to avoid mixing illustrative guidance with
+# officially approved/disallowed vocabulary.
+#
+# Schema: each top-level key is a disallowed term (case-insensitive, matched
+# as a whole word or phrase). Each value is a LIST of one or more senses.
+# Each sense has a `pos` (part of speech: `noun`, `verb`, `adjective`,
+# `adverb`, or `any` for a role-independent connector), an `alternatives`
+# list of suggested replacements for that sense, and an optional free-text
+# `note`. A term with exactly one sense is always reported using that sense.
+# A term with more than one sense is disambiguated at lint time by a
+# best-effort part-of-speech heuristic; when the heuristic cannot decide
+# confidently, every sense is reported, labeled as ambiguous.
+# ---------------------------------------------------------------------------
+
+utilize:
+  - pos: verb
+    alternatives: [use]
+    note: Prefer the shorter, more common word.
+
+utilization:
+  - pos: noun
+    alternatives: [use]
+    note: Prefer the shorter, more common word.
+
+impact:
+  - pos: noun
+    alternatives: [effect]
+    note: Prefer the plain noun over the vague noun sense of "impact".
+  - pos: verb
+    alternatives: [affect]
+    note: Prefer the plain verb over the vague verb sense of "impact".
+
+function:
+  - pos: noun
+    alternatives: [job, purpose]
+    note: Prefer a simple noun for the role or purpose sense.
+  - pos: verb
+    alternatives: [work, operate]
+    note: Prefer a simple verb for the operating sense.
+
+prior to:
+  - pos: any
+    alternatives: [before]
+    note: Simpler time relation.
+
+subsequent to:
+  - pos: any
+    alternatives: [after]
+    note: Simpler time relation.
+
+in order to:
+  - pos: any
+    alternatives: [to]
+    note: Drop unnecessary words.
+
+in the event that:
+  - pos: any
+    alternatives: [if]
+    note: Drop unnecessary words.
+
+with regard to:
+  - pos: any
+    alternatives: [about]
+    note: Drop unnecessary words.
+
+commence:
+  - pos: verb
+    alternatives: [start, begin]
+    note: Prefer the shorter, more common word.
+
+terminate:
+  - pos: verb
+    alternatives: [stop, end]
+    note: Prefer the shorter, more common word.
+
+facilitate:
+  - pos: verb
+    alternatives: [help, make easier]
+    note: Prefer the shorter, more common word.
+
+demonstrate:
+  - pos: verb
+    alternatives: [show]
+    note: Prefer the shorter, more common word.
+
+endeavor:
+  - pos: verb
+    alternatives: [try]
+    note: Prefer the shorter, more common word.
+
+ascertain:
+  - pos: verb
+    alternatives: [find out, check]
+    note: Prefer the shorter, more common word.
+
+sufficient:
+  - pos: adjective
+    alternatives: [enough]
+    note: Prefer the shorter, more common word.
+
+numerous:
+  - pos: adjective
+    alternatives: [many]
+    note: Prefer the shorter, more common word.
+
+approximately:
+  - pos: adverb
+    alternatives: [about]
+    note: Prefer the shorter, more common word.
+
+additional:
+  - pos: adjective
+    alternatives: [more, extra]
+    note: Prefer the shorter, more common word.
+
+initiate:
+  - pos: verb
+    alternatives: [start]
+    note: Prefer the shorter, more common word.
+
+remainder:
+  - pos: noun
+    alternatives: [rest]
+    note: Prefer the shorter, more common word.
+
+purchase:
+  - pos: verb
+    alternatives: [buy]
+    note: Prefer the shorter, more common word.
+
+modify:
+  - pos: verb
+    alternatives: [change]
+    note: Prefer the shorter, more common word.
+
+component:
+  - pos: noun
+    alternatives: [part]
+    note: Prefer the shorter, more common word.
+
+nevertheless:
+  - pos: any
+    alternatives: [but, however]
+    note: Prefer the shorter, more common connector.
+
+notwithstanding:
+  - pos: any
+    alternatives: [despite]
+    note: Prefer the shorter, more common connector.
+
+in the vicinity of:
+  - pos: any
+    alternatives: [near]
+    note: Drop unnecessary words.
+
+for the purpose of:
+  - pos: any
+    alternatives: [to, for]
+    note: Drop unnecessary words.
+
+due to the fact that:
+  - pos: any
+    alternatives: [because]
+    note: Drop unnecessary words.
+
+at this point in time:
+  - pos: any
+    alternatives: [now]
+    note: Drop unnecessary words.
+
+in close proximity to:
+  - pos: any
+    alternatives: [near]
+    note: Drop unnecessary words.
+
+endeavour:
+  - pos: verb
+    alternatives: [try]
+    note: Prefer the shorter, more common word (British spelling variant).
+
+optimum:
+  - pos: adjective
+    alternatives: [best]
+    note: Prefer the shorter, more common word.
+
+verify:
+  - pos: verb
+    alternatives: [check]
+    note: Prefer the shorter, more common word.
+
+produce:
+  - pos: verb
+    alternatives: [cause, give, make, supply]
+    note: Prefer a simple, approved verb depending on context.
+
+# --- Additional plain-English vocabulary --------------------------------------------
+
+adjacent to:
+  - pos: any
+    alternatives: [next to]
+    note: Drop unnecessary words.
+
+aforementioned:
+  - pos: adjective
+    alternatives: [this, that, earlier]
+    note: Prefer a plain word for referring back to something already named.
+
+aggregate:
+  - pos: noun
+    alternatives: [total, sum]
+    note: Prefer a simple noun for the combined-amount sense.
+  - pos: verb
+    alternatives: [add up, total]
+    note: Prefer a simple verb for the combining sense.
+
+at the present time:
+  - pos: any
+    alternatives: [now]
+    note: Drop unnecessary words.
+
+attempt:
+  - pos: noun
+    alternatives: [try]
+    note: Prefer the shorter, more common word for the noun sense.
+  - pos: verb
+    alternatives: [try]
+    note: Prefer the shorter, more common word for the verb sense.
+
+bequeath:
+  - pos: verb
+    alternatives: [leave, give]
+    note: Prefer the shorter, more common word.
+
+burgeoning:
+  - pos: adjective
+    alternatives: [growing]
+    note: Prefer the shorter, more common word.
+
+by means of:
+  - pos: any
+    alternatives: [by, with]
+    note: Drop unnecessary words.
+
+cognizant:
+  - pos: adjective
+    alternatives: [aware]
+    note: Prefer the shorter, more common word.
+
+commensurate with:
+  - pos: any
+    alternatives: [equal to, matching]
+    note: Drop unnecessary words.
+
+consequently:
+  - pos: any
+    alternatives: [so]
+    note: Prefer the shorter, more common connector.
+
+construct:
+  - pos: noun
+    alternatives: [model, structure]
+    note: Prefer a simple noun for the built-thing sense.
+  - pos: verb
+    alternatives: [build, make]
+    note: Prefer a simple verb for the building sense.
+
+convey:
+  - pos: verb
+    alternatives: [tell, carry]
+    note: Prefer a simple, approved verb depending on context.
+
+delineate:
+  - pos: verb
+    alternatives: [describe, outline]
+    note: Prefer the shorter, more common word.
+
+disseminate:
+  - pos: verb
+    alternatives: [share, spread]
+    note: Prefer the shorter, more common word.
+
+duration:
+  - pos: noun
+    alternatives: [time, length]
+    note: Prefer the plain noun over the nominalized form.
+
+elucidate:
+  - pos: verb
+    alternatives: [explain]
+    note: Prefer the shorter, more common word.
+
+enumerate:
+  - pos: verb
+    alternatives: [list]
+    note: Prefer the shorter, more common word.
+
+eradicate:
+  - pos: verb
+    alternatives: [remove, wipe out]
+    note: Prefer the shorter, more common word.
+
+expedite:
+  - pos: verb
+    alternatives: [speed up]
+    note: Prefer the shorter, more common phrase.
+
+extraneous:
+  - pos: adjective
+    alternatives: [unneeded, unrelated]
+    note: Prefer the shorter, more common word.
+
+finalize:
+  - pos: verb
+    alternatives: [finish, complete]
+    note: Prefer the shorter, more common word.
+
+forfeit:
+  - pos: noun
+    alternatives: [loss, penalty]
+    note: Prefer a simple noun for the thing-lost sense.
+  - pos: verb
+    alternatives: [lose, give up]
+    note: Prefer a simple verb for the losing sense.
+
+garner:
+  - pos: verb
+    alternatives: [gain, get]
+    note: Prefer the shorter, more common word.
+
+given that:
+  - pos: any
+    alternatives: [since, because]
+    note: Drop unnecessary words.
+
+henceforth:
+  - pos: any
+    alternatives: [from now on]
+    note: Prefer the plain, common phrase.
+
+hitherto:
+  - pos: any
+    alternatives: [until now]
+    note: Prefer the plain, common phrase.
+
+impede:
+  - pos: verb
+    alternatives: [block, slow down]
+    note: Prefer the shorter, more common word.
+
+inadvertently:
+  - pos: adverb
+    alternatives: [by mistake]
+    note: Prefer the plain, common phrase.
+
+incorporate:
+  - pos: verb
+    alternatives: [include, add]
+    note: Prefer the shorter, more common word.
+
+indicate:
+  - pos: verb
+    alternatives: [show, mean]
+    note: Prefer the shorter, more common word.
+
+insufficient:
+  - pos: adjective
+    alternatives: [not enough]
+    note: Prefer the plain phrase over the negated Latinate word.
+
+in the near future:
+  - pos: any
+    alternatives: [soon]
+    note: Drop unnecessary words.
+
+in spite of the fact that:
+  - pos: any
+    alternatives: [although, though]
+    note: Drop unnecessary words.
+
+in a timely manner:
+  - pos: any
+    alternatives: [on time, promptly]
+    note: Drop unnecessary words.
+
+jeopardize:
+  - pos: verb
+    alternatives: [risk, endanger]
+    note: Prefer the shorter, more common word.
+
+kindly:
+  - pos: adverb
+    alternatives: [please]
+    note: Prefer the plain, common word for a polite request.
+
+leverage:
+  - pos: noun
+    alternatives: [advantage]
+    note: Prefer a simple noun for the advantage sense.
+  - pos: verb
+    alternatives: [use]
+    note: Prefer a simple verb for the using sense.
+
+lengthy:
+  - pos: adjective
+    alternatives: [long]
+    note: Prefer the shorter, more common word.
+
+liaise:
+  - pos: verb
+    alternatives: [talk, work together]
+    note: Prefer the shorter, more common phrase.
+
+magnitude:
+  - pos: noun
+    alternatives: [size]
+    note: Prefer the shorter, more common word.
+
+mandate:
+  - pos: noun
+    alternatives: [order, rule]
+    note: Prefer a simple noun for the instruction sense.
+  - pos: verb
+    alternatives: [require, order]
+    note: Prefer a simple verb for the requiring sense.
+
+methodology:
+  - pos: noun
+    alternatives: [method, way]
+    note: Prefer the shorter, more common word over the nominalized form.
+
+minimize:
+  - pos: verb
+    alternatives: [reduce, lower]
+    note: Prefer the shorter, more common word.
+
+multiple:
+  - pos: adjective
+    alternatives: [many, several]
+    note: Prefer the shorter, more common word.
+
+necessitate:
+  - pos: verb
+    alternatives: [need, require]
+    note: Prefer the shorter, more common word.
+
+notify:
+  - pos: verb
+    alternatives: [tell]
+    note: Prefer the shorter, more common word.
+
+obtain:
+  - pos: verb
+    alternatives: [get]
+    note: Prefer the shorter, more common word.
+
+on the grounds that:
+  - pos: any
+    alternatives: [because]
+    note: Drop unnecessary words.
+
+on a regular basis:
+  - pos: any
+    alternatives: [regularly, often]
+    note: Drop unnecessary words.
+
+originate:
+  - pos: verb
+    alternatives: [start, come from]
+    note: Prefer the shorter, more common word.
+
+permit:
+  - pos: noun
+    alternatives: [licence, approval]
+    note: Prefer a simple noun for the authorization sense.
+  - pos: verb
+    alternatives: [allow, let]
+    note: Prefer a simple verb for the allowing sense.
+
+predominantly:
+  - pos: adverb
+    alternatives: [mostly, mainly]
+    note: Prefer the shorter, more common word.
+
+prevalent:
+  - pos: adjective
+    alternatives: [common]
+    note: Prefer the shorter, more common word.
+
+proceed:
+  - pos: verb
+    alternatives: [continue, go on]
+    note: Prefer the shorter, more common word.
+
+process:
+  - pos: noun
+    alternatives: [steps, method]
+    note: Prefer a simple noun for the sequence-of-steps sense.
+  - pos: verb
+    alternatives: [handle, deal with]
+    note: Prefer a simple verb for the handling sense.
+
+procure:
+  - pos: verb
+    alternatives: [get, buy]
+    note: Prefer the shorter, more common word.
+
+provided that:
+  - pos: any
+    alternatives: [if]
+    note: Drop unnecessary words.
+
+quantify:
+  - pos: verb
+    alternatives: [measure, count]
+    note: Prefer the shorter, more common word.
+
+query:
+  - pos: noun
+    alternatives: [question]
+    note: Prefer a simple noun for the question sense.
+  - pos: verb
+    alternatives: [ask, check]
+    note: Prefer a simple verb for the asking sense.
+
+ramification:
+  - pos: noun
+    alternatives: [effect, result]
+    note: Prefer the shorter, more common word.
+
+rectify:
+  - pos: verb
+    alternatives: [fix, correct]
+    note: Prefer the shorter, more common word.
+
+relinquish:
+  - pos: verb
+    alternatives: [give up, drop]
+    note: Prefer the shorter, more common word.
+
+render:
+  - pos: verb
+    alternatives: [make]
+    note: Prefer a simple, approved verb depending on context.
+
+reside:
+  - pos: verb
+    alternatives: [live, stay]
+    note: Prefer the shorter, more common word.
+
+retain:
+  - pos: verb
+    alternatives: [keep]
+    note: Prefer the shorter, more common word.
+
+solely:
+  - pos: adverb
+    alternatives: [only]
+    note: Prefer the shorter, more common word.
+
+subsequent:
+  - pos: adjective
+    alternatives: [later, next]
+    note: Prefer the shorter, more common word.
+
+substantial:
+  - pos: adjective
+    alternatives: [large, big]
+    note: Prefer the shorter, more common word.
+
+supplementary:
+  - pos: adjective
+    alternatives: [extra, added]
+    note: Prefer the shorter, more common word.
+
+thereafter:
+  - pos: any
+    alternatives: [after that]
+    note: Prefer the plain, common phrase.
+
+transmit:
+  - pos: verb
+    alternatives: [send]
+    note: Prefer the shorter, more common word.
+
+transpire:
+  - pos: verb
+    alternatives: [happen]
+    note: Prefer the shorter, more common word.
+
+undertake:
+  - pos: verb
+    alternatives: [do, start]
+    note: Prefer the shorter, more common word.
+
+utilise:
+  - pos: verb
+    alternatives: [use]
+    note: Prefer the shorter, more common word (British spelling variant).
+
+verification:
+  - pos: noun
+    alternatives: [check]
+    note: Prefer the plain noun over the nominalized form.
+
+via:
+  - pos: any
+    alternatives: [by, through]
+    note: Prefer the plain, common word.
+
+whilst:
+  - pos: any
+    alternatives: [while]
+    note: Prefer the shorter, more common word (British spelling variant).
+
+with the exception of:
+  - pos: any
+    alternatives: [except]
+    note: Drop unnecessary words.
+
+with a view to:
+  - pos: any
+    alternatives: [to]
+    note: Drop unnecessary words.
+
+yield:
+  - pos: noun
+    alternatives: [amount, output]
+    note: Prefer a simple noun for the output sense.
+  - pos: verb
+    alternatives: [give, make]
+    note: Prefer a simple verb for the producing sense.
+
+# --- Further plain-English vocabulary (broader alphabet coverage) --------------
+
+augment:
+  - pos: verb
+    alternatives: [increase, add to]
+    note: Prefer the shorter, more common word.
+
+ameliorate:
+  - pos: verb
+    alternatives: [improve]
+    note: Prefer the shorter, more common word.
+
+alleviate:
+  - pos: verb
+    alternatives: [ease, reduce]
+    note: Prefer the shorter, more common word.
+
+amend:
+  - pos: verb
+    alternatives: [change]
+    note: Prefer the shorter, more common word.
+
+anticipate:
+  - pos: verb
+    alternatives: [expect]
+    note: Prefer the shorter, more common word.
+
+apprise:
+  - pos: verb
+    alternatives: [tell, inform]
+    note: Prefer the shorter, more common word.
+
+appreciable:
+  - pos: adjective
+    alternatives: [noticeable]
+    note: Prefer the shorter, more common word.
+
+apportion:
+  - pos: verb
+    alternatives: [share out, divide]
+    note: Prefer the shorter, more common word.
+
+ascribe:
+  - pos: verb
+    alternatives: [credit, blame]
+    note: Prefer a simple, approved verb depending on context.
+
+aspire:
+  - pos: verb
+    alternatives: [hope, aim]
+    note: Prefer the shorter, more common word.
+
+assimilate:
+  - pos: verb
+    alternatives: [blend in, take in]
+    note: Prefer the shorter, more common phrase.
+
+attain:
+  - pos: verb
+    alternatives: [reach, get]
+    note: Prefer the shorter, more common word.
+
+avail:
+  - pos: verb
+    alternatives: [use, help]
+    note: Prefer a simple, approved verb depending on context.
+
+awaken:
+  - pos: verb
+    alternatives: [wake]
+    note: Prefer the shorter, more common word.
+
+bolster:
+  - pos: verb
+    alternatives: [support, strengthen]
+    note: Prefer the shorter, more common word.
+
+buttress:
+  - pos: verb
+    alternatives: [support]
+    note: Prefer the shorter, more common word.
+
+calibrate:
+  - pos: verb
+    alternatives: [adjust, set]
+    note: Prefer the shorter, more common word.
+
+capitulate:
+  - pos: verb
+    alternatives: [give in]
+    note: Prefer the shorter, more common phrase.
+
+cease:
+  - pos: verb
+    alternatives: [stop]
+    note: Prefer the shorter, more common word.
+
+circumvent:
+  - pos: verb
+    alternatives: [avoid, get around]
+    note: Prefer the shorter, more common word.
+
+compel:
+  - pos: verb
+    alternatives: [force]
+    note: Prefer the shorter, more common word.
+
+compile:
+  - pos: verb
+    alternatives: [gather, put together]
+    note: Prefer the shorter, more common word.
+
+comprise:
+  - pos: verb
+    alternatives: [include, contain]
+    note: Prefer the shorter, more common word.
+
+concur:
+  - pos: verb
+    alternatives: [agree]
+    note: Prefer the shorter, more common word.
+
+configure:
+  - pos: verb
+    alternatives: [set up]
+    note: Prefer the shorter, more common phrase.
+
+consolidate:
+  - pos: verb
+    alternatives: [combine, merge]
+    note: Prefer the shorter, more common word.
+
+constitute:
+  - pos: verb
+    alternatives: [make up, form]
+    note: Prefer the shorter, more common word.
+
+contemplate:
+  - pos: verb
+    alternatives: [think about, consider]
+    note: Prefer the shorter, more common word.
+
+conjecture:
+  - pos: noun
+    alternatives: [guess]
+    note: Prefer a simple noun for the guess sense.
+  - pos: verb
+    alternatives: [guess]
+    note: Prefer a simple verb for the guessing sense.
+
+correspond:
+  - pos: verb
+    alternatives: [match, agree]
+    note: Prefer a simple, approved verb depending on context.
+
+deem:
+  - pos: verb
+    alternatives: [consider, think]
+    note: Prefer the shorter, more common word.
+
+denote:
+  - pos: verb
+    alternatives: [mean, show]
+    note: Prefer the shorter, more common word.
+
+depict:
+  - pos: verb
+    alternatives: [show]
+    note: Prefer the shorter, more common word.
+
+derive:
+  - pos: verb
+    alternatives: [get, come from]
+    note: Prefer the shorter, more common word.
+
+designate:
+  - pos: verb
+    alternatives: [name, choose]
+    note: Prefer the shorter, more common word.
+
+desist:
+  - pos: verb
+    alternatives: [stop]
+    note: Prefer the shorter, more common word.
+
+detain:
+  - pos: verb
+    alternatives: [hold, keep]
+    note: Prefer the shorter, more common word.
+
+determine:
+  - pos: verb
+    alternatives: [find out, decide]
+    note: Prefer the shorter, more common word.
+
+deviate:
+  - pos: verb
+    alternatives: [differ, change]
+    note: Prefer the shorter, more common word.
+
+devise:
+  - pos: verb
+    alternatives: [plan, invent]
+    note: Prefer the shorter, more common word.
+
+diminish:
+  - pos: verb
+    alternatives: [lessen, reduce]
+    note: Prefer the shorter, more common word.
+
+disburse:
+  - pos: verb
+    alternatives: [pay out]
+    note: Prefer the shorter, more common phrase.
+
+discern:
+  - pos: verb
+    alternatives: [see, notice]
+    note: Prefer the shorter, more common word.
+
+disclose:
+  - pos: verb
+    alternatives: [tell, reveal]
+    note: Prefer the shorter, more common word.
+
+discontinue:
+  - pos: verb
+    alternatives: [stop]
+    note: Prefer the shorter, more common word.
+
+disperse:
+  - pos: verb
+    alternatives: [spread out]
+    note: Prefer the shorter, more common phrase.
+
+divulge:
+  - pos: verb
+    alternatives: [tell, reveal]
+    note: Prefer the shorter, more common word.
+
+duplicate:
+  - pos: noun
+    alternatives: [copy]
+    note: Prefer a simple noun for the copy sense.
+  - pos: verb
+    alternatives: [copy]
+    note: Prefer a simple verb for the copying sense.
+
+effectuate:
+  - pos: verb
+    alternatives: [bring about, do]
+    note: Prefer the shorter, more common word.
+
+elicit:
+  - pos: verb
+    alternatives: [get, draw out]
+    note: Prefer the shorter, more common word.
+
+emanate:
+  - pos: verb
+    alternatives: [come from]
+    note: Prefer the shorter, more common phrase.
+
+emphasize:
+  - pos: verb
+    alternatives: [stress]
+    note: Prefer the shorter, more common word.
+
+enable:
+  - pos: verb
+    alternatives: [let, allow]
+    note: Prefer the shorter, more common word.
+
+encompass:
+  - pos: verb
+    alternatives: [include, cover]
+    note: Prefer the shorter, more common word.
+
+engender:
+  - pos: verb
+    alternatives: [cause]
+    note: Prefer the shorter, more common word.
+
+enhance:
+  - pos: verb
+    alternatives: [improve]
+    note: Prefer the shorter, more common word.
+
+ensue:
+  - pos: verb
+    alternatives: [follow, happen next]
+    note: Prefer the shorter, more common phrase.
+
+entail:
+  - pos: verb
+    alternatives: [mean, need]
+    note: Prefer the shorter, more common word.
+
+envisage:
+  - pos: verb
+    alternatives: [expect, imagine]
+    note: Prefer the shorter, more common word.
+
+epitomize:
+  - pos: verb
+    alternatives: [represent, sum up]
+    note: Prefer the shorter, more common word.
+
+equilibrium:
+  - pos: noun
+    alternatives: [balance]
+    note: Prefer the shorter, more common word.
+
+escalate:
+  - pos: verb
+    alternatives: [increase, get worse]
+    note: Prefer a simple, approved verb depending on context.
+
+evacuate:
+  - pos: verb
+    alternatives: [leave, empty]
+    note: Prefer the shorter, more common word.
+
+evince:
+  - pos: verb
+    alternatives: [show]
+    note: Prefer the shorter, more common word.
+
+exacerbate:
+  - pos: verb
+    alternatives: [worsen]
+    note: Prefer the shorter, more common word.
+
+excessive:
+  - pos: adjective
+    alternatives: [too much]
+    note: Prefer the plain phrase.
+
+exhibit:
+  - pos: verb
+    alternatives: [show]
+    note: Prefer the shorter, more common word.
+
+expend:
+  - pos: verb
+    alternatives: [spend, use]
+    note: Prefer the shorter, more common word.
+
+expire:
+  - pos: verb
+    alternatives: [end, run out]
+    note: Prefer a simple, approved verb depending on context.
+
+extant:
+  - pos: adjective
+    alternatives: [existing]
+    note: Prefer the shorter, more common word.
+
+extract:
+  - pos: verb
+    alternatives: [take out]
+    note: Prefer the shorter, more common phrase.
+
+extremity:
+  - pos: noun
+    alternatives: [end]
+    note: Prefer the shorter, more common word.
+
+feasible:
+  - pos: adjective
+    alternatives: [possible, workable]
+    note: Prefer the shorter, more common word.
+
+formulate:
+  - pos: verb
+    alternatives: [plan, work out]
+    note: Prefer the shorter, more common word.
+
+fortify:
+  - pos: verb
+    alternatives: [strengthen]
+    note: Prefer the shorter, more common word.
+
+fundamental:
+  - pos: adjective
+    alternatives: [basic]
+    note: Prefer the shorter, more common word.
+
+furnish:
+  - pos: verb
+    alternatives: [give, supply]
+    note: Prefer the shorter, more common word.
+
+generate:
+  - pos: verb
+    alternatives: [make, create]
+    note: Prefer the shorter, more common word.
+
+genuine:
+  - pos: adjective
+    alternatives: [real]
+    note: Prefer the shorter, more common word.
+
+germane:
+  - pos: adjective
+    alternatives: [relevant]
+    note: Prefer the shorter, more common word.
+
+gratuitous:
+  - pos: adjective
+    alternatives: [unneeded, needless]
+    note: Prefer the shorter, more common word.
+
+guise:
+  - pos: noun
+    alternatives: [disguise, appearance]
+    note: Prefer the shorter, more common word.
+
+heretofore:
+  - pos: any
+    alternatives: [until now]
+    note: Prefer the plain, common phrase.
+
+hypothesize:
+  - pos: verb
+    alternatives: [guess, suggest]
+    note: Prefer the shorter, more common word.
+
+identical:
+  - pos: adjective
+    alternatives: [same]
+    note: Prefer the shorter, more common word.
+
+illuminate:
+  - pos: verb
+    alternatives: [light up, explain]
+    note: Prefer a simple, approved verb depending on context.
+
+illustrate:
+  - pos: verb
+    alternatives: [show]
+    note: Prefer the shorter, more common word.
+
+immerse:
+  - pos: verb
+    alternatives: [put into]
+    note: Prefer the shorter, more common phrase.
+
+implement:
+  - pos: noun
+    alternatives: [tool]
+    note: Prefer a simple noun for the tool sense.
+  - pos: verb
+    alternatives: [carry out, do]
+    note: Prefer a simple, approved verb for the doing sense.
+
+inaugurate:
+  - pos: verb
+    alternatives: [start, open]
+    note: Prefer the shorter, more common word.
+
+inception:
+  - pos: noun
+    alternatives: [start]
+    note: Prefer the shorter, more common word.
+
+incessant:
+  - pos: adjective
+    alternatives: [constant]
+    note: Prefer the shorter, more common word.
+
+incline:
+  - pos: verb
+    alternatives: [lean, tend]
+    note: Prefer a simple, approved verb depending on context.
+
+indispensable:
+  - pos: adjective
+    alternatives: [necessary, needed]
+    note: Prefer the shorter, more common word.
+
+inevitable:
+  - pos: adjective
+    alternatives: [certain, unavoidable]
+    note: Prefer the shorter, more common word.
+
+infer:
+  - pos: verb
+    alternatives: [guess, conclude]
+    note: Prefer the shorter, more common word.
+
+inhibit:
+  - pos: verb
+    alternatives: [stop, block]
+    note: Prefer the shorter, more common word.
+
+innumerable:
+  - pos: adjective
+    alternatives: [many]
+    note: Prefer the shorter, more common word.
+
+inquire:
+  - pos: verb
+    alternatives: [ask]
+    note: Prefer the shorter, more common word.
+
+instigate:
+  - pos: verb
+    alternatives: [start, cause]
+    note: Prefer the shorter, more common word.
+
+integral:
+  - pos: adjective
+    alternatives: [essential, needed]
+    note: Prefer the shorter, more common word.
+
+interrogate:
+  - pos: verb
+    alternatives: [question, ask]
+    note: Prefer the shorter, more common word.
+
+intersperse:
+  - pos: verb
+    alternatives: [mix in, scatter]
+    note: Prefer the shorter, more common word.
+
+intervene:
+  - pos: verb
+    alternatives: [step in]
+    note: Prefer the shorter, more common phrase.
+
+intrinsic:
+  - pos: adjective
+    alternatives: [natural, basic]
+    note: Prefer the shorter, more common word.
+
+inundate:
+  - pos: verb
+    alternatives: [flood, overwhelm]
+    note: Prefer a simple, approved verb depending on context.
+
+invalidate:
+  - pos: verb
+    alternatives: [cancel, void]
+    note: Prefer the shorter, more common word.
+
+juncture:
+  - pos: noun
+    alternatives: [point, time]
+    note: Prefer the shorter, more common word.
+
+lament:
+  - pos: verb
+    alternatives: [regret, mourn]
+    note: Prefer a simple, approved verb depending on context.
+
+laud:
+  - pos: verb
+    alternatives: [praise]
+    note: Prefer the shorter, more common word.
+
+legitimate:
+  - pos: adjective
+    alternatives: [lawful, valid]
+    note: Prefer the shorter, more common word.
+
+maintain:
+  - pos: verb
+    alternatives: [keep, service]
+    note: Prefer a simple, approved verb depending on context.
+
+maximize:
+  - pos: verb
+    alternatives: [raise, boost]
+    note: Prefer a simple, approved verb depending on context.
+
+mediate:
+  - pos: verb
+    alternatives: [settle, help agree]
+    note: Prefer the shorter, more common phrase.
+
+meticulous:
+  - pos: adjective
+    alternatives: [careful]
+    note: Prefer the shorter, more common word.
+
+minuscule:
+  - pos: adjective
+    alternatives: [tiny, very small]
+    note: Prefer the shorter, more common word.
+
+mitigate:
+  - pos: verb
+    alternatives: [lessen, reduce]
+    note: Prefer the shorter, more common word.
+
+mobilize:
+  - pos: verb
+    alternatives: [get ready, move]
+    note: Prefer a simple, approved verb depending on context.
+
+modality:
+  - pos: noun
+    alternatives: [way, method]
+    note: Prefer the shorter, more common word.
+
+multitude:
+  - pos: noun
+    alternatives: [many, lots]
+    note: Prefer the shorter, more common word.
+
+negate:
+  - pos: verb
+    alternatives: [cancel out]
+    note: Prefer the shorter, more common phrase.
+
+negligible:
+  - pos: adjective
+    alternatives: [small, unimportant]
+    note: Prefer the shorter, more common word.
+
+nullify:
+  - pos: verb
+    alternatives: [cancel]
+    note: Prefer the shorter, more common word.
+
+obfuscate:
+  - pos: verb
+    alternatives: [confuse, hide]
+    note: Prefer the shorter, more common word.
+
+objective:
+  - pos: noun
+    alternatives: [goal, aim]
+    note: Prefer the shorter, more common word.
+
+obligatory:
+  - pos: adjective
+    alternatives: [required]
+    note: Prefer the shorter, more common word.
+
+occasion:
+  - pos: verb
+    alternatives: [cause]
+    note: Prefer the shorter, more common word.
+
+omit:
+  - pos: verb
+    alternatives: [leave out]
+    note: Prefer the shorter, more common phrase.
+
+onerous:
+  - pos: adjective
+    alternatives: [hard, heavy]
+    note: Prefer the shorter, more common word.
+
+optimal:
+  - pos: adjective
+    alternatives: [best]
+    note: Prefer the shorter, more common word.
+
+orient:
+  - pos: verb
+    alternatives: [point, aim]
+    note: Prefer a simple, approved verb depending on context.
+
+overarching:
+  - pos: adjective
+    alternatives: [main, general]
+    note: Prefer the shorter, more common word.
+
+paramount:
+  - pos: adjective
+    alternatives: [most important]
+    note: Prefer the plain phrase.
+
+partake:
+  - pos: verb
+    alternatives: [take part, join]
+    note: Prefer the shorter, more common phrase.
+
+peculiar:
+  - pos: adjective
+    alternatives: [unusual, odd]
+    note: Prefer the shorter, more common word.
+
+peripheral:
+  - pos: adjective
+    alternatives: [minor, outer]
+    note: Prefer the shorter, more common word.
+
+permeate:
+  - pos: verb
+    alternatives: [spread through]
+    note: Prefer the shorter, more common phrase.
+
+pertain:
+  - pos: verb
+    alternatives: [relate, apply]
+    note: Prefer the shorter, more common word.
+
+pertinent:
+  - pos: adjective
+    alternatives: [relevant]
+    note: Prefer the shorter, more common word.
+
+phenomenon:
+  - pos: noun
+    alternatives: [event, effect]
+    note: Prefer the shorter, more common word.
+
+plausible:
+  - pos: adjective
+    alternatives: [believable]
+    note: Prefer the shorter, more common word.
+
+portray:
+  - pos: verb
+    alternatives: [show]
+    note: Prefer the shorter, more common word.
+
+postulate:
+  - pos: verb
+    alternatives: [assume, suggest]
+    note: Prefer the shorter, more common word.
+
+precede:
+  - pos: verb
+    alternatives: [come before]
+    note: Prefer the plain phrase.
+
+precipitate:
+  - pos: verb
+    alternatives: [cause, bring on]
+    note: Prefer a simple, approved verb depending on context.
+
+predicate:
+  - pos: verb
+    alternatives: [base]
+    note: Prefer the shorter, more common word.
+
+predominant:
+  - pos: adjective
+    alternatives: [main, most common]
+    note: Prefer the shorter, more common word.
+
+preliminary:
+  - pos: adjective
+    alternatives: [early, first]
+    note: Prefer the shorter, more common word.
+
+premise:
+  - pos: noun
+    alternatives: [assumption, basis]
+    note: Prefer the shorter, more common word.
+
+preponderance:
+  - pos: noun
+    alternatives: [most, majority]
+    note: Prefer the shorter, more common word.
+
+prerequisite:
+  - pos: noun
+    alternatives: [requirement]
+    note: Prefer the shorter, more common word.
+
+prescribe:
+  - pos: verb
+    alternatives: [set, order]
+    note: Prefer the shorter, more common word.
+
+presume:
+  - pos: verb
+    alternatives: [assume, guess]
+    note: Prefer the shorter, more common word.
+
+pretense:
+  - pos: noun
+    alternatives: [excuse, pretending]
+    note: Prefer the shorter, more common word.
+
+proclivity:
+  - pos: noun
+    alternatives: [tendency]
+    note: Prefer the shorter, more common word.
+
+proliferate:
+  - pos: verb
+    alternatives: [spread, grow fast]
+    note: Prefer a simple, approved verb depending on context.
+
+prolong:
+  - pos: verb
+    alternatives: [extend, make longer]
+    note: Prefer a simple, approved verb depending on context.
+
+promulgate:
+  - pos: verb
+    alternatives: [publish, issue]
+    note: Prefer the shorter, more common word.
+
+propagate:
+  - pos: verb
+    alternatives: [spread]
+    note: Prefer the shorter, more common word.
+
+proponent:
+  - pos: noun
+    alternatives: [supporter]
+    note: Prefer the shorter, more common word.
+
+propound:
+  - pos: verb
+    alternatives: [suggest, put forward]
+    note: Prefer a simple, approved verb depending on context.
+
+proscribe:
+  - pos: verb
+    alternatives: [forbid, ban]
+    note: Prefer the shorter, more common word.
+
+protracted:
+  - pos: adjective
+    alternatives: [long]
+    note: Prefer the shorter, more common word.
+
+provisional:
+  - pos: adjective
+    alternatives: [temporary]
+    note: Prefer the shorter, more common word.
+
+proximate:
+  - pos: adjective
+    alternatives: [nearest, close]
+    note: Prefer the shorter, more common word.
+
+purport:
+  - pos: verb
+    alternatives: [claim]
+    note: Prefer the shorter, more common word.
+
+quintessential:
+  - pos: adjective
+    alternatives: [perfect example, typical]
+    note: Prefer a simple, approved phrase depending on context.
+
+readily:
+  - pos: adverb
+    alternatives: [easily]
+    note: Prefer the shorter, more common word.
+
+rebuff:
+  - pos: verb
+    alternatives: [refuse, reject]
+    note: Prefer the shorter, more common word.
+
+reciprocate:
+  - pos: verb
+    alternatives: [return, repay]
+    note: Prefer a simple, approved verb depending on context.
+
+reconcile:
+  - pos: verb
+    alternatives: [settle, match up]
+    note: Prefer a simple, approved verb depending on context.
+
+redress:
+  - pos: verb
+    alternatives: [fix, correct]
+    note: Prefer the shorter, more common word.
+
+refute:
+  - pos: verb
+    alternatives: [disprove]
+    note: Prefer the shorter, more common word.
+
+reiterate:
+  - pos: verb
+    alternatives: [repeat]
+    note: Prefer the shorter, more common word.
+
+remuneration:
+  - pos: noun
+    alternatives: [pay]
+    note: Prefer the shorter, more common word.
+
+replicate:
+  - pos: verb
+    alternatives: [copy]
+    note: Prefer the shorter, more common word.
+
+requisite:
+  - pos: adjective
+    alternatives: [needed, required]
+    note: Prefer the shorter, more common word.
+
+resilient:
+  - pos: adjective
+    alternatives: [tough, able to recover]
+    note: Prefer a simple, approved phrase depending on context.
+
+retrospective:
+  - pos: adjective
+    alternatives: [looking back]
+    note: Prefer the plain phrase.
+
+revert:
+  - pos: verb
+    alternatives: [go back]
+    note: Prefer the plain phrase.
+
+ruminate:
+  - pos: verb
+    alternatives: [think over]
+    note: Prefer the plain phrase.
+
+salient:
+  - pos: adjective
+    alternatives: [main, important]
+    note: Prefer the shorter, more common word.
+
+scrutinize:
+  - pos: verb
+    alternatives: [examine closely, check]
+    note: Prefer a simple, approved phrase depending on context.
+
+sever:
+  - pos: verb
+    alternatives: [cut, separate]
+    note: Prefer the shorter, more common word.
+
+solicit:
+  - pos: verb
+    alternatives: [ask for, request]
+    note: Prefer a simple, approved phrase depending on context.
+
+sporadic:
+  - pos: adjective
+    alternatives: [occasional]
+    note: Prefer the shorter, more common word.
+
+stipulate:
+  - pos: verb
+    alternatives: [state, require]
+    note: Prefer the shorter, more common word.
+
+subsequently:
+  - pos: any
+    alternatives: [after that, later]
+    note: Prefer the plain, common phrase.
+
+substantiate:
+  - pos: verb
+    alternatives: [prove, support]
+    note: Prefer the shorter, more common word.
+
+succinct:
+  - pos: adjective
+    alternatives: [short, brief]
+    note: Prefer the shorter, more common word.
+
+supersede:
+  - pos: verb
+    alternatives: [replace]
+    note: Prefer the shorter, more common word.
+
+supplement:
+  - pos: verb
+    alternatives: [add to]
+    note: Prefer the plain phrase.
+
+surmise:
+  - pos: verb
+    alternatives: [guess]
+    note: Prefer the shorter, more common word.
+
+surplus:
+  - pos: noun
+    alternatives: [extra, spare]
+    note: Prefer the shorter, more common word.
+
+synthesize:
+  - pos: verb
+    alternatives: [combine, make]
+    note: Prefer the shorter, more common word.
+
+tantamount to:
+  - pos: any
+    alternatives: [the same as]
+    note: Prefer the plain, common phrase.
+
+thereby:
+  - pos: any
+    alternatives: [by that, so]
+    note: Prefer the plain, common phrase.
+
+thereof:
+  - pos: any
+    alternatives: [of that, of it]
+    note: Prefer the plain, common phrase.
+
+thereupon:
+  - pos: any
+    alternatives: [then]
+    note: Prefer the shorter, more common word.
+
+undergo:
+  - pos: verb
+    alternatives: [go through]
+    note: Prefer the plain phrase.
+
+underlying:
+  - pos: adjective
+    alternatives: [basic, hidden]
+    note: Prefer the shorter, more common word.
+
+undue:
+  - pos: adjective
+    alternatives: [too much, unfair]
+    note: Prefer a simple, approved phrase depending on context.
+
+unequivocal:
+  - pos: adjective
+    alternatives: [clear, certain]
+    note: Prefer the shorter, more common word.
+
+utmost:
+  - pos: adjective
+    alternatives: [greatest, most]
+    note: Prefer the shorter, more common word.
+
+validate:
+  - pos: verb
+    alternatives: [confirm, check]
+    note: Prefer the shorter, more common word.
+
+verbatim:
+  - pos: adverb
+    alternatives: [word for word]
+    note: Prefer the plain phrase.
+
+viable:
+  - pos: adjective
+    alternatives: [workable, possible]
+    note: Prefer the shorter, more common word.
+
+vicinity:
+  - pos: noun
+    alternatives: [area, nearby]
+    note: Prefer a simple, approved word depending on context.
+
+warrant:
+  - pos: verb
+    alternatives: [justify, call for]
+    note: Prefer a simple, approved phrase depending on context.
+
+whereas:
+  - pos: any
+    alternatives: [but, while]
+    note: Prefer the shorter, more common connector.
+
+withstand:
+  - pos: verb
+    alternatives: [resist, hold up]
+    note: Prefer a simple, approved phrase depending on context.
+
+wherewithal:
+  - pos: noun
+    alternatives: [means, money]
+    note: Prefer a simple, approved word depending on context.
+
+# --- Further wordy multi-word phrases ------------------------------------------
+
+for the reason that:
+  - pos: any
+    alternatives: [because]
+    note: Drop unnecessary words.
+
+in accordance with:
+  - pos: any
+    alternatives: [as required by, following]
+    note: Drop unnecessary words.
+
+as a result of:
+  - pos: any
+    alternatives: [because of]
+    note: Drop unnecessary words.
+
+in conjunction with:
+  - pos: any
+    alternatives: [with, together with]
+    note: Drop unnecessary words.
+
+with the aim of:
+  - pos: any
+    alternatives: [to]
+    note: Drop unnecessary words.
+
+in the course of:
+  - pos: any
+    alternatives: [during]
+    note: Drop unnecessary words.
+
+at such time as:
+  - pos: any
+    alternatives: [when]
+    note: Drop unnecessary words.
+
+by virtue of:
+  - pos: any
+    alternatives: [because of, through]
+    note: Drop unnecessary words.
+
+for the duration of:
+  - pos: any
+    alternatives: [during]
+    note: Drop unnecessary words.
+
+with respect to:
+  - pos: any
+    alternatives: [about, regarding]
+    note: Drop unnecessary words.
+
+in relation to:
+  - pos: any
+    alternatives: [about]
+    note: Drop unnecessary words.
+
+in terms of:
+  - pos: any
+    alternatives: [in, for]
+    note: Drop unnecessary words.
+
+on the basis of:
+  - pos: any
+    alternatives: [based on, from]
+    note: Drop unnecessary words.
+
+with the intent of:
+  - pos: any
+    alternatives: [to]
+    note: Drop unnecessary words.
+
+by reason of:
+  - pos: any
+    alternatives: [because of]
+    note: Drop unnecessary words.
+
+in the interest of:
+  - pos: any
+    alternatives: [for]
+    note: Drop unnecessary words.
+
+to the extent that:
+  - pos: any
+    alternatives: [as far as]
+    note: Drop unnecessary words.
+
+in light of:
+  - pos: any
+    alternatives: [because of, given]
+    note: Drop unnecessary words.
+
+for the benefit of:
+  - pos: any
+    alternatives: [for]
+    note: Drop unnecessary words.
+
+at the time of:
+  - pos: any
+    alternatives: [when]
+    note: Drop unnecessary words.
+
+in the process of:
+  - pos: any
+    alternatives: [while]
+    note: Drop unnecessary words.
+
+on the part of:
+  - pos: any
+    alternatives: [by]
+    note: Drop unnecessary words.
+
+obviously:
+  - pos: adverb
+    alternatives: [clearly, plainly]
+    note: Drop unnecessary words; state the fact directly.
+
+clearly:
+  - pos: adverb
+    alternatives: [plainly]
+    note: Drop unnecessary words; state the fact directly.
+
+simply:
+  - pos: adverb
+    alternatives: [only, just]
+    note: Prefer the shorter, more common word.
+
+basically:
+  - pos: adverb
+    alternatives: [mainly]
+    note: Drop unnecessary words; state the fact directly.
+
+seamless:
+  - pos: adjective
+    alternatives: [smooth, continuous]
+    note: Prefer the plain adjective over the vague marketing term.
+
+robust:
+  - pos: adjective
+    alternatives: [strong, reliable]
+    note: Prefer the plain adjective over the vague marketing term.
+
+crucial:
+  - pos: adjective
+    alternatives: [important, essential]
+    note: Prefer the plain adjective over the vague marketing term.
+
+delve:
+  - pos: verb
+    alternatives: [look into, examine]
+    note: Prefer the shorter, more common word.
+
+moreover:
+  - pos: any
+    alternatives: [also, and]
+    note: Drop unnecessary words.
+
+additionally:
+  - pos: any
+    alternatives: [also, and]
+    note: Drop unnecessary words.

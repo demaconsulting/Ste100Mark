@@ -27,8 +27,10 @@ words:
   - docversion
   - errorlevel
   - fileassert
+  - licence
   - xunit
   - nameof
+  - nominalized
   - pagetitle
   - Pandoc
   - Qube
@@ -42,9 +44,11 @@ words:
   - sysml
   - sysml2tools
   - ste100mark
+  - utilise
   - venv
   - versionmark
   - Weasyprint
+  - yamldotnet
   - yamlfix
 
 # Exclude common build artifacts, dependencies, and vendored third-party code

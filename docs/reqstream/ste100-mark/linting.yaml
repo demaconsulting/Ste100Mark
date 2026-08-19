@@ -1,0 +1,275 @@
+---
+# Linting Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the Ste100Mark Linting subsystem
+# - The Linting subsystem spans the Markdown lint workflow and its configuration models
+# - Subsystem requirements describe the externally visible lint behavior and rule enforcement
+
+sections:
+  - title: Linting Subsystem Requirements
+    requirements:
+      - id: Template-Linting-WordLimits
+        title: >-
+          The Linting subsystem shall enforce ASD-STE100 Rule 4.1 sentence-length limits
+          using the Rule 8.4-8.7 counting behavior implemented by the tool.
+        justification: |
+          Sentence length is one of the primary mechanical constraints in ASD-STE100.
+          The tool must distinguish procedure and descriptive writing and count words
+          consistently for parentheticals, quoted text, hyphenated words, number-plus-unit
+          spans, and title-style proper-name sequences.
+        tests:
+          - Split_SingleSimpleSentence_ReturnsOneSentenceWithWordCount
+          - Split_MultipleSentences_ReturnsEachSentenceSeparately
+          - Split_ColonFollowedByCapital_TreatedAsSentenceTerminator
+          - CountWords_ParentheticalSpan_CountsAsOneWord
+          - Split_ParentheticalFormingCompleteSentence_ExtractedSeparately
+          - CountWords_HyphenatedWord_CountsAsOneWord
+          - CountWords_NumberWithUnit_CountsAsOneWord
+          - CountWords_QuotedText_CountsAsOneWord
+          - CountWords_TitleCaseSequence_CountsAsOneWord
+          - Evaluate_SentenceWithinDescriptiveLimit_NoWordLimitDiagnostic
+          - Evaluate_SentenceExceedingDescriptiveLimit_FlagsWordLimitDiagnostic
+          - Evaluate_SentenceExceedingProcedureLimit_FlagsOnlyInProcedureMode
+
+      - id: Template-Linting-Semicolons
+        title: The Linting subsystem shall report semicolons in prose as Rule 8.1 violations unless the rule is explicitly
+          disabled.
+        justification: |
+          ASD-STE100 Rule 8.1 prohibits semicolons in controlled prose. The subsystem must
+          report the violation consistently while still allowing projects to disable the
+          check when they intentionally choose not to enforce that rule.
+        tests:
+          - Evaluate_Semicolon_FlagsSemicolonDiagnostic
+          - Evaluate_SemicolonWithAllowSemicolons_NoDiagnostic
+          - Run_FileWithSemicolon_ProducesFailureExitCode
+          - Ste100Mark_LintFileWithSemicolon_ReportsErrorAndReturnsNonZero
+
+      - id: Template-Linting-Contractions
+        title: The Linting subsystem shall report contractions in prose as Rule 4.2 violations unless the rule is explicitly
+          disabled.
+        justification: |
+          ASD-STE100 Rule 4.2 requires expanded forms rather than contractions. The
+          subsystem must detect common contraction forms and report them as build-breaking
+          diagnostics when the check is enabled.
+        tests:
+          - Evaluate_Contraction_FlagsContractionDiagnostic
+          - Evaluate_ContractionWithAllowContractions_NoDiagnostic
+
+      - id: Template-Linting-ParagraphAdvisory
+        title: The Linting subsystem shall provide an advisory paragraph-length check with a configurable sentence cap.
+        justification: |
+          Long paragraphs reduce readability even when every individual sentence is legal.
+          The advisory paragraph-length heuristic gives projects a configurable readability
+          signal without treating it as an official ASD-STE100 rule.
+        tests:
+          - Evaluate_ParagraphExceedingSentenceCap_FlagsAdvisoryWarning
+          - Evaluate_ParagraphLengthDisabled_NoAdvisoryDiagnostic
+          - Evaluate_HeadingSegment_ExemptFromParagraphLengthCheck
+
+      - id: Template-Linting-PassiveVoiceAdvisory
+        title: The Linting subsystem shall provide a configurable passive-voice advisory heuristic.
+        justification: |
+          Active voice is often preferred for clear technical instructions, but passive-voice
+          detection is heuristic rather than an official ASD-STE100 rule. The subsystem must
+          allow projects to enable, disable, or escalate this signal according to local needs.
+        tests:
+          - Evaluate_PassiveVoicePattern_FlagsAdvisoryAtConfiguredSeverity
+          - Evaluate_PassiveVoiceOff_NoDiagnostic
+          - Evaluate_PassiveVoiceError_FlagsAtErrorSeverity
+          - Evaluate_WasOpened_StillFlagsPassiveVoice
+
+      - id: Template-Linting-ComplexVerbAdvisory
+        title: The Linting subsystem shall provide a configurable complex-verb (perfect/modal-perfect tense) advisory heuristic.
+        justification: |
+          Perfect and modal-perfect tense verb constructions (for example "has opened" or
+          "would have written") are discouraged by ASD-STE100 in favor of simple present,
+          past, or future tense verbs, but detecting them is heuristic rather than an official
+          rule. The subsystem must allow projects to enable, disable, or escalate this signal,
+          and must not double-report the same construction as both complex-verb and
+          passive-voice findings.
+        tests:
+          - Evaluate_PerfectTensePattern_FlagsComplexVerbAdvisory
+          - Evaluate_ModalPerfectTensePattern_FlagsComplexVerbAdvisory
+          - Evaluate_ComplexVerbOff_NoDiagnostic
+          - Evaluate_ComplexVerbOnlyInsideInlineCode_NoDiagnostic
+          - Evaluate_HasBeenOpened_FlagsComplexVerbOnlyNotPassiveVoice
+
+      - id: Template-Linting-IngFormAdvisory
+        title: The Linting subsystem shall provide a configurable "-ing" form advisory heuristic.
+        justification: |
+          ASD-STE100 restricts "-ing" forms to technical nouns and adjectives, not
+          present-participle verb forms, but distinguishing the two automatically is heuristic
+          rather than an official rule. The subsystem must allow projects to enable, disable,
+          or escalate this signal, and must avoid flagging words that touch a sentence-ending
+          period, since those are less likely to be present-participle verb forms.
+        tests:
+          - Evaluate_IngWordMidSentence_FlagsIngFormAdvisory
+          - Evaluate_IngWordFollowedByPeriod_NotFlagged
+          - Evaluate_IngWordPrecededByPeriod_NotFlagged
+          - Evaluate_IngFormOff_NoDiagnostic
+          - Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic
+
+      - id: Template-Linting-Dictionary
+        title: >-
+          The Linting subsystem shall enforce an effective disallow dictionary built from the
+          configured dictionary sources.
+        justification: |
+          Vocabulary control is central to Simplified Technical English usage. The subsystem
+          must merge the embedded illustrative baseline, any project-supplied dictionary file,
+          and inline allow/disallow/ignore settings into one case-insensitive effective
+          dictionary and report matched terms with suggested alternatives.
+        tests:
+          - Load_DefaultConfig_IncludesEmbeddedEntries
+          - Load_MultiSenseEmbeddedTerm_IncludesBothSenses
+          - Load_UseEmbeddedFalse_ExcludesEmbeddedEntries
+          - Load_InlineDisallowEntry_AddedToMergedDictionary
+          - Load_InlineDisallowOverridesEmbeddedTerm_ReplacesAllSenses
+          - Load_AllowListedTerm_RemovedFromMergedDictionary
+          - Load_IgnoreListedTerm_RemovedFromMergedDictionary
+          - Load_ProjectDictionaryFile_MergedOverEmbedded
+          - Load_MissingProjectDictionaryFile_ThrowsInvalidOperationException
+          - TryGetEntry_DifferentCasing_MatchesEntry
+          - Evaluate_DisallowedEmbeddedTerm_FlagsDiagnosticWithSuggestion
+          - Evaluate_MultiWordPhrase_FlagsDiagnostic
+          - Evaluate_DifferentCasing_StillFlagsDiagnostic
+          - Evaluate_TermEmbeddedInLongerWord_NotFlagged
+          - Evaluate_NoDisallowedTerms_ReturnsNoDiagnostics
+          - Evaluate_InlineOverriddenTerm_UsesOverriddenSuggestion
+          - Evaluate_AllowListedTerm_NotFlagged
+
+      - id: Template-Linting-InlineCodeSpans
+        title: >-
+          The Linting subsystem shall retain inline code spans verbatim in reported prose,
+          count each span as exactly one word toward Rule 4.1/8.4-8.7 limits, and exclude
+          inline-code-span content from the semicolon, contraction, passive-voice,
+          complex-verb, -ing form, and dictionary checks, while fenced code blocks remain
+          fully excluded from prose.
+        justification: |
+          Inline code spans frequently carry literal technical values (for example, a CLI flag
+          or file name) embedded mid-sentence. Stripping them breaks sentence readability and
+          undercounts words. Rule 8.6 already treats numbers, abbreviations, identifiers, and
+          quoted text as a single word each; extending that treatment to inline code spans
+          keeps word counting consistent while excluding non-prose technical literals from
+          grammar-sensitive checks that would otherwise produce false positives.
+        tests:
+          - Extract_InlineCodeSpan_KeptVerbatimInProse
+          - Extract_FencedCodeBlock_ExcludedFromProse
+          - CountWords_InlineCodeSpan_CountsAsOneWord
+          - Split_SentenceWithInlineCodeSpan_KeepsVerbatimText
+          - Evaluate_SemicolonOnlyInsideInlineCode_NoDiagnostic
+          - Evaluate_ContractionOnlyInsideInlineCode_NoDiagnostic
+          - Evaluate_PassiveVoiceOnlyInsideInlineCode_NoDiagnostic
+          - Evaluate_ComplexVerbOnlyInsideInlineCode_NoDiagnostic
+          - Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic
+          - Evaluate_WordLimitDiagnosticMessage_ShowsInlineCodeVerbatim
+          - Evaluate_DisallowedTermOnlyInsideInlineCode_NotFlagged
+          - Evaluate_DisallowedTermInsideAndOutsideInlineCode_FlagsOnlyProseOccurrence
+
+      - id: Template-Linting-DictionaryPos
+        title: >-
+          The Linting subsystem shall select the applicable part-of-speech-tagged sense(s) of a
+          multi-sense disallowed term using a deterministic heuristic, reporting every sense as
+          ambiguous when the heuristic cannot decide confidently.
+        justification: |
+          A single disallowed term can have distinct noun and verb senses with different
+          approved alternatives (for example "impact" as a noun versus as a verb). Reporting
+          the wrong sense's alternative would be misleading, so the subsystem must use
+          surrounding sentence context to pick the correct sense when possible, and fall back
+          to reporting every sense, clearly labeled as ambiguous, when the context does not
+          confidently indicate one grammatical role.
+        tests:
+          - Guess_PrecededByTo_ReturnsVerb
+          - Guess_PrecededByModal_ReturnsVerb
+          - Guess_PrecededByBeAuxiliaryWithIngSuffix_ReturnsVerb
+          - Guess_InflectionSuffixAlone_ReturnsVerb
+          - Guess_ImperativeSentenceStartInProcedureMode_ReturnsVerb
+          - Guess_SentenceStartInDescriptiveMode_ReturnsNull
+          - Guess_PrecededByArticle_ReturnsNoun
+          - Guess_PrecededByPossessive_ReturnsNoun
+          - Guess_PrecededByQuantifier_ReturnsNoun
+          - Guess_PrecededByPreposition_ReturnsNoun
+          - Guess_PluralSuffix_ReturnsNoun
+          - Guess_FollowedByOf_ReturnsNoun
+          - Guess_ConflictingSignals_ReturnsNull
+          - Guess_NoSignals_ReturnsNull
+          - Evaluate_SingleSenseTerm_AlwaysReportedRegardlessOfContext
+          - Evaluate_MultiSenseTerm_NounContext_ReportsNounSense
+          - Evaluate_MultiSenseTerm_VerbContext_ReportsVerbSense
+          - Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous
+          - Evaluate_AnyPosSingleSenseTerm_AlwaysReported
+          - Evaluate_ConfidentSenseSingleAlternative_NoOrInMessage
+          - Evaluate_ConfidentSenseTwoAlternatives_JoinsWithOrNoOxfordComma
+          - Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr
+          - Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin
+
+      - id: Template-Linting-Configuration
+        title: >-
+          The Linting subsystem shall load YAML configuration for include/exclude patterns,
+          mode overrides, rule tuning, and dictionary settings.
+        justification: |
+          Projects need a repeatable way to control file scope, writing mode, rule severity,
+          and vocabulary policy without recompiling the tool. YAML configuration provides a
+          human-editable, repository-local contract for those settings.
+        tests:
+          - Load_NullPath_ReturnsDefaultConfiguration
+          - Load_NonExistentPath_ThrowsInvalidOperationException
+          - Load_FullConfigurationFile_ParsesAllSections
+          - Load_MalformedYaml_ThrowsInvalidOperationException
+          - ResolveMode_NoMatchingOverride_ReturnsDefaultMode
+          - ResolveMode_MatchingOverrideGlob_ReturnsOverriddenMode
+          - ResolveMode_MultipleOverrides_UsesFirstMatch
+          - Run_ProcedureModeOverride_AppliesStricterWordLimit
+
+      - id: Template-Linting-CliIntegration
+        title: >-
+          The Linting subsystem shall accept positional globs and the lint-specific command-line
+          options required to drive one lint invocation.
+        justification: |
+          The default tool path must be controllable from the command line so users and CI
+          jobs can choose file scope, configuration file, output format, and strict-mode
+          behavior for each run.
+        tests:
+          - Context_Create_NoArguments_ReturnsLintingDefaults
+          - Context_Create_PositionalArgument_CollectedAsGlob
+          - Context_Create_MultiplePositionalArguments_CollectedInOrder
+          - Context_Create_ConfigFlag_SetsConfigFile
+          - Context_Create_ConfigFlag_WithoutValue_ThrowsArgumentException
+          - Context_Create_FormatFlagJson_SetsJsonFormat
+          - Context_Create_FormatFlagText_SetsTextFormat
+          - Context_Create_FormatFlag_UnsupportedValue_ThrowsArgumentException
+          - Context_Create_FormatFlag_WithoutValue_ThrowsArgumentException
+          - Context_Create_StrictFlag_SetsStrictTrue
+          - Program_Run_NoArguments_DisplaysDefaultBehavior
+          - Run_PositionalGlobs_OverrideConfigInclude
+
+      - id: Template-Linting-OutputFormats
+        title: The Linting subsystem shall report diagnostics in human-readable text and structured JSON formats.
+        justification: |
+          Human users need readable console diagnostics, while CI systems need a stable
+          machine-readable schema. The subsystem must provide both without mixing banner text
+          into JSON output.
+        tests:
+          - Report_TextFormat_WritesDiagnosticLinesAndSummary
+          - Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema
+          - Report_NoDiagnostics_WritesZeroCountSummary
+          - Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument
+
+      - id: Template-Linting-ExitCode
+        title: >-
+          The Linting subsystem shall return a non-zero exit code for error-severity findings,
+          expected configuration failures, and warn-severity findings when `--strict` is active.
+        justification: |
+          CI/CD pipelines must be able to fail builds on lint problems and configuration
+          defects programmatically. Strict mode also lets a project temporarily promote all
+          warnings to failing conditions without changing the reported severities.
+        tests:
+          - Run_CleanMarkdownFile_ProducesSuccessExitCode
+          - Run_FileWithSemicolon_ProducesFailureExitCode
+          - Run_WarnOnlyFinding_WithoutStrict_ProducesSuccessExitCode
+          - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
+          - Run_MissingExplicitConfigFile_ReportsErrorWithoutThrowing
+          - Context_MarkFailure_SetsExitCodeWithoutConsoleOutput
+          - Ste100Mark_LintCleanFile_ReturnsZeroExitCode
+          - Ste100Mark_LintWithStrictFlag_PromotesWarningsToFailure
+          - Ste100Mark_LintWithMissingConfigFile_ReturnsNonZeroWithErrorMessage

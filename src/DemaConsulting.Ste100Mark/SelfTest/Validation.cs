@@ -58,6 +58,9 @@ internal static class Validation
         // Run core functionality tests
         RunVersionTest(context, testResults);
         RunHelpTest(context, testResults);
+        RunLintCleanFileTest(context, testResults);
+        RunLintViolationFileTest(context, testResults);
+        RunLintJsonOutputTest(context, testResults);
 
         // Calculate totals
         var totalTests = testResults.Results.Count;
@@ -237,6 +240,210 @@ internal static class Validation
         catch (Exception ex)
         {
             HandleTestException(test, context, "Ste100Mark_HelpDisplay", ex);
+        }
+
+        FinalizeTestResult(test, startTime, testResults);
+    }
+
+    /// <summary>
+    ///     Runs a test asserting a clean Markdown file produces no diagnostics when linted.
+    /// </summary>
+    /// <param name="context">The context for output.</param>
+    /// <param name="testResults">The test results collection.</param>
+    private static void RunLintCleanFileTest(Context context, DemaConsulting.TestResults.TestResults testResults)
+    {
+        var startTime = DateTime.UtcNow;
+        var test = CreateTestResult("Ste100Mark_LintCleanFileNoDiagnostics");
+
+        try
+        {
+            using var tempDir = new TemporaryDirectory();
+            var mdFile = PathHelpers.SafePathCombine(tempDir.DirectoryPath, "clean.md");
+            var logFile = PathHelpers.SafePathCombine(tempDir.DirectoryPath, "clean-test.log");
+
+            File.WriteAllText(mdFile, "# Clean Document\n\nThis is a short sentence.\n");
+
+            // Build command line arguments (relative filename; CWD is temporarily switched to the
+            // temp directory below since Ste100Mark resolves globs relative to the current
+            // directory)
+            var args = new List<string>
+            {
+                "clean.md",
+                "--silent",
+                "--log", logFile
+            };
+
+            // Run the program with the current directory switched to the temp directory
+            int exitCode;
+            var originalDirectory = Directory.GetCurrentDirectory();
+            Directory.SetCurrentDirectory(tempDir.DirectoryPath);
+            try
+            {
+                using var testContext = Context.Create([.. args]);
+                Program.Run(testContext);
+                exitCode = testContext.ExitCode;
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalDirectory);
+            }
+
+            // Check if execution succeeded
+            if (exitCode == 0)
+            {
+                test.Outcome = DemaConsulting.TestResults.TestOutcome.Passed;
+                context.WriteLine($"✓ Ste100Mark_LintCleanFileNoDiagnostics - Passed");
+            }
+            else
+            {
+                test.Outcome = DemaConsulting.TestResults.TestOutcome.Failed;
+                test.ErrorMessage = $"Program exited with code {exitCode}";
+                context.WriteError($"✗ Ste100Mark_LintCleanFileNoDiagnostics - Failed: Exit code {exitCode}");
+            }
+        }
+        // Generic catch is justified here as this is a test framework - any exception should be
+        // recorded as a test failure to ensure robust test execution and reporting.
+        catch (Exception ex)
+        {
+            HandleTestException(test, context, "Ste100Mark_LintCleanFileNoDiagnostics", ex);
+        }
+
+        FinalizeTestResult(test, startTime, testResults);
+    }
+
+    /// <summary>
+    ///     Runs a test asserting a Markdown file with multiple violations produces diagnostics for
+    ///     each expected rule code and a non-zero exit code.
+    /// </summary>
+    /// <param name="context">The context for output.</param>
+    /// <param name="testResults">The test results collection.</param>
+    private static void RunLintViolationFileTest(Context context, DemaConsulting.TestResults.TestResults testResults)
+    {
+        var startTime = DateTime.UtcNow;
+        var test = CreateTestResult("Ste100Mark_LintViolationFileDetectsIssues");
+
+        try
+        {
+            using var tempDir = new TemporaryDirectory();
+            var mdFile = PathHelpers.SafePathCombine(tempDir.DirectoryPath, "violations.md");
+            var logFile = PathHelpers.SafePathCombine(tempDir.DirectoryPath, "violations-test.log");
+
+            var longSentence = string.Join(' ', Enumerable.Repeat("word", 26)) + ".";
+            File.WriteAllText(
+                mdFile,
+                "# Violations Document\n\n" +
+                $"{longSentence}\n\n" +
+                "Open the panel; then close it.\n\n" +
+                "We don't allow this.\n\n" +
+                "Please utilize the tool.\n");
+
+            // Build command line arguments (relative filename; CWD is temporarily switched to the
+            // temp directory below since Ste100Mark resolves globs relative to the current
+            // directory)
+            var args = new List<string>
+            {
+                "violations.md",
+                "--silent",
+                "--log", logFile
+            };
+
+            // Run the program with the current directory switched to the temp directory
+            int exitCode;
+            var originalDirectory = Directory.GetCurrentDirectory();
+            Directory.SetCurrentDirectory(tempDir.DirectoryPath);
+            try
+            {
+                using var testContext = Context.Create([.. args]);
+                Program.Run(testContext);
+                exitCode = testContext.ExitCode;
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalDirectory);
+            }
+            var logContent = File.Exists(logFile) ? File.ReadAllText(logFile) : string.Empty;
+            var expectedCodes = new[] { "STE100-4.1", "STE100-8.1", "STE100-4.2", "STE100-DICT" };
+            var missingCodes = expectedCodes.Where(code => !logContent.Contains(code)).ToList();
+
+            if (exitCode != 0 && missingCodes.Count == 0)
+            {
+                test.Outcome = DemaConsulting.TestResults.TestOutcome.Passed;
+                context.WriteLine($"✓ Ste100Mark_LintViolationFileDetectsIssues - Passed");
+            }
+            else
+            {
+                test.Outcome = DemaConsulting.TestResults.TestOutcome.Failed;
+                test.ErrorMessage = exitCode == 0
+                    ? "Program exited with code 0; expected a non-zero exit code for violations"
+                    : $"Missing expected rule codes in log: {string.Join(", ", missingCodes)}";
+                context.WriteError($"✗ Ste100Mark_LintViolationFileDetectsIssues - Failed: {test.ErrorMessage}");
+            }
+        }
+        // Generic catch is justified here as this is a test framework - any exception should be
+        // recorded as a test failure to ensure robust test execution and reporting.
+        catch (Exception ex)
+        {
+            HandleTestException(test, context, "Ste100Mark_LintViolationFileDetectsIssues", ex);
+        }
+
+        FinalizeTestResult(test, startTime, testResults);
+    }
+
+    /// <summary>
+    ///     Runs a test asserting that <c>--format json</c> output is valid, parseable JSON.
+    /// </summary>
+    /// <param name="context">The context for output.</param>
+    /// <param name="testResults">The test results collection.</param>
+    private static void RunLintJsonOutputTest(Context context, DemaConsulting.TestResults.TestResults testResults)
+    {
+        var startTime = DateTime.UtcNow;
+        var test = CreateTestResult("Ste100Mark_LintJsonOutputIsValidJson");
+
+        try
+        {
+            using var tempDir = new TemporaryDirectory();
+            var mdFile = PathHelpers.SafePathCombine(tempDir.DirectoryPath, "json-output.md");
+            var logFile = PathHelpers.SafePathCombine(tempDir.DirectoryPath, "json-output-test.log");
+
+            File.WriteAllText(mdFile, "# JSON Output Document\n\nPlease utilize the tool.\n");
+
+            // Build command line arguments (relative filename; CWD is temporarily switched to the
+            // temp directory below since Ste100Mark resolves globs relative to the current
+            // directory)
+            var args = new List<string>
+            {
+                "json-output.md",
+                "--silent",
+                "--log", logFile,
+                "--format", "json"
+            };
+
+            // Run the program with the current directory switched to the temp directory
+            var originalDirectory = Directory.GetCurrentDirectory();
+            Directory.SetCurrentDirectory(tempDir.DirectoryPath);
+            try
+            {
+                using var testContext = Context.Create([.. args]);
+                Program.Run(testContext);
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalDirectory);
+            }
+
+            // Read log content and confirm it parses as JSON
+            var logContent = File.ReadAllText(logFile);
+            using var _ = System.Text.Json.JsonDocument.Parse(logContent);
+
+            test.Outcome = DemaConsulting.TestResults.TestOutcome.Passed;
+            context.WriteLine($"✓ Ste100Mark_LintJsonOutputIsValidJson - Passed");
+        }
+        // Generic catch is justified here as this is a test framework - any exception (including
+        // JsonException on parse failure) should be recorded as a test failure to ensure robust
+        // test execution and reporting.
+        catch (Exception ex)
+        {
+            HandleTestException(test, context, "Ste100Mark_LintJsonOutputIsValidJson", ex);
         }
 
         FinalizeTestResult(test, startTime, testResults);

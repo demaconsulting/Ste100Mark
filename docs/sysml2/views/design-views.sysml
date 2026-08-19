@@ -16,6 +16,10 @@ package Ste100Mark {
         expose CliSubsystem;
     }
 
+    view LintingView {
+        expose LintingSubsystem;
+    }
+
     view SelfTestView {
         expose SelfTestSubsystem;
     }

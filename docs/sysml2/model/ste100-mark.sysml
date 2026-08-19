@@ -15,7 +15,10 @@ package Ste100Mark {
 
         part program : Program;
         part cli : CliSubsystem;
+        part linting : LintingSubsystem;
         part selfTest : SelfTestSubsystem;
         part utilities : UtilitiesSubsystem;
+        part yamlDotNet : YamlDotNet;
+        part fileSystemGlobbing : FileSystemGlobbing;
     }
 }

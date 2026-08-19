@@ -20,6 +20,7 @@
 
 using System.Reflection;
 using DemaConsulting.Ste100Mark.Cli;
+using DemaConsulting.Ste100Mark.Linting;
 using DemaConsulting.Ste100Mark.SelfTest;
 
 namespace DemaConsulting.Ste100Mark;
@@ -113,8 +114,14 @@ internal static class Program
             return;
         }
 
-        // Print application banner
-        PrintBanner(context);
+        // Print application banner unless JSON diagnostic output for the main tool logic was
+        // requested. JSON mode must produce a single parseable document on stdout; the --help and
+        // --validate paths never emit JSON, so the banner is always shown for them.
+        var suppressBanner = context.Format == OutputFormat.Json && !context.Help && !context.Validate;
+        if (!suppressBanner)
+        {
+            PrintBanner(context);
+        }
 
         // Priority 2: Help
         if (context.Help)
@@ -151,7 +158,7 @@ internal static class Program
     /// <param name="context">The context for output.</param>
     private static void PrintHelp(Context context)
     {
-        context.WriteLine("Usage: ste100mark [options]");
+        context.WriteLine("Usage: ste100mark [globs...] [options]");
         context.WriteLine("");
         context.WriteLine("Options:");
         context.WriteLine("  -v, --version              Display version information");
@@ -161,17 +168,20 @@ internal static class Program
         context.WriteLine("  --results <file>           Write validation results to file (.trx or .xml)");
         context.WriteLine("  --depth <#>                Set heading depth for markdown output (default: 1)");
         context.WriteLine("  --log <file>               Write output to log file");
+        context.WriteLine("  --config <file>            Path to lint configuration file (default: .ste100mark.yaml)");
+        context.WriteLine("  --format <text|json>       Diagnostic output format (default: text)");
+        context.WriteLine("  --strict                   Promote warn-severity findings to errors for exit code");
+        context.WriteLine("");
+        context.WriteLine("[globs...] are optional Markdown glob patterns to lint (e.g. \"docs/**/*.md\").");
+        context.WriteLine("When omitted, the include/exclude patterns from the resolved configuration are used.");
     }
 
     /// <summary>
-    ///     Runs the main tool logic.
+    ///     Runs the main tool logic: lints Markdown files for ASD-STE100 Issue 9 compliance.
     /// </summary>
     /// <param name="context">The context containing command line arguments and program state.</param>
     private static void RunToolLogic(Context context)
     {
-        context.WriteLine("Ste100Mark - Demo Functionality");
-        context.WriteLine("This is a template project demonstrating best practices.");
-        context.WriteLine("");
-        context.WriteLine("Replace this with your actual tool implementation.");
+        Linter.Run(context);
     }
 }

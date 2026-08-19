@@ -504,6 +504,169 @@ public class ContextTests
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() => Context.Create(["--log", invalidLogPath]));
     }
+
+    /// <summary>
+    ///     Test creating a context with no arguments returns empty globs and defaults for the new
+    ///     linting-related options.
+    /// </summary>
+    [Fact]
+    public void Context_Create_NoArguments_ReturnsLintingDefaults()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create([]);
+
+        // Assert: verify expected behavior
+        Assert.Empty(context.Globs);
+        Assert.Null(context.ConfigFile);
+        Assert.Equal(OutputFormat.Text, context.Format);
+        Assert.False(context.Strict);
+    }
+
+    /// <summary>
+    ///     Test that a positional (non-flag) argument is collected as a glob rather than rejected.
+    /// </summary>
+    [Fact]
+    public void Context_Create_PositionalArgument_CollectedAsGlob()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create(["docs/**/*.md"]);
+
+        // Assert: verify expected behavior
+        Assert.Single(context.Globs);
+        Assert.Equal("docs/**/*.md", context.Globs[0]);
+    }
+
+    /// <summary>
+    ///     Test that multiple positional arguments are collected as globs in order, alongside flags.
+    /// </summary>
+    [Fact]
+    public void Context_Create_MultiplePositionalArguments_CollectedInOrder()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create(["a/*.md", "--silent", "b/*.md"]);
+
+        // Assert: verify expected behavior
+        Assert.Equal(["a/*.md", "b/*.md"], context.Globs);
+        Assert.True(context.Silent);
+    }
+
+    /// <summary>
+    ///     Test creating a context with the config flag.
+    /// </summary>
+    [Fact]
+    public void Context_Create_ConfigFlag_SetsConfigFile()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create(["--config", "custom.yaml"]);
+
+        // Assert: verify expected behavior
+        Assert.Equal("custom.yaml", context.ConfigFile);
+    }
+
+    /// <summary>
+    ///     Test creating a context with --config flag but no value throws exception.
+    /// </summary>
+    [Fact]
+    public void Context_Create_ConfigFlag_WithoutValue_ThrowsArgumentException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => Context.Create(["--config"]));
+        Assert.Contains("--config", exception.Message);
+    }
+
+    /// <summary>
+    ///     Test creating a context with --format json sets the JSON output format.
+    /// </summary>
+    [Fact]
+    public void Context_Create_FormatFlagJson_SetsJsonFormat()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create(["--format", "json"]);
+
+        // Assert: verify expected behavior
+        Assert.Equal(OutputFormat.Json, context.Format);
+    }
+
+    /// <summary>
+    ///     Test creating a context with --format text sets the text output format.
+    /// </summary>
+    [Fact]
+    public void Context_Create_FormatFlagText_SetsTextFormat()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create(["--format", "text"]);
+
+        // Assert: verify expected behavior
+        Assert.Equal(OutputFormat.Text, context.Format);
+    }
+
+    /// <summary>
+    ///     Test creating a context with --format flag and an unsupported value throws exception.
+    /// </summary>
+    [Fact]
+    public void Context_Create_FormatFlag_UnsupportedValue_ThrowsArgumentException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => Context.Create(["--format", "xml"]));
+        Assert.Contains("--format", exception.Message);
+    }
+
+    /// <summary>
+    ///     Test creating a context with --format flag but no value throws exception.
+    /// </summary>
+    [Fact]
+    public void Context_Create_FormatFlag_WithoutValue_ThrowsArgumentException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => Context.Create(["--format"]));
+        Assert.Contains("--format", exception.Message);
+    }
+
+    /// <summary>
+    ///     Test creating a context with the strict flag.
+    /// </summary>
+    [Fact]
+    public void Context_Create_StrictFlag_SetsStrictTrue()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create(["--strict"]);
+
+        // Assert: verify expected behavior
+        Assert.True(context.Strict);
+        Assert.Equal(0, context.ExitCode);
+    }
+
+    /// <summary>
+    ///     Test that MarkFailure sets the exit code to 1 without writing any console output.
+    /// </summary>
+    [Fact]
+    public void Context_MarkFailure_SetsExitCodeWithoutConsoleOutput()
+    {
+        // Arrange: redirect both console streams to detect any unexpected output
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        try
+        {
+            using var outWriter = new StringWriter();
+            using var errWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            Console.SetError(errWriter);
+            using var context = Context.Create([]);
+
+            // Act: execute the operation being tested
+            context.MarkFailure();
+
+            // Assert: exit code reflects failure, but no console output was produced
+            Assert.Equal(1, context.ExitCode);
+            Assert.Equal(string.Empty, outWriter.ToString());
+            Assert.Equal(string.Empty, errWriter.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+        }
+    }
 }
 
 

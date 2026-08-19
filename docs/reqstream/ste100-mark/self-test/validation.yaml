@@ -47,3 +47,20 @@ sections:
           surface output configuration errors automatically.
         tests:
           - Validation_Run_WithUnsupportedResultsFormat_DoesNotWriteFile
+
+      - id: Template-Validation-LintSelfChecks
+        title: >-
+          The Validation class shall self-check the tool's own Markdown lint workflow by
+          invoking it against a clean file, a file with known violations, and a JSON-format
+          request, demonstrating end-to-end that the lint path works in the deployment
+          environment.
+        justification: |
+          The self-validation suite already demonstrates `--version` and `--help`, but the
+          tool's primary function is linting Markdown prose. Exercising the lint workflow
+          end-to-end (clean file, violation file, JSON output) as part of self-validation
+          gives operators direct evidence that the deployed tool's core behavior, not just its
+          CLI plumbing, works correctly.
+        tests:
+          - Ste100Mark_LintCleanFileNoDiagnostics
+          - Ste100Mark_LintViolationFileDetectsIssues
+          - Ste100Mark_LintJsonOutputIsValidJson

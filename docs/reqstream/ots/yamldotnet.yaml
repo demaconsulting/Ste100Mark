@@ -1,0 +1,28 @@
+---
+# YamlDotNet OTS Software Requirements
+#
+# Requirements for the YamlDotNet YAML deserialization library functionality.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: YamlDotNet Requirements
+        requirements:
+          - id: Template-OTS-YamlDotNet
+            title: YamlDotNet shall deserialize YAML configuration and dictionary files into strongly typed models.
+            justification: |
+              YamlDotNet is the YAML deserialization library used by the Linting subsystem to
+              parse `.ste100mark.yaml` lint configuration files and project dictionary files
+              into strongly typed local models. Passing tests that load valid, malformed, and
+              missing configuration/dictionary files confirm the library correctly deserializes,
+              rejects, and reports on YAML content.
+            tags: [ots]
+            tests:
+              - Load_FullConfigurationFile_ParsesAllSections
+              - Load_MalformedYaml_ThrowsInvalidOperationException
+              - Load_NullPath_ReturnsDefaultConfiguration
+              - Load_NonExistentPath_ThrowsInvalidOperationException
+              - Load_DefaultConfig_IncludesEmbeddedEntries
+              - Load_ProjectDictionaryFile_MergedOverEmbedded
+              - Load_MissingProjectDictionaryFile_ThrowsInvalidOperationException
+              - Load_InlineDisallowEntry_AddedToMergedDictionary
