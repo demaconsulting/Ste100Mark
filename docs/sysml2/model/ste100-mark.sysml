@@ -1,8 +1,8 @@
 package Ste100Mark {
     doc
     /*
-     * Ste100Mark is a template .NET command-line application demonstrating
-     * DemaConsulting's compliance/documentation tooling conventions.
+     * Ste100Mark is a .NET command-line tool that lints Markdown prose against
+     * ASD-STE100-style Simplified Technical English rules.
      */
 
     part def Ste100MarkSystem {

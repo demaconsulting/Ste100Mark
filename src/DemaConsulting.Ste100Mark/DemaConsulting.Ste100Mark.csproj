@@ -14,13 +14,13 @@
     <Version>0.0.0</Version>
     <Authors>DEMA Consulting</Authors>
     <Company>DEMA Consulting</Company>
-    <Description>Template project for DEMA Consulting DotNet Tools</Description>
+    <Description>ASD-STE100 Issue 9 Markdown prose linter</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/demaconsulting/Ste100Mark</PackageProjectUrl>
     <RepositoryUrl>https://github.com/demaconsulting/Ste100Mark</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>Icon.png</PackageIcon>
-    <PackageTags>template;dotnet-tool</PackageTags>
+    <PackageTags>ste100;simplified-technical-english;markdown;linter;dotnet-tool</PackageTags>
     <Copyright>Copyright DEMA Consulting</Copyright>
     <Title>Ste100Mark</Title>
     <Product>DemaConsulting.Ste100Mark</Product>
