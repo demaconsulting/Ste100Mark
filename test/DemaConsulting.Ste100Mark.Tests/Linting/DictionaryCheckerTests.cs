@@ -1018,4 +1018,142 @@ public class DictionaryCheckerTests
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
     }
+
+    /// <summary>
+    ///     Test that an entry whose senses collectively cover more than one part of speech, and
+    ///     every one of those senses lists only its own headword among its alternatives, is never
+    ///     flagged - there is no part-of-speech switch that would resolve the finding, so it is
+    ///     unactionable regardless of what the guesser returns. Regression test for a reported bug
+    ///     where an entry like "support (n) -&gt; SUPPORT, HOLD" and "support (v) -&gt; HOLD, SUPPORT"
+    ///     was still being flagged even though ASD-STE100 approves the word in every role it can
+    ///     grammatically take.
+    /// </summary>
+    [Fact]
+    public void Evaluate_UnactionableMultiPosSelfReferentialEntry_NeverFlagged()
+    {
+        // Arrange: "support" is approved as both a noun and a verb (each sense's alternatives list
+        // its own headword), so no correction exists in either role. The fixture deliberately
+        // includes a confident noun occurrence ("the switch to support gigabit" - preceded by "to",
+        // a confident verb signal) and a confident-noun occurrence ("Software support" - preceded
+        // by an adjective-modified noun phrase, resolving via the noun-compound-modifier signal) as
+        // well as an inconclusive occurrence, so this test cannot pass merely because
+        // IsUnactionable happens to only be reached via a null guess; it proves the suppression is
+        // independent of whatever the guesser returns.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["support"] =
+                    [
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["SUPPORT", "HOLD"] },
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["HOLD", "SUPPORT"] }
+                    ]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+        [
+            new ProseSegment(
+                "Software support is a must. LaunchCode supports the switch to support gigabit.",
+                1,
+                SegmentRole.Paragraph)
+        ];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior - none of the three occurrences (confident noun,
+        // confident verb, and inconclusive) are flagged.
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that the mode-dependent imperative-sentence-start signal no longer confidently
+    ///     resolves "Hold" as a verb at the start of a Markdown table cell, now that the strong
+    ///     noun-compound/verbless-segment signals are correctly allowed to conflict with it.
+    ///     Regression test for the bug fixed in <see cref="PartOfSpeechGuesser.Guess"/>: asserts the
+    ///     guesser's own result directly (not just the end-to-end diagnostic outcome), because a
+    ///     noun-only entry is already protected from a wrongly-confident Verb guess by the
+    ///     pre-existing "confident guess matches no sense" rule regardless of this bug, so the
+    ///     end-to-end diagnostic count alone does not distinguish the fixed behavior from the
+    ///     pre-fix behavior for that entry shape.
+    /// </summary>
+    [Fact]
+    public void Guess_ImperativeAtStartOfTableCell_ResolvesAmbiguousNotConfidentVerb()
+    {
+        // Arrange: the exact table-cell fragment from the reported false positive.
+        const string text = "Hold at the end of the stroke while the column settles";
+        var index = text.IndexOf("Hold", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Hold".Length, LintMode.Procedure);
+
+        // Assert: the imperative signal alone no longer wins outright; the verbless-segment noun
+        // signal now conflicts with it, so the overall result is ambiguous (null).
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    ///     Test that a noun-only entry is not flagged for an imperative verb usage that begins a
+    ///     Markdown table cell in Procedure mode.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ImperativeAtStartOfTableCell_NounOnlyEntry_NotFlagged()
+    {
+        // Arrange: "hold" is noun-only; "Hold at the end..." begins its own table-cell segment in
+        // Procedure mode.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["hold"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["HOLD"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        var markdown = "| 8 | Metering pump | Hold at the end of the stroke while the column settles |";
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Procedure);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that the same noun-only entry still reports a genuine noun usage elsewhere in a
+    ///     normal sentence, confirming the table-cell imperative fix does not suppress the entry
+    ///     outright.
+    /// </summary>
+    [Fact]
+    public void Evaluate_GenuineNounUsageOfSameNounOnlyEntry_StillFlagged()
+    {
+        // Arrange: "hold" is noun-only; "a hold at the end of a stroke" is a confident noun usage,
+        // which this entry disallows.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["hold"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["HOLD"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Neither figure gives a hold at the end of a stroke.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Single(diagnostics);
+    }
 }

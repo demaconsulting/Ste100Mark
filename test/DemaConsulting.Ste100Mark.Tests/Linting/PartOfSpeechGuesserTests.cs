@@ -116,6 +116,36 @@ public class PartOfSpeechGuesserTests
     }
 
     /// <summary>
+    ///     Test that the mode-dependent imperative-sentence-start signal (which is intentionally
+    ///     weaker than the local verb-context signals in <see cref="PartOfSpeechGuesser"/>'s own
+    ///     documented rule set) is still allowed to conflict with a strong noun-compound signal
+    ///     ("Idle threshold" - a noun-phrase modifier immediately followed by a noun) rather than
+    ///     unconditionally suppressing it. Regression test for a bug where the noun signal
+    ///     evaluation was passed the combined verb result (imperative-or-other-signal) instead of
+    ///     just the strong other-verb-signal, causing the imperative signal to wrongly out-rank the
+    ///     noun-compound signal and misclassify an adjectival/nominal sentence-start word as a verb
+    ///     purely because it began a Procedure-mode segment (for example the first cell of a table
+    ///     row).
+    /// </summary>
+    [Fact]
+    public void Guess_ImperativeSentenceStartButNounCompoundFollows_ReturnsNull()
+    {
+        // Arrange: "Idle threshold..." begins a Procedure-mode segment (so the weak imperative
+        // signal fires), but "Idle" is immediately followed by "threshold", a noun-compound head,
+        // so the strong noun-compound signal should still be allowed to conflict with it,
+        // resolving as ambiguous rather than confidently Verb.
+        const string text = "Idle threshold for leaving the path charged or drained";
+        var index = text.IndexOf("Idle", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Idle".Length, LintMode.Procedure);
+
+        // Assert: verify expected behavior
+        Assert.Null(result);
+    }
+
+
+    /// <summary>
     ///     Test that the same sentence-start text in Descriptive mode does not trigger the
     ///     imperative signal, resolving as inconclusive when no other signal fires.
     /// </summary>
