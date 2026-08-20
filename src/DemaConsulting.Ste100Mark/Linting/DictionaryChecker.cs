@@ -200,6 +200,19 @@ internal static class DictionaryChecker
             return null;
         }
 
+        if (IsUnactionable(entry))
+        {
+            // Every sense's alternatives list is just its own headword, and the senses between
+            // them cover more than one part of speech (for example "support (n) -> SUPPORT, HOLD"
+            // and "support (v) -> HOLD, SUPPORT"). ASD-STE100 approves this word in every role it
+            // can grammatically take, so there is no part-of-speech switch left that would resolve
+            // the finding - the guesser being right or wrong changes nothing. The only other
+            // suggestion offered (here, HOLD) is a different word with a different meaning, not a
+            // correction of this usage, so flagging it is never actionable. This is a pure
+            // dictionary-shape test and does not depend on the guesser at all.
+            return null;
+        }
+
         if (guess is null && entry.Senses.Count == 1 && IsSelfReferential(entry))
         {
             // A self-referential entry (its alternatives list includes its own headword) is
@@ -231,6 +244,37 @@ internal static class DictionaryChecker
     private static bool IsSelfReferential(DictionaryEntry entry)
     {
         return entry.Senses.Any(s =>
+            s.Alternatives.Any(a => string.Equals(a, entry.Term, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    /// <summary>
+    ///     Determines whether every sense of an entry is "unactionable": every sense's
+    ///     <see cref="DictionarySense.Alternatives"/> list contains only the entry's own headword
+    ///     (case-insensitive, no other alternative offered), and the entry's senses collectively
+    ///     cover more than one part of speech. For example <c>support (n) -&gt; SUPPORT, HOLD</c>
+    ///     combined with <c>support (v) -&gt; HOLD, SUPPORT</c> approves "support" in every role it
+    ///     can grammatically take, so there is no part-of-speech switch that would resolve a
+    ///     finding: whichever role the word is used in here, ASD-STE100 already approves it in that
+    ///     role. Such an entry can never produce an actionable diagnostic and is never flagged,
+    ///     regardless of what <see cref="PartOfSpeechGuesser.Guess"/> returns. This differs from
+    ///     <see cref="IsSelfReferential"/>: a self-referential entry still has a genuine correction
+    ///     (switch part of speech), whereas an unactionable entry does not, because every possible
+    ///     part of speech is already self-referential.
+    /// </summary>
+    private static bool IsUnactionable(DictionaryEntry entry)
+    {
+        if (entry.Senses.Count < 2)
+        {
+            return false;
+        }
+
+        var distinctPos = entry.Senses.Select(s => s.Pos).Distinct().Count();
+        if (distinctPos < 2)
+        {
+            return false;
+        }
+
+        return entry.Senses.All(s =>
             s.Alternatives.Any(a => string.Equals(a, entry.Term, StringComparison.OrdinalIgnoreCase)));
     }
 

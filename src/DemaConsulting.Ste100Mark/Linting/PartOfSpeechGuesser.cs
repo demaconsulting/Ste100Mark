@@ -167,7 +167,7 @@ internal static class PartOfSpeechGuesser
         var isImperative = isSentenceStart && mode == LintMode.Procedure;
         var hasOtherVerbSignal = HasOtherVerbSignal(matchText, precedingWord, followingWord);
         var hasVerb = isImperative || hasOtherVerbSignal;
-        var hasNoun = HasNounSignal(matchText, precedingWord, governingWord, followingWord, segmentText, hasVerb);
+        var hasNoun = HasNounSignal(matchText, precedingWord, governingWord, followingWord, segmentText, hasOtherVerbSignal);
 
         if (hasVerb && !hasNoun)
         {
