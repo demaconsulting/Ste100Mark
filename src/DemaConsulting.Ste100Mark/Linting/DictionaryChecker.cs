@@ -202,14 +202,13 @@ internal static class DictionaryChecker
 
         if (IsUnactionable(entry))
         {
-            // Every sense's alternatives list is just its own headword, and the senses between
-            // them cover more than one part of speech (for example "support (n) -> SUPPORT, HOLD"
-            // and "support (v) -> HOLD, SUPPORT"). ASD-STE100 approves this word in every role it
-            // can grammatically take, so there is no part-of-speech switch left that would resolve
-            // the finding - the guesser being right or wrong changes nothing. The only other
-            // suggestion offered (here, HOLD) is a different word with a different meaning, not a
-            // correction of this usage, so flagging it is never actionable. This is a pure
-            // dictionary-shape test and does not depend on the guesser at all.
+            // Every sense's alternatives list includes its own headword (possibly alongside other
+            // alternatives), and the senses between them cover more than one part of speech (for
+            // example "support (n) -> SUPPORT, HOLD" and "support (v) -> HOLD, SUPPORT"). ASD-STE100
+            // approves this word in every role it can grammatically take, so there is no
+            // part-of-speech switch left that would resolve the finding - the guesser being right
+            // or wrong changes nothing. This is a pure dictionary-shape test and does not depend on
+            // the guesser at all.
             return null;
         }
 
@@ -243,23 +242,24 @@ internal static class DictionaryChecker
     /// </summary>
     private static bool IsSelfReferential(DictionaryEntry entry)
     {
-        return entry.Senses.Any(s =>
-            s.Alternatives.Any(a => string.Equals(a, entry.Term, StringComparison.OrdinalIgnoreCase)));
+        return entry.Senses.Any(s => IsSelfReferentialSense(s, entry.Term));
     }
 
     /// <summary>
     ///     Determines whether every sense of an entry is "unactionable": every sense's
-    ///     <see cref="DictionarySense.Alternatives"/> list contains only the entry's own headword
-    ///     (case-insensitive, no other alternative offered), and the entry's senses collectively
-    ///     cover more than one part of speech. For example <c>support (n) -&gt; SUPPORT, HOLD</c>
-    ///     combined with <c>support (v) -&gt; HOLD, SUPPORT</c> approves "support" in every role it
-    ///     can grammatically take, so there is no part-of-speech switch that would resolve a
-    ///     finding: whichever role the word is used in here, ASD-STE100 already approves it in that
-    ///     role. Such an entry can never produce an actionable diagnostic and is never flagged,
-    ///     regardless of what <see cref="PartOfSpeechGuesser.Guess"/> returns. This differs from
-    ///     <see cref="IsSelfReferential"/>: a self-referential entry still has a genuine correction
-    ///     (switch part of speech), whereas an unactionable entry does not, because every possible
-    ///     part of speech is already self-referential.
+    ///     <see cref="DictionarySense.Alternatives"/> list includes the entry's own headword
+    ///     (case-insensitive; other alternatives may also be listed), and the entry's senses
+    ///     collectively cover more than one part of speech. For example <c>support (n) -&gt; SUPPORT,
+    ///     HOLD</c> combined with <c>support (v) -&gt; HOLD, SUPPORT</c> approves "support" in every
+    ///     role it can grammatically take, so there is no part-of-speech switch that would resolve
+    ///     a finding: whichever role the word is used in here, ASD-STE100 already approves it in
+    ///     that role. Such an entry can never produce an actionable diagnostic and is never
+    ///     flagged, regardless of what <see cref="PartOfSpeechGuesser.Guess"/> returns. This differs
+    ///     from <see cref="IsSelfReferential"/> only in scope: <see cref="IsSelfReferential"/> asks
+    ///     whether *any* sense is self-referential (used to relax a single-sense entry's
+    ///     inconclusive-guess case), whereas this asks whether *every* sense across *more than one*
+    ///     part of speech is self-referential (used to suppress the finding outright, independent of
+    ///     the guesser).
     /// </summary>
     private static bool IsUnactionable(DictionaryEntry entry)
     {
@@ -274,8 +274,16 @@ internal static class DictionaryChecker
             return false;
         }
 
-        return entry.Senses.All(s =>
-            s.Alternatives.Any(a => string.Equals(a, entry.Term, StringComparison.OrdinalIgnoreCase)));
+        return entry.Senses.All(s => IsSelfReferentialSense(s, entry.Term));
+    }
+
+    /// <summary>
+    ///     Determines whether a single sense's <see cref="DictionarySense.Alternatives"/> list
+    ///     includes the entry's own headword (case-insensitive).
+    /// </summary>
+    private static bool IsSelfReferentialSense(DictionarySense sense, string term)
+    {
+        return sense.Alternatives.Any(a => string.Equals(a, term, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
