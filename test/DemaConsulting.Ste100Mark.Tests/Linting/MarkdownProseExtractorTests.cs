@@ -205,6 +205,59 @@ public class MarkdownProseExtractorTests
     }
 
     /// <summary>
+    ///     Test that a list item wrapped across multiple source lines (a "lazy continuation" line,
+    ///     indented text with no list marker of its own, immediately following a list item with no
+    ///     intervening blank line) is folded into the same <see cref="SegmentRole.ListItem"/>
+    ///     segment, rather than the continuation line starting an unrelated new paragraph segment.
+    ///     Regression test for a reported bug where an allowed phrase (e.g. "process error") split
+    ///     across such a line wrap was never recognized, because the two halves landed in different,
+    ///     disconnected segments.
+    /// </summary>
+    [Fact]
+    public void Extract_ListItemWrappedAcrossLines_MergesIntoSingleListItemSegment()
+    {
+        // Arrange: a list item whose text wraps onto a second, indented continuation line.
+        var markdown = "- The following describes a process\n  error that can occur during setup.";
+
+        // Act: extract segments
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: a single list-item segment with the wrapped text merged, not two segments.
+        var segment = Assert.Single(segments);
+        Assert.Equal(SegmentRole.ListItem, segment.Role);
+        Assert.Equal("The following describes a process error that can occur during setup.", segment.Text);
+        Assert.Equal(1, segment.LineNumber);
+
+        // ... and ResolveLine reports each half's true source line, not always line 1.
+        Assert.Equal(1, segment.ResolveLine(segment.Text.IndexOf("following", StringComparison.Ordinal)));
+        Assert.Equal(2, segment.ResolveLine(segment.Text.IndexOf("error", StringComparison.Ordinal)));
+    }
+
+    /// <summary>
+    ///     Test that two distinct list items - the first wrapped across a line break, the second not -
+    ///     remain separate segments: the wrapped-continuation merge must not bleed past the next line
+    ///     that itself starts a new list item.
+    /// </summary>
+    [Fact]
+    public void Extract_TwoListItemsFirstWrapped_RemainSeparateSegments()
+    {
+        // Arrange: item one wraps onto a continuation line; item two starts immediately after.
+        var markdown = "- First item wraps across\n  a line break here.\n- Second item is separate.";
+
+        // Act: extract segments
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: two list-item segments, not one merged segment.
+        Assert.Equal(2, segments.Count);
+        Assert.Equal(SegmentRole.ListItem, segments[0].Role);
+        Assert.Equal("First item wraps across a line break here.", segments[0].Text);
+        Assert.Equal(1, segments[0].LineNumber);
+        Assert.Equal(SegmentRole.ListItem, segments[1].Role);
+        Assert.Equal("Second item is separate.", segments[1].Text);
+        Assert.Equal(3, segments[1].LineNumber);
+    }
+
+    /// <summary>
     ///     Test that <see cref="ProseSegment.ResolveLine"/> on a single-line segment (heading, list
     ///     item, or table row) always resolves to that segment's own line number, regardless of the
     ///     offset queried, since these segments are never folded from multiple source lines.

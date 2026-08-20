@@ -191,9 +191,10 @@ internal static class MarkdownProseExtractor
         var segments = new List<ProseSegment>();
         var lines = markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
 
-        var paragraphBuffer = new StringBuilder();
-        var paragraphStartLine = -1;
-        var paragraphLineOffsets = new List<(int Offset, int Line)>();
+        var buffer = new StringBuilder();
+        var bufferStartLine = -1;
+        var bufferRole = SegmentRole.Paragraph;
+        var lineOffsets = new List<(int Offset, int Line)>();
         var inFence = false;
 
         for (var i = 0; i < lines.Length; i++)
@@ -205,7 +206,7 @@ internal static class MarkdownProseExtractor
             // every line (including the delimiters themselves) while inside one.
             if (FenceRegex.IsMatch(rawLine))
             {
-                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
                 inFence = !inFence;
                 continue;
             }
@@ -224,14 +225,14 @@ internal static class MarkdownProseExtractor
 
             if (BlankLineRegex.IsMatch(cleaned))
             {
-                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
                 continue;
             }
 
             var headingMatch = HeadingRegex.Match(cleaned);
             if (headingMatch.Success)
             {
-                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
                 segments.Add(new ProseSegment(headingMatch.Groups["text"].Value, lineNumber, SegmentRole.Heading));
                 continue;
             }
@@ -240,9 +241,18 @@ internal static class MarkdownProseExtractor
             if (listItemMatch.Success)
             {
                 // Rule 8.4: each vertical-list item is counted as its own sentence against the
-                // sentence word-count limit, so list items are never merged into a paragraph.
-                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
-                segments.Add(new ProseSegment(listItemMatch.Groups["text"].Value, lineNumber, SegmentRole.ListItem));
+                // sentence word-count limit, so a list item is never merged with a preceding
+                // paragraph or a different list item. A wrapped continuation line of the *same*
+                // item (a following line with no list marker of its own, e.g. a long item that a
+                // Markdown author wrapped at 80 columns) is folded back into this item's text
+                // below, the same way a wrapped paragraph line is - otherwise a disallowed phrase
+                // spanning the wrap (for example "process error" split across two source lines)
+                // would never match, since it would straddle two disconnected segments.
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
+                bufferRole = SegmentRole.ListItem;
+                bufferStartLine = lineNumber;
+                lineOffsets.Add((0, lineNumber));
+                buffer.Append(listItemMatch.Groups["text"].Value.Trim());
                 continue;
             }
 
@@ -257,7 +267,7 @@ internal static class MarkdownProseExtractor
                 // sentence and should not be merged with unrelated cells), so a cell with a few
                 // words is checked on its own terms, while a cell containing a genuine descriptive
                 // paragraph is still fully checked.
-                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
                 if (!TableSeparatorRowRegex.IsMatch(cleaned))
                 {
                     foreach (var cell in SplitTableRowCells(cleaned))
@@ -272,21 +282,24 @@ internal static class MarkdownProseExtractor
                 continue;
             }
 
-            // Any other non-blank line accumulates into the current paragraph buffer.
-            if (paragraphBuffer.Length == 0)
+            // Any other non-blank line accumulates into the current buffer: either a continuation
+            // of the paragraph/list-item already being accumulated, or (when the buffer is empty)
+            // the start of a new paragraph.
+            if (buffer.Length == 0)
             {
-                paragraphStartLine = lineNumber;
+                bufferRole = SegmentRole.Paragraph;
+                bufferStartLine = lineNumber;
             }
             else
             {
-                paragraphBuffer.Append(' ');
+                buffer.Append(' ');
             }
 
-            paragraphLineOffsets.Add((paragraphBuffer.Length, lineNumber));
-            paragraphBuffer.Append(cleaned.Trim());
+            lineOffsets.Add((buffer.Length, lineNumber));
+            buffer.Append(cleaned.Trim());
         }
 
-        FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
+        FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
 
         return segments;
     }
@@ -381,25 +394,32 @@ internal static class MarkdownProseExtractor
     }
 
     /// <summary>
-    ///     Emits the accumulated paragraph buffer as a <see cref="ProseSegment"/>, if non-empty, and
-    ///     resets the buffer and offset map for the next paragraph.
+    ///     Emits the accumulated buffer as a <see cref="ProseSegment"/>, if non-empty, and resets
+    ///     the buffer and offset map for whatever is accumulated next.
     /// </summary>
     /// <param name="segments">Segment list to append to.</param>
-    /// <param name="buffer">Paragraph text accumulated so far.</param>
+    /// <param name="buffer">Text accumulated so far (a paragraph or a list item and its wrapped continuation lines).</param>
     /// <param name="lineOffsets">
     ///     Per-line offset map accumulated so far (see <see cref="ProseSegment.LineOffsets"/>);
     ///     copied into the emitted segment and then cleared.
     /// </param>
-    /// <param name="startLine">Line number the paragraph started on.</param>
-    private static void FlushParagraph(
+    /// <param name="role">
+    ///     The role to emit the segment as - <see cref="SegmentRole.Paragraph"/> or
+    ///     <see cref="SegmentRole.ListItem"/> (a list item's wrapped continuation lines are folded
+    ///     into the same buffer and emitted together as one <see cref="SegmentRole.ListItem"/>
+    ///     segment, mirroring how a multi-line paragraph is folded and emitted as one segment).
+    /// </param>
+    /// <param name="startLine">Line number the buffer started on.</param>
+    private static void FlushBuffer(
         List<ProseSegment> segments,
         StringBuilder buffer,
         List<(int Offset, int Line)> lineOffsets,
+        SegmentRole role,
         ref int startLine)
     {
         if (buffer.Length > 0)
         {
-            segments.Add(new ProseSegment(buffer.ToString(), startLine, SegmentRole.Paragraph, [.. lineOffsets]));
+            segments.Add(new ProseSegment(buffer.ToString(), startLine, role, [.. lineOffsets]));
             buffer.Clear();
             lineOffsets.Clear();
         }

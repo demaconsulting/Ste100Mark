@@ -857,6 +857,41 @@ public class DictionaryCheckerTests
     }
 
     /// <summary>
+    ///     End-to-end regression test: an allowed phrase split across a Markdown list item's wrapped
+    ///     continuation line is suppressed, using real <see cref="MarkdownProseExtractor.Extract"/>
+    ///     output rather than a hand-built segment. Regression test for a reported bug where
+    ///     <see cref="MarkdownProseExtractor"/> emitted the continuation line as a disconnected new
+    ///     paragraph segment, so the two halves of the phrase never landed in the same segment and
+    ///     the allow-in-phrase suppression could never match.
+    /// </summary>
+    [Fact]
+    public void Evaluate_AllowedPhraseSplitAcrossListItemLineWrap_SuppressesDiagnostic()
+    {
+        // Arrange: a list item whose text wraps mid-phrase onto an indented continuation line.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["error"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["fault"] }]
+                },
+                AllowInPhrase = ["process error"]
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        var markdown = "- The following describes a process\n  error that can occur during setup.";
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["process error"]);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
     ///     Test that supplying an unrelated <c>allowedPhrases</c> entry does not suppress a
     ///     disallowed term that does not occur within any configured phrase.
     /// </summary>
