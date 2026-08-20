@@ -131,6 +131,10 @@ internal static class PartOfSpeechGuesser
             "analog", "external", "internal", "optional", "additional", "main", "backup"
         };
 
+    /// <summary>Negation/adverbial words that cannot be the head noun of a compound.</summary>
+    private static readonly HashSet<string> NonCompoundHeadWords =
+        new(StringComparer.OrdinalIgnoreCase) { "not", "never", "also", "already", "still", "just", "often" };
+
     /// <summary>Maximum number of modifier tokens to scan past when looking for a governing determiner.</summary>
     private const int MaxModifierScanDistance = 3;
 
@@ -217,7 +221,24 @@ internal static class PartOfSpeechGuesser
             return true; // FollowedByArticle (match takes a direct object noun phrase, e.g. "utilize the tool")
         }
 
+        if (followingWord is not null && LooksLikeNumber(followingWord))
+        {
+            return true; // FollowedByNumber (match takes a numeric direct object, e.g. "use 0.12 ohms")
+        }
+
         return false;
+    }
+
+    /// <summary>
+    ///     Determines whether a word looks like a numeral (an optional sign followed by digits,
+    ///     with an optional decimal point), used as a verb signal: a word immediately followed by
+    ///     a number is very likely a transitive verb taking that number as (part of) its direct
+    ///     object, for example "use 0.12" or "set 5".
+    /// </summary>
+    private static bool LooksLikeNumber(string word)
+    {
+        var candidate = word.TrimStart('+', '-');
+        return candidate.Length > 0 && candidate.All(c => char.IsDigit(c) || c == '.');
     }
 
     /// <summary>
@@ -278,12 +299,60 @@ internal static class PartOfSpeechGuesser
             return true; // FollowedByFiniteVerb (match is the subject of the sentence)
         }
 
+        if (followingWord is not null && LooksLikeCompoundNoun(followingWord) && !hasOtherVerbSignal)
+        {
+            return true; // NounCompoundModifier (match modifies a following noun, e.g. "test fixture")
+        }
+
         if (!hasOtherVerbSignal && !HasAnyFiniteVerb(segmentText))
         {
             return true; // VerblessSegment (no finite verb anywhere: cannot be verb-only usage)
         }
 
         return false;
+    }
+
+    /// <summary>
+    ///     Determines whether a following word looks like the head noun of a noun-noun compound
+    ///     (for example "fixture" in "test fixture", "cycle" in "duty cycle") rather than a verb,
+    ///     function word, or number. Deliberately conservative: articles, prepositions,
+    ///     quantifiers, possessives, conjunctions, auxiliaries, and anything that looks like a
+    ///     finite verb form or a verb inflection are excluded, as is anything that is not a plain
+    ///     alphabetic word (so numbers such as "0.12" never trigger this signal).
+    /// </summary>
+    private static bool LooksLikeCompoundNoun(string followingWord)
+    {
+        if (followingWord.Length == 0 || !followingWord.All(char.IsLetter))
+        {
+            return false;
+        }
+
+        if (Articles.Contains(followingWord)
+            || PossessivePronouns.Contains(followingWord)
+            || QuantifiersOrDemonstratives.Contains(followingWord)
+            || Prepositions.Contains(followingWord)
+            || ClauseBreakingWords.Contains(followingWord)
+            || ModalAuxiliaries.Contains(followingWord)
+            || BeAuxiliaries.Contains(followingWord)
+            || NonCompoundHeadWords.Contains(followingWord))
+        {
+            return false;
+        }
+
+        if (IsFiniteVerbForm(followingWord)
+            || followingWord.EndsWith("ing", StringComparison.OrdinalIgnoreCase)
+            || followingWord.EndsWith("ed", StringComparison.OrdinalIgnoreCase)
+            || followingWord.EndsWith("ly", StringComparison.OrdinalIgnoreCase)
+            || followingWord.EndsWith('s'))
+        {
+            // Any word ending in "s" is excluded (not just recognized finite-verb forms): it is
+            // ambiguously either a 3rd-person-singular verb (e.g. "happens") or a plural noun, and
+            // words such as "sometimes" are adverbs, not compound-noun heads. Being conservative
+            // here avoids false noun-compound signals on unrecognized verb/adverb forms.
+            return false;
+        }
+
+        return true;
     }
 
     /// <summary>
