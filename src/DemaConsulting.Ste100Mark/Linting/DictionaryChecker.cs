@@ -200,16 +200,19 @@ internal static class DictionaryChecker
             return null;
         }
 
-        if (guess is null && IsSelfReferential(entry))
+        if (guess is null && entry.Senses.Count == 1 && IsSelfReferential(entry))
         {
             // A self-referential entry (its alternatives list includes its own headword) is
             // ASD-STE100's convention for "this word is approved, but only in the other part of
             // speech" (for example "test (v) -> TEST", meaning the noun "test" is fine). When the
             // guesser could not confidently resolve a role at all, an inconclusive match against a
             // self-referential, single-sense entry is more likely a missed noun-compound/other
-            // signal than a genuine disallowed usage, so it is not reported. A confident guess of
-            // the disallowed part of speech is still reported (handled by the candidates check
-            // above/below); this only relaxes the previously-ambiguous case.
+            // signal than a genuine disallowed usage, so it is not reported. This is deliberately
+            // restricted to single-sense entries: a multi-sense entry that happens to include its
+            // own headword among one sense's alternatives may still have a genuinely ambiguous
+            // finding worth reporting under its other sense(s), so it is not suppressed here. A
+            // confident guess of the disallowed part of speech is still reported (handled by the
+            // candidates check above); this only relaxes the previously-ambiguous case.
             return null;
         }
 

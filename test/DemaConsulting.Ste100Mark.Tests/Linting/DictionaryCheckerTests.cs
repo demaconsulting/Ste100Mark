@@ -896,7 +896,13 @@ public class DictionaryCheckerTests
     public void Evaluate_SelfReferentialEntry_NounCompoundUsage_NotFlagged()
     {
         // Arrange: "check" is verb-only, but self-referential (alternatives include "CHECK" - the
-        // noun form is approved). "check fixture" is a noun-noun compound.
+        // noun form is approved). No noun or verb signal fires locally for "check" here (the
+        // determiner "the" does not reach past the ordinary noun "system", "status" is excluded
+        // from the compound-noun signal because it ends in "s", and "operates" elsewhere is a
+        // recognized finite verb so the whole-segment verbless signal does not fire either), so
+        // the guesser is genuinely inconclusive (null) - this exercises the new
+        // `guess is null && IsSelfReferential(entry)` suppression path directly, rather than the
+        // pre-existing "confident guess matches no sense" rule.
         var config = new LintConfig
         {
             Dictionary = new DictionaryConfig
@@ -909,7 +915,12 @@ public class DictionaryCheckerTests
         };
         var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
         IReadOnlyList<ProseSegment> segments =
-            [new ProseSegment("The bench is a calibrated check fixture.", 1, SegmentRole.Paragraph)];
+        [
+            new ProseSegment(
+                "The system operates continuously. Technical check status remains stable.",
+                1,
+                SegmentRole.Paragraph)
+        ];
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);

@@ -135,6 +135,7 @@ internal static class PartOfSpeechGuesser
     private static readonly HashSet<string> NonCompoundHeadWords =
         new(StringComparer.OrdinalIgnoreCase) { "not", "never", "also", "already", "still", "just", "often" };
 
+    /// <summary>Maximum number of modifier tokens to scan past when looking for a governing determiner.</summary>
     private const int MaxModifierScanDistance = 3;
 
     /// <summary>
