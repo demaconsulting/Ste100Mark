@@ -258,6 +258,83 @@ public class MarkdownProseExtractorTests
     }
 
     /// <summary>
+    ///     Test that a list item with an empty marker line (for example <c>- </c> with no text of its
+    ///     own) still keeps <see cref="SegmentRole.ListItem"/>, rather than a following continuation
+    ///     line resetting the buffer's role to <see cref="SegmentRole.Paragraph"/>. Regression test
+    ///     for a review finding: the original fix tested <c>buffer.Length == 0</c> to decide whether a
+    ///     new segment was starting, but an empty marker line leaves the buffer empty while a segment
+    ///     is still active, so that test wrongly matched.
+    /// </summary>
+    [Fact]
+    public void Extract_ListItemWithEmptyMarkerLineThenContinuation_KeepsListItemRole()
+    {
+        // Arrange: the marker line has no text; the next line is its wrapped continuation.
+        var markdown = "- \n  Open the panel and check the gauge.";
+
+        // Act: extract segments
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: one ListItem segment, not a Paragraph starting on line 2.
+        var segment = Assert.Single(segments);
+        Assert.Equal(SegmentRole.ListItem, segment.Role);
+        Assert.Equal("Open the panel and check the gauge.", segment.Text);
+        Assert.Equal(1, segment.LineNumber);
+    }
+
+    /// <summary>
+    ///     Test that an empty list marker line followed immediately by a second, separate list item
+    ///     does not leak a stale line-offset entry into the second item's segment. Regression test for
+    ///     a review finding: <c>FlushBuffer</c> previously only cleared <c>lineOffsets</c> inside the
+    ///     <c>buffer.Length &gt; 0</c> branch, so an empty marker's <c>(0, lineNumber)</c> entry
+    ///     survived the flush and was inherited by whatever segment was accumulated next.
+    /// </summary>
+    [Fact]
+    public void Extract_EmptyListMarkerThenSeparateItem_DoesNotLeakStaleLineOffset()
+    {
+        // Arrange: an empty marker item immediately followed by a genuine second item.
+        var markdown = "- \n- Second item text.";
+
+        // Act: extract segments
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: only the second item is emitted (the empty marker contributes no text), and its
+        // line offsets/ResolveLine correctly point at line 2, not line 1.
+        var segment = Assert.Single(segments);
+        Assert.Equal("Second item text.", segment.Text);
+        Assert.Equal(2, segment.LineNumber);
+        Assert.Equal(2, segment.ResolveLine(0));
+    }
+
+    /// <summary>
+    ///     Test that a nested (deeper-indented) list item is not folded as a wrapped-continuation
+    ///     line into its parent's <see cref="SegmentRole.ListItem"/> segment. Regression test for a
+    ///     review finding: the wrapped-continuation fallback only checked
+    ///     <see cref="SegmentRole.Heading"/>/<see cref="SegmentRole.ListItem"/>/
+    ///     <see cref="SegmentRole.TableRow"/> at up to 3 leading spaces (the top-level
+    ///     <c>ListItemRegex</c> limit), so a nested item indented deeper than that fell through and
+    ///     merged into the parent, letting a disallowed phrase/word-count check incorrectly span two
+    ///     separate list items.
+    /// </summary>
+    [Fact]
+    public void Extract_NestedListItem_DoesNotMergeIntoParentListItem()
+    {
+        // Arrange: a parent item with a nested child indented past the 3-space top-level limit.
+        var markdown = "- Parent item text.\n    - Child item text.";
+
+        // Act: extract segments
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: two distinct list-item segments, the parent's text unaffected by the child.
+        Assert.Equal(2, segments.Count);
+        Assert.Equal(SegmentRole.ListItem, segments[0].Role);
+        Assert.Equal("Parent item text.", segments[0].Text);
+        Assert.Equal(1, segments[0].LineNumber);
+        Assert.Equal(SegmentRole.ListItem, segments[1].Role);
+        Assert.Equal("Child item text.", segments[1].Text);
+        Assert.Equal(2, segments[1].LineNumber);
+    }
+
+    /// <summary>
     ///     Test that <see cref="ProseSegment.ResolveLine"/> on a single-line segment (heading, list
     ///     item, or table row) always resolves to that segment's own line number, regardless of the
     ///     offset queried, since these segments are never folded from multiple source lines.

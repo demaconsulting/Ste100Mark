@@ -17,9 +17,11 @@ values.
 
 **SegmentRole**: enum describing the source structure of a segment.
 
-- `Heading` - ATX heading line.
-- `ListItem` - one bulleted or numbered list item line.
-- `TableRow` - one emitted Markdown table cell segment.
+- `Heading` - ATX heading line, always single-line.
+- `ListItem` - one bulleted or numbered list item, merged with any wrapped continuation
+  lines (a following line with no list marker of its own), so may span multiple source
+  lines.
+- `TableRow` - one emitted Markdown table cell segment, always single-line.
 - `Paragraph` - one or more consecutive non-heading, non-list-item, non-table-row lines.
 
 **ProseSegment**: immutable record describing one extracted prose run.
@@ -28,11 +30,12 @@ values.
   removed; inline code spans are retained verbatim.
 - `LineNumber`: `int` - 1-based source line where the segment begins.
 - `Role`: `SegmentRole` - heading, list item, table row, or paragraph.
-- `LineOffsets`: `IReadOnlyList<(int Offset, int Line)>` - for a single-line segment, always
-  `[(0, LineNumber)]` via the record's secondary constructor; for a multi-line paragraph, one
-  entry per folded source line giving that line's starting character offset within `Text`.
-  Consumed by `ResolveLine` so diagnostics can report the actual violating line rather than
-  always the paragraph's first line.
+- `LineOffsets`: `IReadOnlyList<(int Offset, int Line)>` - for a single-line segment
+  (`Heading` or `TableRow`), always `[(0, LineNumber)]` via the record's secondary
+  constructor; for a multi-line `Paragraph` or `ListItem`, one entry per folded source line
+  giving that line's starting character offset within `Text`. Consumed by `ResolveLine` so
+  diagnostics can report the actual violating line rather than always the segment's first
+  line.
 
 **ResolveLine**: Resolves the true 1-based source line for a character offset within `Text`,
 walking `LineOffsets` to find the last entry whose offset does not exceed the given offset.
@@ -52,10 +55,11 @@ one-second timeout.
 - *Returns*: `IReadOnlyList<ProseSegment>` - extracted segments in document order.
 - *Preconditions*: `markdown` is not null.
 - *Postconditions*: Fenced code blocks are skipped, inline code spans are retained verbatim,
-  paragraphs are merged across adjacent lines, list items remain separate, each table row
-  cell becomes its own segment, segment line numbers point to the start of each emitted
-  segment, and each multi-line paragraph's `LineOffsets` records every folded line's true
-  source line for later `ResolveLine` lookups.
+  paragraphs are merged across adjacent lines, list items are merged with any wrapped
+  continuation lines but remain separate from other list items and from paragraphs, each
+  table row cell becomes its own segment, segment line numbers point to the start of each
+  emitted segment, and each multi-line paragraph's or list item's `LineOffsets` records every
+  folded line's true source line for later `ResolveLine` lookups.
 
 **CleanLine**: Rewrites inline links to keep visible text, leaving inline code spans
 untouched.
@@ -90,11 +94,12 @@ character for checks that only need a yes or no signal.
 - *Parameters*: `string text` - verbatim segment or sentence text.
 - *Returns*: `string` - text with each inline code span replaced by a single character.
 
-**FlushParagraph**: Emits the accumulated paragraph buffer, if non-empty, as a paragraph
-segment and resets the buffer state.
+**FlushBuffer**: Emits the accumulated buffer, if non-empty, as a paragraph or list-item
+segment and resets the buffer state; always clears the line-offset map regardless of
+whether a segment was emitted.
 
 - *Parameters*: `List<ProseSegment> segments`; `StringBuilder buffer`;
-  `List<(int Offset, int Line)> lineOffsets`; `ref int startLine`.
+  `List<(int Offset, int Line)> lineOffsets`; `SegmentRole role`; `ref int startLine`.
 - *Returns*: `void`.
 
 #### Error Handling
