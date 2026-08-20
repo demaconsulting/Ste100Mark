@@ -81,7 +81,7 @@ exceptions propagate to `Program.Main`.
 available.
 
 `Dispose` is idempotent: repeated calls are safe and do not throw. Any disposal errors are
-    silently ignored.
+silently ignored.
 
 #### Dependencies
 
