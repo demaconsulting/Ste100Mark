@@ -154,6 +154,24 @@ sections:
           - Evaluate_InlineOverriddenTerm_UsesOverriddenSuggestion
           - Evaluate_AllowListedTerm_NotFlagged
 
+      - id: Ste100Mark-Linting-DictionaryDisable
+        title: >-
+          The Linting subsystem shall let a project disable the dictionary/vocabulary check
+          entirely via `dictionary.enabled: false`, defaulting to enabled, without requiring a
+          dictionary file or the embedded baseline to be loaded.
+        justification: |
+          Some projects want the mechanical/structural ASD-STE100 checks (sentence length,
+          semicolons, contractions, passive voice, and similar) without enforcing ASD-STE100
+          vocabulary, for example because they have not licensed the standard's controlled
+          dictionary or intentionally use domain vocabulary outside its scope. `UseEmbedded:
+          false` only removes the embedded illustrative baseline while the dictionary check
+          itself still runs against any remaining sources; `dictionary.enabled: false` is a
+          distinct, coarser switch that skips the dictionary check altogether, avoiding any
+          requirement to load or supply a dictionary at all.
+        tests:
+          - Run_DictionaryDisabled_SuppressesDictionaryFindingsButKeepsStructuralChecks
+          - Run_NoDictionaryConfigSection_DictionaryCheckRunsByDefault
+
       - id: Ste100Mark-Linting-InlineCodeSpans
         title: >-
           The Linting subsystem shall retain inline code spans verbatim in reported prose,
@@ -235,6 +253,29 @@ sections:
           - Evaluate_ConfidentSenseTwoAlternatives_JoinsWithOrNoOxfordComma
           - Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr
           - Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin
+
+      - id: Ste100Mark-Linting-AccurateLineNumbers
+        title: >-
+          The Linting subsystem shall report each diagnostic against the source line on which its
+          violation actually occurs, even when the violation is found within a multi-line
+          paragraph, rather than always reporting the paragraph's first line.
+        justification: |
+          A Markdown paragraph spanning several source lines is folded into a single prose
+          segment for sentence and dictionary analysis. Reporting every finding at the segment's
+          first line regardless of where the violating sentence, word, or term actually appears
+          misleads the user about which line to edit, especially in long paragraphs. Diagnostics
+          for word-limit, semicolon, contraction, passive-voice, complex-verb, -ing form, and
+          dictionary findings must resolve the true source line from the character offset of the
+          match or sentence within the segment. A paragraph-length finding remains an exception,
+          since it concerns the whole paragraph and is correctly reported at its start line.
+        tests:
+          - Extract_MultiLineParagraph_ResolveLineReportsEachLinesOwnLineNumber
+          - Extract_SingleLineSegment_ResolveLineAlwaysReturnsSegmentLine
+          - Evaluate_LongSentenceOnLaterLineOfMultiLineParagraph_ReportsThatLine
+          - Evaluate_SemicolonOnLaterLineOfMultiLineParagraph_ReportsThatLine
+          - Evaluate_ContractionOnLaterLineOfMultiLineParagraph_ReportsThatLine
+          - Evaluate_IngFormOnLaterLineOfMultiLineParagraph_ReportsThatLine
+          - Evaluate_DisallowedTermOnLaterLineOfMultiLineParagraph_ReportsThatLine
 
       - id: Ste100Mark-Linting-Configuration
         title: >-

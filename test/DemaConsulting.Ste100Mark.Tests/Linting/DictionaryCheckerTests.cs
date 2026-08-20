@@ -48,6 +48,36 @@ public class DictionaryCheckerTests
     }
 
     /// <summary>
+    ///     Test that a dictionary violation positioned on a later line of a multi-line paragraph
+    ///     reports that sentence's own source line, not the paragraph's first line. Regression test
+    ///     for the reported bug where every dictionary finding in a multi-line paragraph was
+    ///     reported at the paragraph's start line regardless of where the disallowed term actually
+    ///     appeared.
+    /// </summary>
+    [Fact]
+    public void Evaluate_DisallowedTermOnLaterLineOfMultiLineParagraph_ReportsThatLine()
+    {
+        // Arrange: a four-line paragraph (extracted end-to-end, so line numbers are real), where
+        // only the fourth line contains a disallowed embedded-dictionary term ("utilize").
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+        var markdown = string.Join(
+            '\n',
+            "The first line has no issue.",
+            "The second line has no issue.",
+            "The third line has no issue.",
+            "Please utilize the tool on the fourth line.");
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: the diagnostic reports line 4 (where "utilize" appears), not line 1 (the
+        // paragraph's start line).
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(4, diagnostic.Line);
+    }
+
+    /// <summary>
     ///     Test that a multi-word disallowed phrase is matched even across normal whitespace.
     /// </summary>
     [Fact]

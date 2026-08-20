@@ -248,6 +248,18 @@ internal sealed class Profile
 internal sealed class DictionaryConfig
 {
     /// <summary>
+    ///     When <see langword="false"/>, the entire dictionary/vocabulary check
+    ///     (<c>STE100-DICT</c>) is skipped for every file: no embedded dictionary, project
+    ///     <see cref="File"/>, or inline <see cref="Disallow"/> entries are loaded or evaluated.
+    ///     Default <see langword="true"/>. Use this for projects that want only the structural/
+    ///     mechanical STE100 checks (sentence length, semicolons, contractions, and the advisory
+    ///     heuristics) enforced, without ASD-STE100 vocabulary restrictions. Unlike
+    ///     <see cref="UseEmbedded"/> (which still checks a project-supplied dictionary), this
+    ///     disables the check entirely.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
     ///     Path (relative to the configuration file's directory, or absolute) to a project-supplied
     ///     dictionary file in the same YAML schema as the embedded default dictionary. Entries in
     ///     this file override embedded entries with the same term. Projects that require true
