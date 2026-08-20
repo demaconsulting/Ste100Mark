@@ -10,7 +10,7 @@
 sections:
   - title: System-Level Requirements
     requirements:
-      - id: Template-System-Version
+      - id: Ste100Mark-System-Version
         title: The tool shall display version information when the version flag is provided.
         justification: |
           Users need to quickly identify the version of the tool they are using for
@@ -19,7 +19,7 @@ sections:
         tests:
           - Ste100Mark_VersionFlag_Provided_OutputsVersion
 
-      - id: Template-System-Help
+      - id: Ste100Mark-System-Help
         title: The tool shall display usage information when the help flag is provided.
         justification: |
           Users need access to command-line usage documentation without requiring
@@ -28,7 +28,7 @@ sections:
         tests:
           - Ste100Mark_HelpFlag_Provided_OutputsUsageInformation
 
-      - id: Template-System-Validate
+      - id: Ste100Mark-System-Validate
         title: The tool shall execute self-validation tests when the validate flag is provided.
         justification: |
           Regulated environments require tool qualification evidence to demonstrate
@@ -39,7 +39,7 @@ sections:
         tests:
           - Ste100Mark_ValidateFlag_Provided_RunsValidation
 
-      - id: Template-System-Silent
+      - id: Ste100Mark-System-Silent
         title: The tool shall suppress console output when the silent flag is provided.
         justification: |
           Enables automated scripts and CI/CD pipelines to run the tool without
@@ -47,7 +47,7 @@ sections:
         tests:
           - Ste100Mark_SilentFlag_Provided_SuppressesOutput
 
-      - id: Template-System-Log
+      - id: Ste100Mark-System-Log
         title: The tool shall write output to a log file when the log flag is provided.
         justification: |
           Provides persistent logging for debugging and compliance audit trails.
@@ -56,7 +56,7 @@ sections:
         tests:
           - Ste100Mark_LogFlag_Provided_WritesOutputToFile
 
-      - id: Template-System-ErrorHandling
+      - id: Ste100Mark-System-ErrorHandling
         title: The tool shall return a non-zero exit code for unrecognized arguments.
         justification: |
           A non-zero exit code enables CI/CD pipelines to detect and
@@ -64,7 +64,7 @@ sections:
         tests:
           - Ste100Mark_UnknownArgument_Provided_ReturnsError
 
-      - id: Template-System-ErrorMessage
+      - id: Ste100Mark-System-ErrorMessage
         title: The tool shall report an error message for unrecognized arguments.
         justification: |
           Clear feedback for unrecognized arguments helps users quickly correct
@@ -72,7 +72,7 @@ sections:
         tests:
           - Ste100Mark_UnknownArgument_Provided_ReturnsError
 
-      - id: Template-System-Results
+      - id: Ste100Mark-System-Results
         title: >-
           The tool shall write self-validation results to a standard test result
           file when the `--results` flag is provided.
@@ -83,7 +83,7 @@ sections:
           - Ste100Mark_ValidateWithTrxResults_Requested_GeneratesTrxFile
           - Ste100Mark_ValidateWithXmlResults_Requested_GeneratesJUnitFile
 
-      - id: Template-System-Depth
+      - id: Ste100Mark-System-Depth
         title: The tool shall adjust the heading depth of validation output when the `--depth` flag is provided.
         justification: |
           Enables validation output to be embedded within larger markdown documents at
@@ -93,7 +93,7 @@ sections:
           - Ste100Mark_ValidateFlag_Provided_RunsValidation
           - Ste100Mark_ValidateWithDepth_DepthThree_OutputsCorrectHeadingLevel
 
-      - id: Template-System-ValidateFailure
+      - id: Ste100Mark-System-ValidateFailure
         title: The tool shall return a non-zero exit code when the results file cannot be written.
         justification: |
           A non-zero exit code on results-write failure enables CI/CD pipelines to detect
@@ -102,7 +102,7 @@ sections:
         tests:
           - Ste100Mark_ValidateWithBadExtension_ExtensionInvalid_ReturnsNonZero
 
-      - id: Template-System-DefaultBehavior
+      - id: Ste100Mark-System-DefaultBehavior
         title: The tool shall display a banner then run the default tool logic when invoked without any action flags.
         justification: |
           When a user invokes the tool without any recognized action flag, the tool shall
@@ -111,7 +111,7 @@ sections:
         tests:
           - Ste100Mark_NoArguments_Invoked_DisplaysBanner
 
-      - id: Template-System-ResultAlias
+      - id: Ste100Mark-System-ResultAlias
         title: The tool shall accept `--result` as a legacy alias for `--results`.
         justification: |
           Backward compatibility with scripts that use the earlier `--result` spelling

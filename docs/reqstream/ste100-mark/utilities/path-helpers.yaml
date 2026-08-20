@@ -8,20 +8,43 @@
 sections:
   - title: PathHelpers Unit Requirements
     requirements:
-      - id: Template-PathHelpers-SafeCombine
-        title: The PathHelpers class shall combine paths safely, preventing path traversal.
+      - id: Ste100Mark-PathHelpers-SafeCombine
+        title: >-
+          The PathHelpers class shall combine a base path with a valid relative path and preserve non-traversal inputs.
         justification: |
-          Prevents path-traversal vulnerabilities when constructing file paths from
-          user-supplied or external inputs. Paths containing ".." or rooted paths
-          must be rejected to ensure the combined path remains under the base directory.
+          Safe path composition must still allow legitimate relative paths, including nested paths,
+          current-directory references, names that merely start with "..", and an empty relative
+          path that resolves to the base directory.
         tests:
           - PathHelpers_SafePathCombine_ValidPaths_CombinesCorrectly
-          - PathHelpers_SafePathCombine_PathTraversalWithDoubleDots_ThrowsArgumentException
-          - PathHelpers_SafePathCombine_DoubleDotsInMiddle_ThrowsArgumentException
-          - PathHelpers_SafePathCombine_AbsolutePath_ThrowsArgumentException
           - PathHelpers_SafePathCombine_NestedPaths_CombinesCorrectly
           - PathHelpers_SafePathCombine_CurrentDirectoryReference_CombinesCorrectly
-          - PathHelpers_SafePathCombine_EmptyRelativePath_ReturnsBasePath
           - PathHelpers_SafePathCombine_DotDotPrefixedName_CombinesCorrectly
+          - PathHelpers_SafePathCombine_EmptyRelativePath_ReturnsBasePath
+
+      - id: Ste100Mark-PathHelpers-SafeCombine-PathTraversal
+        title: The PathHelpers class shall reject relative paths containing traversal components.
+        justification: |
+          Prevents path-traversal vulnerabilities when constructing file paths from user-supplied
+          or external inputs by rejecting relative path components that would escape the base
+          directory.
+        tests:
+          - PathHelpers_SafePathCombine_PathTraversalWithDoubleDots_ThrowsArgumentException
+          - PathHelpers_SafePathCombine_DoubleDotsInMiddle_ThrowsArgumentException
+
+      - id: Ste100Mark-PathHelpers-SafeCombine-RootedPath
+        title: The PathHelpers class shall reject rooted paths when a relative path is expected.
+        justification: |
+          A rooted input bypasses the caller-supplied base directory entirely, so it must be
+          rejected to keep the combined result anchored under the base path.
+        tests:
+          - PathHelpers_SafePathCombine_AbsolutePath_ThrowsArgumentException
+
+      - id: Ste100Mark-PathHelpers-SafeCombine-NullInputs
+        title: The PathHelpers class shall reject null path arguments.
+        justification: |
+          Null path inputs are invalid caller input and must be rejected explicitly rather than
+          combined into an undefined path result.
+        tests:
           - PathHelpers_SafePathCombine_NullBasePath_ThrowsArgumentNullException
           - PathHelpers_SafePathCombine_NullRelativePath_ThrowsArgumentNullException

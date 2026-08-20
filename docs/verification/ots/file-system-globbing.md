@@ -30,7 +30,7 @@ correctly matches, excludes, and orders pattern results as the subsystem relies 
 **Expected**: Microsoft.Extensions.FileSystemGlobbing reports no match, and the default mode is
 returned.
 
-**Requirement coverage**: `Template-OTS-FileSystemGlobbing`.
+**Requirement coverage**: `Ste100Mark-OTS-FileSystemGlobbing`.
 
 #### ResolveMode_MatchingProfileGlob_ReturnsOverriddenMode
 
@@ -39,7 +39,7 @@ returned.
 **Expected**: Microsoft.Extensions.FileSystemGlobbing reports a match, and the overridden mode is
 returned.
 
-**Requirement coverage**: `Template-OTS-FileSystemGlobbing`.
+**Requirement coverage**: `Ste100Mark-OTS-FileSystemGlobbing`.
 
 #### ResolveMode_MultipleProfiles_UsesFirstMatch
 
@@ -48,7 +48,7 @@ returned.
 **Expected**: Microsoft.Extensions.FileSystemGlobbing evaluates the overrides in order, and the
 first matching override's mode is used.
 
-**Requirement coverage**: `Template-OTS-FileSystemGlobbing`.
+**Requirement coverage**: `Ste100Mark-OTS-FileSystemGlobbing`.
 
 #### Run_PositionalGlobs_OverrideConfigInclude
 
@@ -58,7 +58,7 @@ include patterns.
 **Expected**: Microsoft.Extensions.FileSystemGlobbing resolves files using the positional globs,
 overriding the configuration file's include patterns.
 
-**Requirement coverage**: `Template-OTS-FileSystemGlobbing`.
+**Requirement coverage**: `Ste100Mark-OTS-FileSystemGlobbing`.
 
 #### Run_ProcedureModeOverride_AppliesStricterWordLimit
 
@@ -67,7 +67,7 @@ overriding the configuration file's include patterns.
 **Expected**: Microsoft.Extensions.FileSystemGlobbing reports the match, and the stricter
 procedure-mode word limit is applied to that file.
 
-**Requirement coverage**: `Template-OTS-FileSystemGlobbing`.
+**Requirement coverage**: `Ste100Mark-OTS-FileSystemGlobbing`.
 
 #### Run_CleanMarkdownFile_ProducesSuccessExitCode
 
@@ -77,4 +77,4 @@ include/exclude glob set.
 **Expected**: Microsoft.Extensions.FileSystemGlobbing resolves the file for linting, and the
 lint run completes with a success exit code.
 
-**Requirement coverage**: `Template-OTS-FileSystemGlobbing`.
+**Requirement coverage**: `Ste100Mark-OTS-FileSystemGlobbing`.

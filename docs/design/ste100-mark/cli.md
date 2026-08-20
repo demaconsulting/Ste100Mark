@@ -17,7 +17,8 @@ flags and write output. The `Cli` subsystem contains one unit: `Context`.
 - *Role*: Provider.
 - *Contract*: Parses `string[] args` into flag properties and opens the log file if `--log` is
   present. Returns a fully initialized `Context`. Accepts `--result` as a legacy alias for
-  `--results`.
+  `--results`, stores an explicit lint configuration path from `--config`, stores `text` or
+  `json` output-format selection from `--format`, and records whether `--strict` was requested.
 - *Constraints*: Throws `ArgumentException` for unknown or malformed arguments; throws
   `InvalidOperationException` when the log file cannot be opened.
 
@@ -33,9 +34,12 @@ flags and write output. The `Cli` subsystem contains one unit: `Context`.
 
 - *Type*: In-process .NET instance method.
 - *Role*: Provider.
-- *Contract*: Sets `_hasErrors` to true, writes `message` in red to `Console.Error`, and writes
-  to the log file if one is open. Stderr output is suppressed when `Silent` is true, but
-  `ExitCode` is set to 1 regardless.
+- *Contract*: Sets `_hasErrors` to true, writes `message` to `Console.Error`, temporarily requests
+  `ConsoleColor.Red` before writing, restores the previous foreground color afterward, and writes
+  to the log file if one is open. Color is best-effort and host-dependent; some terminals and CI
+  log captures may not render it. Stderr routing, not color rendering, is what the automated
+  subsystem tests verify. Stderr output is suppressed when `Silent` is true, but `ExitCode` is set
+  to 1 regardless.
 - *Constraints*: Once set, `ExitCode` cannot return to 0 within the same invocation.
 
 **Context.ExitCode**: Derived property returning 0 or 1.
@@ -61,6 +65,17 @@ of each invocation and passes it to all other units that produce output.
 
 The subsystem has no dependencies on other tool subsystems; it uses only .NET BCL types
 (`Console`, `StreamWriter`).
+
+`Program.Run` dispatches in priority order: `--version`, then help, then self-validation, then the
+main lint flow. During main lint flow, `--format json` suppresses the normal banner so stdout can
+remain a single parseable JSON document; help and self-validation still emit the banner even if a
+JSON format argument is present.
+
+The lint path uses `Context.ConfigFile`, `Context.Format`, and `Context.Strict` exactly as parsed.
+`Linter` passes an explicit `--config` path through to configuration loading, defaults to
+`.ste100mark.yaml` only when no explicit path was supplied, reports diagnostics in the selected
+text or JSON format, and treats `--strict` as an exit-code policy that promotes warn-severity
+findings to failure without changing the severities reported in diagnostic output.
 
 Error handling flows from `Context.Create` to `Program.Main`: argument parsing errors propagate
 as `ArgumentException`; log-file errors propagate as `InvalidOperationException`. Both are

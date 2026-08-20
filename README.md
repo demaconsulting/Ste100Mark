@@ -26,9 +26,10 @@ Ste100Mark provides:
 - 🖥️ **Multi-Platform Support**: Builds and runs on Windows, Linux, macOS
 - ⚙️ **Multi-Runtime Support**: Targets .NET 8, 9, and 10 runtimes
 - 🔁 **Comprehensive CI/CD**: GitHub Actions workflows for quality checks, builds, tests
-- 🛡️ **Continuous Compliance**: Generates automatic compliance evidence on every CI run,
-  following the [Continuous Compliance][link-continuous-compliance] methodology
-- 📚 **Documentation Generation**: Automates build notes, user guide, and compliance reports
+- 🛡️ **Continuous Compliance**: This repository's CI pipeline generates compliance evidence and
+  reports using the [Continuous Compliance][link-continuous-compliance] methodology
+- 📚 **Repository Documentation Tooling**: This repository also automates build notes, user guide,
+  and compliance report generation
 
 ## Installation
 

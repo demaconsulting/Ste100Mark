@@ -13,9 +13,11 @@ that ReviewMark executed without error.
 ### Verification Approach
 
 ReviewMark is verified by two complementary layers of evidence. First, the CI pipeline runs
-`reviewmark --validate --results artifacts/reviewmark-self-validation.trx`, which exercises
-ReviewMark's built-in self-validation suite against test review configurations and records
-results for ReqStream.
+`dotnet reviewmark --validate --results artifacts/reviewmark-self-validation.trx` in the
+`Run ReviewMark self-validation` step, which exercises ReviewMark's built-in self-validation suite
+against test review configurations and records results for ReqStream; that same self-validation
+suite is the evidence for the documented `--elaborate` behavior because the `ReviewMark_Elaborate`
+scenario is defined as a self-validation case in this verification record.
 
 Second, the pipeline invokes ReviewMark to generate
 `docs/code_review_plan/generated/plan.md` and `docs/code_review_report/generated/report.md`.
@@ -33,7 +35,7 @@ from a test configuration.
 
 **Expected**: Exits 0 and produces a non-empty review plan markdown file.
 
-**Requirement coverage**: `Template-OTS-ReviewMark`.
+**Requirement coverage**: `Ste100Mark-OTS-ReviewMark`.
 
 #### ReviewMark_ReviewReportGeneration
 
@@ -42,7 +44,7 @@ report from a test configuration and evidence store.
 
 **Expected**: Exits 0 and produces a non-empty review report.
 
-**Requirement coverage**: `Template-OTS-ReviewMark`.
+**Requirement coverage**: `Ste100Mark-OTS-ReviewMark`.
 
 #### ReviewMark_Enforce
 
@@ -51,7 +53,7 @@ issues.
 
 **Expected**: Exits with a non-zero exit code when review issues are present.
 
-**Requirement coverage**: `Template-OTS-ReviewMark-Enforce`.
+**Requirement coverage**: `Ste100Mark-OTS-ReviewMark-Enforce`.
 
 #### ReviewMark_Elaborate
 
@@ -60,7 +62,7 @@ named review set.
 
 **Expected**: Exits 0 and prints the review-set ID, fingerprint, and file list.
 
-**Requirement coverage**: `Template-OTS-ReviewMark-Elaborate`.
+**Requirement coverage**: `Ste100Mark-OTS-ReviewMark-Elaborate`.
 
 #### ReviewMark_Lint
 
@@ -69,4 +71,4 @@ issues.
 
 **Expected**: Correctly reports structural and semantic issues found in the test definition.
 
-**Requirement coverage**: `Template-OTS-ReviewMark-Lint`.
+**Requirement coverage**: `Ste100Mark-OTS-ReviewMark-Lint`.

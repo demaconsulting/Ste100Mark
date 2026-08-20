@@ -9,7 +9,7 @@ sections:
     sections:
       - title: Microsoft.Extensions.FileSystemGlobbing Requirements
         requirements:
-          - id: Template-OTS-FileSystemGlobbing
+          - id: Ste100Mark-OTS-FileSystemGlobbing
             title: >-
               Microsoft.Extensions.FileSystemGlobbing shall match file paths against
               include/exclude glob patterns.

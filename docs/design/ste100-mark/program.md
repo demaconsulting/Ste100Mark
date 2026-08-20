@@ -36,23 +36,31 @@ Creates a `Context` using `Context.Create(args)`, calls `Run(context)`, and retu
 - *Preconditions*: `context` is not null.
 - *Postconditions*: Exactly one handler has been called.
 
-Inspects flags in priority order: (1) if `context.Version` is true, calls
-`context.WriteLine(Version)` and returns; (2) calls `PrintBanner`; (3) if `context.Help` is
-true, calls `PrintHelp` and returns; (4) if `context.Validate` is true, calls
-`Validation.Run(context)`; (5) otherwise calls `RunToolLogic(context)`.
+Inspects flags in priority order. First, if `context.Version` is true, it writes only the
+version string and returns without printing the banner. Otherwise it determines banner behavior
+before dispatch: the banner is suppressed only when `context.Format == OutputFormat.Json` and both
+`context.Help` and `context.Validate` are false, because the main lint path must keep stdout to a
+single JSON document. For all other paths, including `--help --format json` and
+`--validate --format json`, `Run` prints the banner first. After that it dispatches in order:
+(1) help via `PrintHelp`; (2) self-validation via `Validation.Run(context)`; (3) main lint tool
+logic via `RunToolLogic(context)`. Exactly one path runs per invocation.
 
 **PrintBanner**: Writes the tool name, version, and copyright line to `context`.
 
 - *Parameters*: `Context context` — output target.
 - *Returns*: `void`.
 
-**PrintHelp**: Writes the usage synopsis and options table to `context`.
+**PrintHelp**: Writes the usage synopsis and the umbrella CLI options table to `context`,
+including the lint-related options `--config`, `--format`, `--strict`, and the optional input
+glob arguments used by the main lint workflow.
 
 - *Parameters*: `Context context` — output target.
 - *Returns*: `void`.
 
-**RunToolLogic**: Placeholder for main tool logic; writes a demo message to `context`.
-Downstream projects replace this method body with actual tool behavior.
+**RunToolLogic**: Invokes the current main lint tool implementation by calling
+`Linter.Run(context)`. The method remains the structural hook where downstream projects could
+replace the dispatched tool behavior, but in the current implementation it routes directly to the
+linter.
 
 - *Parameters*: `Context context` — output target.
 - *Returns*: `void`.
@@ -72,6 +80,7 @@ propagate to `Main`.
   `Context.WriteError` for all output.
 - **Validation** — `Program.Run` calls `Validation.Run(context)` when the `--validate` flag is
   set.
+- **Linter** — `Program.RunToolLogic` calls `Linter.Run(context)` for the main lint execution path.
 
 ### Callers
 

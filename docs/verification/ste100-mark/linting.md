@@ -24,7 +24,7 @@ N/A - standard test environment.
 
 ### Test Scenarios
 
-**Template-Linting-WordLimits**: Sentence splitting and Rule 4.1 counting are verified for
+**Ste100Mark-Linting-WordLimits**: Sentence splitting and Rule 4.1 counting are verified for
 normal punctuation, colon termination, parentheticals, hyphenated words, number-plus-unit
 spans, quoted text, title-style sequences, and procedure-versus-descriptive limits. This
 scenario is tested by `Split_SingleSimpleSentence_ReturnsOneSentenceWithWordCount`,
@@ -38,31 +38,31 @@ scenario is tested by `Split_SingleSimpleSentence_ReturnsOneSentenceWithWordCoun
 `Evaluate_SentenceExceedingDescriptiveLimit_FlagsWordLimitDiagnostic`, and
 `Evaluate_SentenceExceedingProcedureLimit_FlagsOnlyInProcedureMode`.
 
-**Template-Linting-Semicolons**: Rule 8.1 enforcement is verified both in-process and through
+**Ste100Mark-Linting-Semicolons**: Rule 8.1 enforcement is verified both in-process and through
 the published CLI, including the configuration path that disables the rule. This scenario is
 tested by `Evaluate_Semicolon_FlagsSemicolonDiagnostic`,
 `Evaluate_SemicolonWithAllowSemicolons_NoDiagnostic`,
 `Run_FileWithSemicolon_ProducesFailureExitCode`, and
 `Ste100Mark_LintFileWithSemicolon_ReportsErrorAndReturnsNonZero`.
 
-**Template-Linting-Contractions**: Rule 4.2 contraction detection is verified with the rule
+**Ste100Mark-Linting-Contractions**: Rule 4.2 contraction detection is verified with the rule
 enabled and disabled. This scenario is tested by `Evaluate_Contraction_FlagsContractionDiagnostic`
 and `Evaluate_ContractionWithAllowContractions_NoDiagnostic`.
 
-**Template-Linting-ParagraphAdvisory**: The advisory paragraph-length heuristic is verified for
+**Ste100Mark-Linting-ParagraphAdvisory**: The advisory paragraph-length heuristic is verified for
 warning output, disablement through `0`, and the exemption of heading segments. This scenario is
 tested by `Evaluate_ParagraphExceedingSentenceCap_FlagsAdvisoryWarning`,
 `Evaluate_ParagraphLengthDisabled_NoAdvisoryDiagnostic`, and
 `Evaluate_HeadingSegment_ExemptFromParagraphLengthCheck`.
 
-**Template-Linting-PassiveVoiceAdvisory**: The passive-voice heuristic is verified for warning,
+**Ste100Mark-Linting-PassiveVoiceAdvisory**: The passive-voice heuristic is verified for warning,
 off, and error-severity configurations, plus a case proving a simple (non-perfect-tense)
 passive construction is still flagged after the complex-verb precedence amendment. This
 scenario is tested by `Evaluate_PassiveVoicePattern_FlagsAdvisoryAtConfiguredSeverity`,
 `Evaluate_PassiveVoiceOff_NoDiagnostic`, `Evaluate_PassiveVoiceError_FlagsAtErrorSeverity`, and
 `Evaluate_WasOpened_StillFlagsPassiveVoice`.
 
-**Template-Linting-ComplexVerbAdvisory**: The complex-verb (perfect/modal-perfect tense)
+**Ste100Mark-Linting-ComplexVerbAdvisory**: The complex-verb (perfect/modal-perfect tense)
 heuristic is verified for perfect-tense and modal-perfect-tense matches, off-configuration,
 inline-code exclusion, and the precedence case proving "has been X" is reported only as a
 complex-verb finding and not also as a passive-voice finding. This scenario is tested by
@@ -71,14 +71,14 @@ complex-verb finding and not also as a passive-voice finding. This scenario is t
 `Evaluate_ComplexVerbOff_NoDiagnostic`, `Evaluate_ComplexVerbOnlyInsideInlineCode_NoDiagnostic`,
 and `Evaluate_HasBeenOpened_FlagsComplexVerbOnlyNotPassiveVoice`.
 
-**Template-Linting-IngFormAdvisory**: The "-ing" form heuristic is verified for a mid-sentence
+**Ste100Mark-Linting-IngFormAdvisory**: The "-ing" form heuristic is verified for a mid-sentence
 match, exclusion of a match touching a sentence-ending period before or after the word,
 off-configuration, and inline-code exclusion. This scenario is tested by
 `Evaluate_IngWordMidSentence_FlagsIngFormAdvisory`,
 `Evaluate_IngWordFollowedByPeriod_NotFlagged`, `Evaluate_IngWordPrecededByPeriod_NotFlagged`,
 `Evaluate_IngFormOff_NoDiagnostic`, and `Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic`.
 
-**Template-Linting-Dictionary**: Dictionary merge and lookup behavior is verified for the
+**Ste100Mark-Linting-Dictionary**: Dictionary merge and lookup behavior is verified for the
 embedded baseline (including a multi-sense term), explicit project dictionaries, inline
 overrides (including full sense-list replacement), allow/ignore removal, case-insensitive
 lookup, whole-term matching, and suggestions. This scenario is tested by
@@ -97,7 +97,7 @@ lookup, whole-term matching, and suggestions. This scenario is tested by
 `Evaluate_InlineOverriddenTerm_UsesOverriddenSuggestion`, and
 `Evaluate_AllowListedTerm_NotFlagged`.
 
-**Template-Linting-InlineCodeSpans**: Inline code span handling is verified for verbatim
+**Ste100Mark-Linting-InlineCodeSpans**: Inline code span handling is verified for verbatim
 retention in extracted prose, continued full exclusion of fenced code blocks, one-word
 counting toward Rule 4.1/8.4-8.7 limits, verbatim display in a word-limit diagnostic message,
 and exclusion of inline-code-span content from the semicolon (Rule 8.1), contraction
@@ -115,7 +115,7 @@ same segment. This scenario is tested by `Extract_InlineCodeSpan_KeptVerbatimInP
 `Evaluate_DisallowedTermOnlyInsideInlineCode_NotFlagged`, and
 `Evaluate_DisallowedTermInsideAndOutsideInlineCode_FlagsOnlyProseOccurrence`.
 
-**Template-Linting-DictionaryPos**: Part-of-speech sense selection is verified for every
+**Ste100Mark-Linting-DictionaryPos**: Part-of-speech sense selection is verified for every
 heuristic signal in isolation (infinitive marker, modal auxiliary, progressive auxiliary,
 verb-inflection suffix, imperative sentence start in both Procedure and Descriptive mode,
 article, possessive, quantifier/demonstrative, preposition, plural-noun suffix, noun-phrase
@@ -153,7 +153,7 @@ dictionary allowances supplied via a matching `Profile`'s `dictionary.allow`/
 `Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic`, and
 `Evaluate_ExtraAllowedTermsUnrelatedTerm_StillFlagsOtherDisallowedTerm`.
 
-**Template-Linting-DictionaryPosVerblessSegment**: The whole-segment "no finite verb anywhere"
+**Ste100Mark-Linting-DictionaryPosVerblessSegment**: The whole-segment "no finite verb anywhere"
 noun signal is verified in isolation for a verbless table cell, a verbless list-item fragment, a
 verbless comma-separated list fragment, and a verbless heading fragment, plus its correct
 interaction with stronger and weaker verb signals: it does not out-vote a strong match-local verb
@@ -179,7 +179,7 @@ instruction with no other finite verb is still flagged as a verb usage), and
 `Evaluate_SubjectNounWithDeterminerAndFollowingVerb_NotFlagged` (a determiner/finite-verb-follows
 regression guard).
 
-**Template-Linting-Configuration**: YAML configuration loading and resolution are verified for
+**Ste100Mark-Linting-Configuration**: YAML configuration loading and resolution are verified for
 defaults, malformed files, missing files, complete schemas, first-match-wins mode profiles,
 and layered rules/dictionary profile deltas. This scenario is tested by
 `Load_NullPath_ReturnsDefaultConfiguration`,
@@ -199,7 +199,7 @@ and layered rules/dictionary profile deltas. This scenario is tested by
 `Run_ProcedureModeOverride_AppliesStricterWordLimit`, and
 `Run_ProfileDictionaryAllowList_PermitsTermOnlyWithinProfileGlob`.
 
-**Template-Linting-DictionaryPhraseScopedAllowance**: The `dictionary.allow-in-phrase`
+**Ste100Mark-Linting-DictionaryPhraseScopedAllowance**: The `dictionary.allow-in-phrase`
 phrase-scoped allowance is verified for suppressing a disallowed term only when the match falls
 entirely inside a configured phrase while the same term elsewhere in the same segment is still
 flagged, case-insensitive matching, matching across whitespace variation consistent with a
@@ -216,7 +216,7 @@ of the global `dictionary.allow-in-phrase` list unioned with a matching profile'
 `ResolveAllowedPhrases_NoMatchingProfile_ReturnsGlobalPhrasesOnly` and
 `ResolveAllowedPhrases_MatchingProfile_UnionsWithGlobalPhraseList` (listed above).
 
-**Template-Linting-CliIntegration**: The lint-specific CLI surface is verified for positional
+**Ste100Mark-Linting-CliIntegration**: The lint-specific CLI surface is verified for positional
 globs, `--config`, `--format`, `--strict`, and default dispatch through `Program.Run`. This
 scenario is tested by `Context_Create_NoArguments_ReturnsLintingDefaults`,
 `Context_Create_PositionalArgument_CollectedAsGlob`,
@@ -229,14 +229,14 @@ scenario is tested by `Context_Create_NoArguments_ReturnsLintingDefaults`,
 `Context_Create_StrictFlag_SetsStrictTrue`, `Program_Run_NoArguments_DisplaysDefaultBehavior`,
 and `Run_PositionalGlobs_OverrideConfigInclude`.
 
-**Template-Linting-OutputFormats**: Text and JSON reporting are verified at the formatter level
+**Ste100Mark-Linting-OutputFormats**: Text and JSON reporting are verified at the formatter level
 and through the published CLI JSON path. This scenario is tested by
 `Report_TextFormat_WritesDiagnosticLinesAndSummary`,
 `Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema`,
 `Report_NoDiagnostics_WritesZeroCountSummary`, and
 `Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument`.
 
-**Template-Linting-ExitCode**: Exit-code behavior is verified for clean files, build-breaking
+**Ste100Mark-Linting-ExitCode**: Exit-code behavior is verified for clean files, build-breaking
 errors, strict-mode warning promotion, configuration failures, and JSON-mode failure signaling.
 This scenario is tested by `Run_CleanMarkdownFile_ProducesSuccessExitCode`,
 `Run_FileWithSemicolon_ProducesFailureExitCode`,

@@ -48,7 +48,7 @@ and a known-bad model fixture as part of its built-in self-test suite.
 **Expected**: Exits 0 with no reported syntax or reference errors for the valid fixture, and
 correctly reports an error for the invalid fixture.
 
-**Requirement coverage**: `Template-OTS-SysML2Tools-Lint`.
+**Requirement coverage**: `Ste100Mark-OTS-SysML2Tools-Lint`.
 
 #### SysML2Tools_RenderSvgSelfTest
 
@@ -57,7 +57,7 @@ against a known-good model fixture as part of its built-in self-test suite.
 
 **Expected**: Exits 0 and produces a non-empty SVG file for the fixture's declared view.
 
-**Requirement coverage**: `Template-OTS-SysML2Tools-Render`.
+**Requirement coverage**: `Ste100Mark-OTS-SysML2Tools-Render`.
 
 #### SysML2Tools_DesignDiagramsSvg
 
@@ -69,7 +69,7 @@ element.
 **Expected**: FileAssert exits 0, proving render produced every declared view's diagram against the
 real model - not just the self-test's fixture.
 
-**Requirement coverage**: `Template-OTS-SysML2Tools-Render`.
+**Requirement coverage**: `Ste100Mark-OTS-SysML2Tools-Render`.
 
 ### Acceptance Criteria
 
