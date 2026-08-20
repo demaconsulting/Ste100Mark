@@ -486,8 +486,9 @@ public class PartOfSpeechGuesserTests
     [Fact]
     public void Guess_SegmentHasFiniteVerbElsewhere_MatchStillAmbiguous()
     {
-        // Arrange: "pump" has no local signal, but "operates" elsewhere is a recognized finite verb
-        const string text = "Consider pump behavior. The system operates continuously.";
+        // Arrange: "pump" has no local signal (followed by "often", an adverb, not a compound-noun
+        // head), but "operates" elsewhere is a recognized finite verb
+        const string text = "Consider pump often. The system operates continuously.";
         var index = text.IndexOf("pump", StringComparison.Ordinal);
 
         // Act: execute the operation being tested
@@ -495,5 +496,82 @@ public class PartOfSpeechGuesserTests
 
         // Assert: verify expected behavior
         Assert.Null(result);
+    }
+
+    /// <summary>
+    ///     Test that a match immediately followed by another noun (a noun-noun compound) resolves
+    ///     as a noun, even when a finite verb appears elsewhere in the segment (so the
+    ///     verbless-segment signal alone would not have caught it).
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByCompoundNoun_ReturnsNoun()
+    {
+        // Arrange: "test fixture" - "test" modifies the following noun "fixture"
+        const string text = "The breadboard is a laboratory test fixture.";
+        var index = text.IndexOf("test", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "test".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test another noun-noun compound shape: "duty cycle", where "cycle" is the head noun of
+    ///     the compound modified by "duty".
+    /// </summary>
+    [Fact]
+    public void Guess_HeadOfCompoundNounAfterModifier_ReturnsNoun()
+    {
+        // Arrange: "duty cycle" - preceded by "the" (article), exercising the compound via the
+        // determiner-governs-through-modifiers path for the head noun "cycle" itself is covered
+        // elsewhere; here we assert the compound's first word is a noun signal by adjacency.
+        const string text = "Pump rate is set by the duty cycle.";
+        var index = text.IndexOf("duty", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "duty".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that the noun-compound signal does not fire when the following word is itself a
+    ///     verb-signal-bearing word (for example an article), so genuine verb usages such as
+    ///     "cover the indicative load" are unaffected.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByArticleNotCompoundNoun_ReturnsVerb()
+    {
+        // Arrange: "cover the load" - "the" following "cover" is a verb signal (direct object),
+        // not a compound-noun signal.
+        const string text = "One supply is enough to cover the indicative load.";
+        var index = text.IndexOf("cover", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "cover".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that a match immediately followed by a number resolves as a verb (the match takes
+    ///     the number as its direct object), for example "use 0.12 ohms".
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByNumber_ReturnsVerb()
+    {
+        // Arrange: "use 0.12" - "use" is a verb taking the number as its object
+        const string text = "Blocks 1 to 5 use 0.12 ohms.";
+        var index = text.IndexOf("use", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "use".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
     }
 }

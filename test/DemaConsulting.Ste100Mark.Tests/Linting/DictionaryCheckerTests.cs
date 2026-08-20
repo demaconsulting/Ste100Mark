@@ -885,4 +885,96 @@ public class DictionaryCheckerTests
         // Assert: verify expected behavior
         Assert.Single(diagnostics);
     }
+
+    /// <summary>
+    ///     Test that a self-referential entry (its alternatives list includes its own headword,
+    ///     ASD-STE100's convention for "approved in the other part of speech") is not flagged when
+    ///     the guesser cannot confidently resolve a role but the usage is a noun-noun compound the
+    ///     dictionary term modifies.
+    /// </summary>
+    [Fact]
+    public void Evaluate_SelfReferentialEntry_NounCompoundUsage_NotFlagged()
+    {
+        // Arrange: "check" is verb-only, but self-referential (alternatives include "CHECK" - the
+        // noun form is approved). "check fixture" is a noun-noun compound.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["check"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["MAKE SURE", "CHECK"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("The bench is a calibrated check fixture.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a self-referential entry still reports a diagnostic when the guesser
+    ///     confidently resolves the disallowed grammatical role (an imperative verb usage).
+    /// </summary>
+    [Fact]
+    public void Evaluate_SelfReferentialEntry_ConfidentDisallowedUsage_StillFlagged()
+    {
+        // Arrange: "check" is verb-only and self-referential; an imperative usage is confidently
+        // the disallowed verb role, so it must still be reported.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["check"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["MAKE SURE", "CHECK"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Check the supply level.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Procedure);
+
+        // Assert: verify expected behavior
+        Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a match immediately followed by a number is treated as a confident verb usage
+    ///     and, against a noun-only self-referential entry (disallowing the noun sense only), is
+    ///     not flagged - the verb role is the approved grammatical role for this word.
+    /// </summary>
+    [Fact]
+    public void Evaluate_TermFollowedByNumber_ConfidentVerbUsage_NotFlagged()
+    {
+        // Arrange: "use" is noun-only, self-referential (alternatives include "USE"); followed by
+        // a number, it is confidently a verb, which this entry does not disallow.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["use"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["OPERATION", "USE"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Blocks 1 to 5 use 0.12 ohms of resistance.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
 }

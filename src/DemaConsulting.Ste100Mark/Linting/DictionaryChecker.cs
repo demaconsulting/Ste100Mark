@@ -200,9 +200,35 @@ internal static class DictionaryChecker
             return null;
         }
 
+        if (guess is null && IsSelfReferential(entry))
+        {
+            // A self-referential entry (its alternatives list includes its own headword) is
+            // ASD-STE100's convention for "this word is approved, but only in the other part of
+            // speech" (for example "test (v) -> TEST", meaning the noun "test" is fine). When the
+            // guesser could not confidently resolve a role at all, an inconclusive match against a
+            // self-referential, single-sense entry is more likely a missed noun-compound/other
+            // signal than a genuine disallowed usage, so it is not reported. A confident guess of
+            // the disallowed part of speech is still reported (handled by the candidates check
+            // above/below); this only relaxes the previously-ambiguous case.
+            return null;
+        }
+
         return candidates.Count == 1
             ? ConfidentDiagnostic(file, segment, match, candidates[0], labelPos: entry.Senses.Count > 1)
             : AmbiguousDiagnostic(file, segment, match, candidates);
+    }
+
+    /// <summary>
+    ///     Determines whether an entry is "self-referential": at least one sense's
+    ///     <see cref="DictionarySense.Alternatives"/> list includes the entry's own headword
+    ///     (case-insensitive). This is ASD-STE100's convention for a dual-role word where the
+    ///     correction is a change of grammatical role rather than a different word (for example
+    ///     <c>test (v) -&gt; TEST</c>, meaning the noun "test" is the approved form).
+    /// </summary>
+    private static bool IsSelfReferential(DictionaryEntry entry)
+    {
+        return entry.Senses.Any(s =>
+            s.Alternatives.Any(a => string.Equals(a, entry.Term, StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>
