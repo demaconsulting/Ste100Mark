@@ -21,9 +21,9 @@ sections:
               correctly matches, excludes, and orders pattern results.
             tags: [ots]
             tests:
-              - ResolveMode_NoMatchingOverride_ReturnsDefaultMode
-              - ResolveMode_MatchingOverrideGlob_ReturnsOverriddenMode
-              - ResolveMode_MultipleOverrides_UsesFirstMatch
+              - ResolveMode_NoMatchingProfile_ReturnsDefaultMode
+              - ResolveMode_MatchingProfileGlob_ReturnsOverriddenMode
+              - ResolveMode_MultipleProfiles_UsesFirstMatch
               - Run_PositionalGlobs_OverrideConfigInclude
               - Run_ProcedureModeOverride_AppliesStricterWordLimit
               - Run_CleanMarkdownFile_ProducesSuccessExitCode

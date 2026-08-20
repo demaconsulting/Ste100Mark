@@ -23,7 +23,7 @@ correctly matches, excludes, and orders pattern results as the subsystem relies 
 
 ### Test Scenarios
 
-#### ResolveMode_NoMatchingOverride_ReturnsDefaultMode
+#### ResolveMode_NoMatchingProfile_ReturnsDefaultMode
 
 **Scenario**: A file path is checked against a mode-override glob that does not match it.
 
@@ -32,7 +32,7 @@ returned.
 
 **Requirement coverage**: `Template-OTS-FileSystemGlobbing`.
 
-#### ResolveMode_MatchingOverrideGlob_ReturnsOverriddenMode
+#### ResolveMode_MatchingProfileGlob_ReturnsOverriddenMode
 
 **Scenario**: A file path is checked against a mode-override glob that matches it.
 
@@ -41,7 +41,7 @@ returned.
 
 **Requirement coverage**: `Template-OTS-FileSystemGlobbing`.
 
-#### ResolveMode_MultipleOverrides_UsesFirstMatch
+#### ResolveMode_MultipleProfiles_UsesFirstMatch
 
 **Scenario**: A file path matches multiple configured mode-override globs.
 
