@@ -637,6 +637,34 @@ public class ContextTests
     }
 
     /// <summary>
+    ///     Test that Dispose may be called multiple times without throwing.
+    /// </summary>
+    [Fact]
+    public void Context_Dispose_CalledMultipleTimes_DoesNotThrow()
+    {
+        // Arrange: create a context with an opened log writer to exercise resource disposal
+        var logFile = Path.GetTempFileName();
+        try
+        {
+            using var context = Context.Create(["--log", logFile]);
+
+            // Act / Assert: repeated disposal is safe
+            context.Dispose();
+            var exception = Record.Exception(() => context.Dispose());
+
+            // Assert: verify expected behavior
+            Assert.Null(exception);
+        }
+        finally
+        {
+            if (File.Exists(logFile))
+            {
+                File.Delete(logFile);
+            }
+        }
+    }
+
+    /// <summary>
     ///     Test that MarkFailure sets the exit code to 1 without writing any console output.
     /// </summary>
     [Fact]

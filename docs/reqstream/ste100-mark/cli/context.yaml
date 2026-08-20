@@ -27,6 +27,55 @@ sections:
           - Context_Create_ResultAliasFlag_SetsResultsFile
           - Context_Create_DepthFlag_SetsHeadingDepth
           - Context_Create_NoDepthFlag_ReturnsDefaultHeadingDepth
+          - Context_Create_NoArguments_ReturnsLintingDefaults
+
+      - id: Template-Context-ConfigArgumentParsing
+        title: The Context class shall parse the --config option and expose the supplied lint configuration file path.
+        justification: |
+          Callers must be able to select a specific lint configuration file for a single
+          invocation without relying on the default configuration discovery behavior.
+        tests:
+          - Context_Create_NoArguments_ReturnsLintingDefaults
+          - Context_Create_ConfigFlag_SetsConfigFile
+
+      - id: Template-Context-FormatArgumentParsing
+        title: The Context class shall parse the --format option and expose the selected diagnostic output format.
+        justification: |
+          Callers must be able to request the supported diagnostic output format that
+          downstream tools and users expect for the current invocation.
+        tests:
+          - Context_Create_NoArguments_ReturnsLintingDefaults
+          - Context_Create_FormatFlagJson_SetsJsonFormat
+          - Context_Create_FormatFlagText_SetsTextFormat
+
+      - id: Template-Context-StrictArgumentParsing
+        title: >-
+          The Context class shall parse the --strict option and expose whether strict severity
+          promotion is enabled.
+        justification: |
+          Callers must be able to request strict exit-code handling for warning-severity
+          findings on a per-invocation basis.
+        tests:
+          - Context_Create_NoArguments_ReturnsLintingDefaults
+          - Context_Create_StrictFlag_SetsStrictTrue
+
+      - id: Template-Context-GlobArgumentParsing
+        title: The Context class shall collect positional non-flag arguments as glob patterns in the order supplied.
+        justification: |
+          Callers must be able to scope linting to explicit path patterns supplied on the
+          command line without those arguments being misinterpreted as unsupported flags.
+        tests:
+          - Context_Create_NoArguments_ReturnsLintingDefaults
+          - Context_Create_PositionalArgument_CollectedAsGlob
+          - Context_Create_MultiplePositionalArguments_CollectedInOrder
+
+      - id: Template-Context-Dispose
+        title: The Context class shall allow Dispose to be called multiple times without throwing.
+        justification: |
+          Callers must be able to dispose the invocation context safely from repeated or
+          layered cleanup paths without introducing disposal-time failures.
+        tests:
+          - Context_Dispose_CalledMultipleTimes_DoesNotThrow
 
       - id: Template-Context-InvalidArgs
         title: The Context class shall reject unknown or malformed command-line arguments with a descriptive error.
@@ -42,6 +91,9 @@ sections:
           - Context_Create_DepthFlag_NonIntegerValue_ThrowsArgumentException
           - Context_Create_DepthFlag_ZeroValue_ThrowsArgumentException
           - Context_Create_DepthFlag_ExceedsMaxValue_ThrowsArgumentException
+          - Context_Create_ConfigFlag_WithoutValue_ThrowsArgumentException
+          - Context_Create_FormatFlag_UnsupportedValue_ThrowsArgumentException
+          - Context_Create_FormatFlag_WithoutValue_ThrowsArgumentException
 
       - id: Template-Context-ConsoleOutput
         title: The Context class shall write output to the console unless the silent flag is set.

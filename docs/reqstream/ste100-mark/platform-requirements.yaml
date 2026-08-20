@@ -22,34 +22,46 @@ sections:
       - id: Template-Platform-Windows
         title: The tool shall execute successfully on Windows platforms.
         justification: |
-          DEMA Consulting tools must support Windows as a major development platform.
+          The GitHub Actions build workflow runs the build, pack, and full `dotnet test` suite on
+          the `windows-latest` matrix leg after installing .NET 8.x, 9.x, and 10.x. This
+          requirement is therefore limited to the Windows environment that the CI matrix actually
+          exercises and can prove with platform-filtered evidence.
         tests:
-          # Tests link to "windows" to ensure results come from Windows platform
+          # Tests link to "windows" to ensure results come from the windows-latest CI matrix leg
           - "windows@Ste100Mark_VersionDisplay"
           - "windows@Ste100Mark_HelpDisplay"
 
       - id: Template-Platform-Linux
         title: The tool shall execute successfully on Linux platforms.
         justification: |
-          DEMA Consulting tools must support Linux for CI/CD and containerized environments.
+          The GitHub Actions build workflow runs the build, pack, and full `dotnet test` suite on
+          the `ubuntu-latest` matrix leg after installing .NET 8.x, 9.x, and 10.x. This
+          requirement is therefore limited to the Linux environment that the CI matrix actually
+          exercises and can prove with platform-filtered evidence.
         tests:
-          # Tests link to "ubuntu" to ensure results come from Linux platform
+          # Tests link to "ubuntu" to ensure results come from the ubuntu-latest CI matrix leg
           - "ubuntu@Ste100Mark_VersionDisplay"
           - "ubuntu@Ste100Mark_HelpDisplay"
 
       - id: Template-Platform-MacOS
         title: The tool shall execute successfully on macOS platforms.
         justification: |
-          DEMA Consulting tools must support macOS for developers using Apple platforms.
+          The GitHub Actions build workflow runs the build, pack, and full `dotnet test` suite on
+          the `macos-latest` matrix leg after installing .NET 8.x, 9.x, and 10.x. This
+          requirement is therefore limited to the macOS environment that the CI matrix actually
+          exercises and can prove with platform-filtered evidence.
         tests:
-          # Tests link to "macos" to ensure results come from macOS platform
+          # Tests link to "macos" to ensure results come from the macos-latest CI matrix leg
           - "macos@Ste100Mark_VersionDisplay"
           - "macos@Ste100Mark_HelpDisplay"
 
       - id: Template-Platform-Net8
         title: The tool shall support .NET 8 runtime.
         justification: |
-          .NET 8 is an LTS release providing long-term stability for enterprise users.
+          The GitHub Actions build workflow installs .NET 8.x, 9.x, and 10.x on every
+          `windows-latest`, `ubuntu-latest`, and `macos-latest` build-matrix leg before running the
+          build and test steps. This requirement is therefore bounded to the .NET 8.x runtime that
+          the CI matrix actually provisions and exercises across those operating systems.
         tests:
           - "dotnet8.x@Ste100Mark_VersionDisplay"
           - "dotnet8.x@Ste100Mark_HelpDisplay"
@@ -57,7 +69,10 @@ sections:
       - id: Template-Platform-Net9
         title: The tool shall support .NET 9 runtime.
         justification: |
-          .NET 9 support enables users to leverage the latest .NET features.
+          The GitHub Actions build workflow installs .NET 8.x, 9.x, and 10.x on every
+          `windows-latest`, `ubuntu-latest`, and `macos-latest` build-matrix leg before running the
+          build and test steps. This requirement is therefore bounded to the .NET 9.x runtime that
+          the CI matrix actually provisions and exercises across those operating systems.
         tests:
           - "dotnet9.x@Ste100Mark_VersionDisplay"
           - "dotnet9.x@Ste100Mark_HelpDisplay"
@@ -65,7 +80,10 @@ sections:
       - id: Template-Platform-Net10
         title: The tool shall support .NET 10 runtime.
         justification: |
-          .NET 10 support ensures the tool remains compatible with the latest .NET ecosystem.
+          The GitHub Actions build workflow installs .NET 8.x, 9.x, and 10.x on every
+          `windows-latest`, `ubuntu-latest`, and `macos-latest` build-matrix leg before running the
+          build and test steps. This requirement is therefore bounded to the .NET 10.x runtime
+          that the CI matrix actually provisions and exercises across those operating systems.
         tests:
           - "dotnet10.x@Ste100Mark_VersionDisplay"
           - "dotnet10.x@Ste100Mark_HelpDisplay"

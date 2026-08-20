@@ -445,4 +445,76 @@ public class CliSubsystemTests
             }
         }
     }
+
+    /// <summary>
+    ///     Test that Context parses an explicit --config path.
+    /// </summary>
+    [Fact]
+    public void CliSubsystem_ConfigFlow_ContextAndProgram_AcceptsExplicitConfigPath()
+    {
+        // Arrange: command line arguments with an explicit lint configuration file path
+        var args = new[] { "--config", "custom.ste100mark.yaml" };
+
+        // Act: create context from the provided arguments
+        using var context = Context.Create(args);
+
+        // Assert: the explicit configuration path is preserved for the lint flow
+        Assert.Equal("custom.ste100mark.yaml", context.ConfigFile);
+    }
+
+    /// <summary>
+    ///     Test that Context parses the --strict flag.
+    /// </summary>
+    [Fact]
+    public void CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag()
+    {
+        // Arrange: command line arguments with the strict flag
+        var args = new[] { "--strict" };
+
+        // Act: create context from the provided arguments
+        using var context = Context.Create(args);
+
+        // Assert: strict mode is preserved for the lint flow
+        Assert.True(context.Strict, "Context should parse strict flag");
+    }
+
+    /// <summary>
+    ///     Test that Context and Program work together to parse the --format json option and suppress the banner for lint output.
+    /// </summary>
+    [Fact]
+    public void CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner()
+    {
+        // Arrange: a clean Markdown file linted with JSON output; capture console output
+        var tempDir = Path.GetTempPath();
+        var filePath = Path.Combine(tempDir, $"cli_test_{Guid.NewGuid()}.md");
+        var args = new[] { filePath, "--format", "json" };
+        var originalOut = Console.Out;
+        using var capturedOut = new StringWriter();
+
+        try
+        {
+            File.WriteAllText(filePath, "# Title\r\n\r\nOpen the panel.\r\n");
+            Console.SetOut(capturedOut);
+
+            // Act: create context and run program logic
+            using var context = Context.Create(args);
+            Program.Run(context);
+
+            // Assert: JSON format is parsed, lint output stays machine-readable, and exit code is success
+            Assert.Equal(OutputFormat.Json, context.Format);
+            Assert.Equal(0, context.ExitCode);
+            var output = capturedOut.ToString();
+            Assert.StartsWith("{", output.TrimStart(), StringComparison.Ordinal);
+            Assert.DoesNotContain("Ste100Mark version", output, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
+    }
 }
+

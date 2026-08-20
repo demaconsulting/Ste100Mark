@@ -41,11 +41,14 @@ The following topics are out of scope:
 ## Software Structure
 
 The software structure is modeled in SysML2 under `docs/sysml2/` and rendered to the diagram
-below by SysML2Tools as part of the build pipeline. AI agents should query the SysML2 model
-directly (see the `sysml2tools-query` skill) rather than parsing this diagram or the prose
-elsewhere in this document. The model captures the shipped system's runtime composition only;
-the OTS items listed in Scope above are build-time/pipeline tooling, documented separately
-(see `docs/design/ots.md`) rather than modeled as SysML2 parts.
+below by SysML2Tools as part of the build pipeline. The SysML2 model is the authoritative source
+for the system, subsystem, and unit hierarchy. AI agents should query the SysML2 model directly
+(see the `sysml2tools-query` skill) rather than parsing this diagram or the prose elsewhere in
+this document. Any hand-maintained prose in this introduction that describes structure or item
+relationships is illustrative and explanatory only; if it differs from the model, the model takes
+precedence. The model captures the shipped system's runtime composition only; the OTS items listed
+in Scope above are build-time/pipeline tooling, documented separately (see `docs/design/ots.md`)
+rather than modeled as SysML2 parts.
 
 ![Software Structure](SoftwareStructureView.svg)
 
@@ -71,9 +74,14 @@ Throughout this document:
 
 Local software items have corresponding artifacts in parallel directory trees:
 
-- Requirements: `docs/reqstream/{system}/.../{item}.yaml` (kebab-case)
-- Design docs: `docs/design/{system}/.../{item}.md` (kebab-case)
-- Verification design: `docs/verification/{system}/.../{item}.md` (kebab-case)
+- Requirements: `docs/reqstream/{system-name}/.../{item}.yaml` for system artifacts and deeper
+  descendants such as `docs/reqstream/{system-name}/{subsystem-name}.yaml` or
+  `docs/reqstream/{system-name}/{subsystem-name}/{unit-name}.yaml` (kebab-case)
+- Design docs: `docs/design/{system-name}.md` for the system document, with descendants under
+  `docs/design/{system-name}/...` such as `docs/design/{system-name}/{subsystem-name}.md` or
+  `docs/design/{system-name}/{subsystem-name}/{unit-name}.md` (kebab-case)
+- Verification design: `docs/verification/{system-name}.md` for the system document, with
+  descendants under `docs/verification/{system-name}/...` using the same pattern (kebab-case)
 - Source code: `src/{System}/.../{Item}.cs` (PascalCase for C#)
 - Tests: `test/{System}.Tests/.../{Item}Tests.cs` (PascalCase for C#)
 

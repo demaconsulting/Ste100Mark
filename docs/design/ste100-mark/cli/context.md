@@ -61,13 +61,14 @@ malformed arguments; throws `InvalidOperationException` if the log file cannot b
 - *Postconditions*: `_hasErrors` is true; message is on stderr in red (unless `Silent`) and in
   the log file (if open).
 
-**Dispose**: Disposes the log file writer.
+**Dispose**: Disposes the log file writer and is idempotent.
 
 - *Parameters*: None.
 - *Returns*: `void`.
 - *Preconditions*: None.
 - *Postconditions*: `_logWriter` is disposed and set to null; any buffered log content is
-  flushed.
+  flushed. Repeated calls are safe, do not throw, and have no additional effect after the first
+  successful disposal.
 
 #### Error Handling
 
@@ -79,7 +80,8 @@ exceptions propagate to `Program.Main`.
 `WriteLine` and `WriteError` do not throw; they write to whichever output channels are
 available.
 
-`Dispose` does not throw; any disposal errors are silently ignored.
+`Dispose` is idempotent: repeated calls are safe and do not throw. Any disposal errors are
+    silently ignored.
 
 #### Dependencies
 

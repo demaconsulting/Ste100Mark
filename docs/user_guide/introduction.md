@@ -19,16 +19,16 @@ This user guide covers:
 # Continuous Compliance
 
 This project follows the
-[Continuous Compliance](https://github.com/demaconsulting/ContinuousCompliance) methodology, which ensures
-compliance evidence is generated automatically on every CI run.
+[Continuous Compliance](https://github.com/demaconsulting/ContinuousCompliance) methodology, with
+compliance evidence generated through the repository's documented CI requirements pipeline.
 
 ## Key Practices
 
-- **Requirements Traceability**: Every requirement is linked to passing tests, and a trace matrix is
-  auto-generated on each release
+- **Requirements Traceability**: Requirements link to passing tests as defined by the
+  requirements set, while tests may also exist without requirement links
 - **Linting Enforcement**: markdownlint, cspell, and yamllint are enforced before any build proceeds
-- **Automated Audit Documentation**: Each release ships with generated requirements, justifications,
-  trace matrix, and quality reports
+- **Automated Audit Documentation**: ReqStream generates the trace matrix and related compliance
+  reports as part of the documented requirements pipeline
 - **CodeQL and SonarCloud**: Security and quality analysis runs on every build
 
 # Installation

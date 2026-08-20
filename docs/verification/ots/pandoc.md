@@ -11,9 +11,16 @@ assertions for each document type proves Pandoc executed correctly and produced 
 
 ### Verification Approach
 
-Pandoc is verified by self-validation evidence from the CI pipeline. Each scenario is a FileAssert
-assertion that runs after Pandoc converts a specific Markdown document to HTML. A passing pipeline
-run for all scenarios constitutes evidence that the requirement is satisfied.
+Pandoc is verified by the Build Documents job in the CI pipeline. The job's
+`Generate Build Notes HTML with Pandoc`, `Generate Code Quality HTML with Pandoc`,
+`Generate Review Plan HTML with Pandoc`, `Generate Review Report HTML with Pandoc`,
+`Generate Design HTML with Pandoc`, `Generate Verification HTML with Pandoc`, and
+`Generate User Guide HTML with Pandoc` steps produce the corresponding HTML files under
+`docs/*/generated/*.html`, and the matching FileAssert steps record that evidence in TRX artifacts
+such as `artifacts/fileassert-build-notes.trx`, `artifacts/fileassert-code-quality.trx`,
+`artifacts/fileassert-code-review.trx`, `artifacts/fileassert-design.trx`,
+`artifacts/fileassert-verification.trx`, and `artifacts/fileassert-user-guide.trx`. A passing run
+for those assertions constitutes evidence that the requirement is satisfied.
 
 ### Test Scenarios
 

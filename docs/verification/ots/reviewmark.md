@@ -13,9 +13,11 @@ that ReviewMark executed without error.
 ### Verification Approach
 
 ReviewMark is verified by two complementary layers of evidence. First, the CI pipeline runs
-`reviewmark --validate --results artifacts/reviewmark-self-validation.trx`, which exercises
-ReviewMark's built-in self-validation suite against test review configurations and records
-results for ReqStream.
+`dotnet reviewmark --validate --results artifacts/reviewmark-self-validation.trx` in the
+`Run ReviewMark self-validation` step, which exercises ReviewMark's built-in self-validation suite
+against test review configurations and records results for ReqStream; that same self-validation
+suite is the evidence for the documented `--elaborate` behavior because the `ReviewMark_Elaborate`
+scenario is defined as a self-validation case in this verification record.
 
 Second, the pipeline invokes ReviewMark to generate
 `docs/code_review_plan/generated/plan.md` and `docs/code_review_report/generated/report.md`.

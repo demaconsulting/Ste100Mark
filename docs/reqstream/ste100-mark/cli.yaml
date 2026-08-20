@@ -19,9 +19,14 @@ sections:
         tests:
           - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits
           - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits
-          - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits_WithShortQuestionFlag
-          - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits_WithShortHFlag
           - CliSubsystem_ValidateFlow_ContextAndProgram_RunsValidationAndExits
+          - CliSubsystem_SilentFlow_ContextAndProgram_SuppressesOutput
+          - CliSubsystem_ResultsFlow_ContextAndProgram_WritesResultsFile
+          - CliSubsystem_DepthFlow_ContextAndProgram_AdjustsHeadingDepth
+          - CliSubsystem_LogFlow_ContextAndProgram_WritesLogFile
+          - CliSubsystem_ConfigFlow_ContextAndProgram_AcceptsExplicitConfigPath
+          - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
+          - CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag
 
       - id: Template-Cli-OutputChannels
         title: >-
@@ -37,7 +42,9 @@ sections:
           - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
 
       - id: Template-Cli-Version
-        title: The Cli subsystem shall support -v and --version flags to signal version display.
+        title: >-
+          The Cli subsystem shall support -v and --version flags to display the tool version and
+          then exit successfully.
         justification: |
           Users need to quickly identify the version of the tool they are using for
           troubleshooting and compatibility verification.
@@ -46,7 +53,9 @@ sections:
           - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits_WithShortVFlag
 
       - id: Template-Cli-Help
-        title: The Cli subsystem shall support -?, -h, and --help flags to signal help display.
+        title: >-
+          The Cli subsystem shall support -?, -h, and --help flags to display usage information
+          and then exit successfully.
         justification: |
           Users need access to command-line usage documentation without requiring
           external resources.
@@ -64,7 +73,7 @@ sections:
           - CliSubsystem_SilentFlow_ContextAndProgram_SuppressesOutput
 
       - id: Template-Cli-Validate
-        title: The Cli subsystem shall support --validate flag to signal self-validation.
+        title: The Cli subsystem shall support --validate flag to run self-validation and then exit successfully.
         justification: |
           Provides a built-in mechanism to verify the tool is functioning correctly
           in the deployment environment.
@@ -77,6 +86,14 @@ sections:
           Enables integration with CI/CD systems that expect standard test result formats.
         tests:
           - CliSubsystem_ResultsFlow_ContextAndProgram_WritesResultsFile
+
+      - id: Template-Cli-ResultAlias
+        title: The Cli subsystem shall accept `--result` as a legacy alias for `--results` when parsing arguments.
+        justification: |
+          Backward compatibility with scripts that use the earlier `--result` spelling
+          prevents breakage when upgrading to newer tool versions.
+        tests:
+          - CliSubsystem_ResultAliasFlow_ContextAndProgram_WritesResultsFile
 
       - id: Template-Cli-Depth
         title: The Cli subsystem shall support --depth flag to control the heading depth of markdown output.
@@ -94,6 +111,39 @@ sections:
         tests:
           - CliSubsystem_LogFlow_ContextAndProgram_WritesLogFile
 
+      - id: Template-Cli-Config
+        title: >-
+          The Cli subsystem shall support --config flag to pass an explicit lint configuration
+          file path to the lint flow.
+        justification: |
+          Users need a way to lint against a configuration file other than the default
+          .ste100mark.yaml in the current working directory.
+        tests:
+          - CliSubsystem_ConfigFlow_ContextAndProgram_AcceptsExplicitConfigPath
+          - Run_MissingExplicitConfigFile_ReportsErrorWithoutThrowing
+
+      - id: Template-Cli-Format
+        title: >-
+          The Cli subsystem shall support --format flag with `text` and `json` values to select
+          diagnostic output format.
+        justification: |
+          Human operators need readable console diagnostics, while CI integrations need
+          machine-readable output that can be parsed without banner text mixed in.
+        tests:
+          - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
+
+      - id: Template-Cli-Strict
+        title: >-
+          The Cli subsystem shall support --strict flag to make warn-severity findings cause a
+          failure exit code without changing their reported severity.
+        justification: |
+          Teams need to enforce stricter CI gates for advisory findings while preserving
+          the underlying diagnostic severity reported to users and tooling.
+        tests:
+          - CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag
+          - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
+          - Run_WarnOnlyFinding_WithoutStrict_ProducesSuccessExitCode
+
       - id: Template-Cli-ErrorOutput
         title: The Cli subsystem shall write error messages to stderr.
         justification: |
@@ -101,6 +151,7 @@ sections:
           without polluting stdout, which consumers may pipe or redirect for data capture.
         tests:
           - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
+          - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
 
       - id: Template-Cli-InvalidArgs
         title: The Cli subsystem shall reject unknown or malformed command-line arguments with a descriptive error.
@@ -111,17 +162,14 @@ sections:
           - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
 
       - id: Template-Cli-ExitCode
-        title: The Cli subsystem shall return a non-zero exit code on failure.
+        title: The Cli subsystem shall return exit code 0 on success and a non-zero exit code on failure.
         justification: |
-          Callers (scripts, CI/CD pipelines) must be able to detect failure conditions
-          programmatically via the process exit code.
+          Callers (scripts, CI/CD pipelines) must be able to detect success and failure
+          conditions programmatically via the process exit code.
         tests:
+          - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits
+          - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits
+          - CliSubsystem_ValidateFlow_ContextAndProgram_RunsValidationAndExits
           - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
-
-      - id: Template-Cli-ResultAlias
-        title: The Cli subsystem shall accept `--result` as a legacy alias for `--results` when parsing arguments.
-        justification: |
-          Backward compatibility with scripts that use the earlier `--result` spelling
-          prevents breakage when upgrading to newer tool versions.
-        tests:
-          - CliSubsystem_ResultAliasFlow_ContextAndProgram_WritesResultsFile
+          - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
+          - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode

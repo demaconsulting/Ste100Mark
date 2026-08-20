@@ -90,6 +90,96 @@ public class ValidationTests
     }
 
     /// <summary>
+    ///     Test that Run reports the clean-file lint self-check as passed.
+    /// </summary>
+    [Fact]
+    public void Validation_Run_WithSilentContext_PassesLintCleanFileSelfCheck()
+    {
+        // Arrange: setup unique log file path to capture silent context output
+        var logFile = Path.Combine(Path.GetTempPath(), $"validation_test_{Guid.NewGuid()}.log");
+        try
+        {
+            using (var context = Context.Create(["--silent", "--log", logFile]))
+            {
+                // Act: run validation with silent context and log file
+                Validation.Run(context);
+            }
+
+            // Assert: verify the clean-file self-check passed and no failure was reported
+            var logContent = File.ReadAllText(logFile);
+            Assert.Contains("✓ Ste100Mark_LintCleanFileNoDiagnostics - Passed", logContent);
+            Assert.DoesNotContain("✗ Ste100Mark_LintCleanFileNoDiagnostics", logContent);
+        }
+        finally
+        {
+            if (File.Exists(logFile))
+            {
+                File.Delete(logFile);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Test that Run reports the violation-file lint self-check as passed.
+    /// </summary>
+    [Fact]
+    public void Validation_Run_WithSilentContext_PassesLintViolationFileSelfCheck()
+    {
+        // Arrange: setup unique log file path to capture silent context output
+        var logFile = Path.Combine(Path.GetTempPath(), $"validation_test_{Guid.NewGuid()}.log");
+        try
+        {
+            using (var context = Context.Create(["--silent", "--log", logFile]))
+            {
+                // Act: run validation with silent context and log file
+                Validation.Run(context);
+            }
+
+            // Assert: verify the violation-file self-check passed and no failure was reported
+            var logContent = File.ReadAllText(logFile);
+            Assert.Contains("✓ Ste100Mark_LintViolationFileDetectsIssues - Passed", logContent);
+            Assert.DoesNotContain("✗ Ste100Mark_LintViolationFileDetectsIssues", logContent);
+        }
+        finally
+        {
+            if (File.Exists(logFile))
+            {
+                File.Delete(logFile);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Test that Run reports the JSON-output lint self-check as passed.
+    /// </summary>
+    [Fact]
+    public void Validation_Run_WithSilentContext_PassesLintJsonOutputSelfCheck()
+    {
+        // Arrange: setup unique log file path to capture silent context output
+        var logFile = Path.Combine(Path.GetTempPath(), $"validation_test_{Guid.NewGuid()}.log");
+        try
+        {
+            using (var context = Context.Create(["--silent", "--log", logFile]))
+            {
+                // Act: run validation with silent context and log file
+                Validation.Run(context);
+            }
+
+            // Assert: verify the JSON-output self-check passed and no failure was reported
+            var logContent = File.ReadAllText(logFile);
+            Assert.Contains("✓ Ste100Mark_LintJsonOutputIsValidJson - Passed", logContent);
+            Assert.DoesNotContain("✗ Ste100Mark_LintJsonOutputIsValidJson", logContent);
+        }
+        finally
+        {
+            if (File.Exists(logFile))
+            {
+                File.Delete(logFile);
+            }
+        }
+    }
+
+    /// <summary>
     ///     Test that Run writes a valid TRX file when the results path ends with .trx.
     /// </summary>
     [Fact]
@@ -187,4 +277,3 @@ public class ValidationTests
         }
     }
 }
-

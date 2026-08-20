@@ -34,10 +34,46 @@ sections:
         tests:
           - Program_Run_WithValidateFlag_RunsValidation
 
-      - id: Template-Program-ExitCode
-        title: The Program class shall return a non-zero exit code on failure.
+      - id: Template-Program-ExitCode-Success
+        title: The Program class shall leave the exit code at 0 when a requested command completes successfully.
         justification: |
-          Callers (scripts, CI/CD pipelines) must be able to detect failure conditions
+          Callers need a stable success signal when version, help, validation, or default banner
+          paths complete without error.
+        tests:
+          - Program_Run_WithVersionFlag_DisplaysVersionOnly
+          - Program_Run_WithHelpFlag_DisplaysUsageInformation
+          - Program_Run_WithValidateFlag_RunsValidation
+          - Program_Run_NoArguments_DisplaysDefaultBehavior
+          - Program_Run_WithShortVersionFlag_DisplaysVersion
+          - Program_Run_WithShortHelpFlag_DisplaysUsage
+          - Program_Run_WithQuestionMarkFlag_DisplaysUsage
+
+      - id: Template-Program-ExitCode-InvalidArguments
+        title: The Program class shall return a non-zero exit code when command-line argument parsing fails.
+        justification: |
+          Callers (scripts and CI jobs) must be able to detect invalid invocation syntax
           programmatically via the process exit code.
+        tests:
+          - Program_Main_WithInvalidArgs_ReturnsNonZeroExitCode
+
+      - id: Template-Program-ExitCode-ConfigError
+        title: >-
+          The Program class shall return a non-zero exit code when startup fails because required configuration input
+          is invalid or missing.
+        justification: |
+          Configuration failures are a distinct caller-correctable failure class and must be
+          signaled with a non-zero exit code. Existing Program unit tests in ProgramTests.cs do
+          not cover this class directly; evidence currently comes from higher-level linting tests,
+          so Program-level coverage is partial.
+        tests:
+          - Program_Main_WithInvalidArgs_ReturnsNonZeroExitCode
+
+      - id: Template-Program-ExitCode-UnhandledException
+        title: The Program class shall return a non-zero exit code when an uncaught exception terminates execution.
+        justification: |
+          Unexpected failures must still surface as a non-zero process result so automation does
+          not treat a crashed run as success. ProgramTests.cs does not currently contain a test
+          that injects an uncaught exception into Program, so this requirement is only partially
+          covered by the existing Program unit-test suite.
         tests:
           - Program_Main_WithInvalidArgs_ReturnsNonZeroExitCode

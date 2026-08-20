@@ -114,9 +114,8 @@ internal static class Program
             return;
         }
 
-        // Print application banner unless JSON diagnostic output for the main tool logic was
-        // requested. JSON mode must produce a single parseable document on stdout; the --help and
-        // --validate paths never emit JSON, so the banner is always shown for them.
+        // Suppress the banner only when main lint execution is emitting JSON so stdout remains a
+        // single parseable document; help and validation still print the banner even with --format json.
         var suppressBanner = context.Format == OutputFormat.Json && !context.Help && !context.Validate;
         if (!suppressBanner)
         {

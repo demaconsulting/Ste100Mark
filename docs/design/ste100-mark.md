@@ -49,12 +49,15 @@ flowchart TD
 ```
 
 `Program` is the entry point. It creates a `Context` from the `Cli` subsystem,
-dispatches to `Validation` when `--validate` is passed, dispatches to `Linter.Run`
-otherwise, and returns the exit code from `Context`. `Validation` calls `Program.Run`
-recursively to exercise the tool during self-testing, and uses `PathHelpers` to construct
-safe temporary file paths. `Linter` resolves the effective lint configuration and file set,
-extracts Markdown prose, evaluates structural and dictionary rules, and reports diagnostics
-through the shared `Context` output channel.
+dispatches to `Validation.Run` when `--validate` is passed, dispatches to `Linter.Run`
+otherwise, and returns the exit code from `Context`. `Validation` is therefore a distinct
+Program dispatch mode, not a recursive call path back into `Program`; within its own workflow
+it may create additional `Context` instances and invoke `Program.Run` to exercise specific
+behaviors during self-testing. `Validation` also uses `PathHelpers` to construct safe
+temporary file paths. Output ownership is shared through the supplied `Context`: `Program`
+writes banner, help, and version text through `context.WriteLine`; `Validation` writes
+validation progress, summaries, and failures through the same context; and `Linter` writes
+diagnostics and summaries through `DiagnosticReporter` into that context's output channels.
 
 ## External Interfaces
 

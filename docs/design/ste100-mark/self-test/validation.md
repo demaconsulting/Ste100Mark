@@ -25,11 +25,15 @@ tool's requirements; it verifies that the tool behaves correctly in the deployme
   file has been written or an error has been recorded for an unsupported extension.
 
 Calls `PrintValidationHeader`, constructs a `TestResults` object named
-`"Ste100Mark Self-Validation"`, calls `RunVersionTest`, `RunHelpTest`, `RunLintCleanFileTest`,
-`RunLintViolationFileTest`, and `RunLintJsonOutputTest`, prints totals (using `WriteError` if
-any tests failed), and calls `WriteResultsFile` if `context.ResultsFile` is set.
+`"Ste100Mark Self-Validation"`, runs five self-check runners (`RunVersionTest`,
+`RunHelpTest`, `RunLintCleanFileTest`, `RunLintViolationFileTest`, and
+`RunLintJsonOutputTest`), prints totals (using `WriteError` if any tests failed), and calls
+`WriteResultsFile` if `context.ResultsFile` is set.
 
-**RunVersionTest**: Verifies that `--version` produces a version string.
+**RunVersionTest**: Verifies that `--version` produces a version string. Expected outcome: the
+self-check passes when `Program.Run` exits with code `0` and the captured log contains a
+semantic-version-like string; it fails when execution returns a non-zero exit code, the version
+string is missing, or an exception occurs.
 
 - *Parameters*: `Context context`, `DemaConsulting.TestResults.TestResults testResults`.
 - *Returns*: `void`.
@@ -39,7 +43,10 @@ invokes `Program.Run` with `["--silent", "--log", logFile, "--version"]`, reads 
 asserts the content matches a semver-like regex (`\b\d+\.\d+\.\d+`). Records pass or fail.
 Any exception is caught by a broad `catch (Exception)` and recorded via `HandleTestException`.
 
-**RunHelpTest**: Verifies that `--help` produces usage text.
+**RunHelpTest**: Verifies that `--help` produces usage text. Expected outcome: the self-check
+passes when `Program.Run` exits with code `0` and the captured log contains both `"Usage:"`
+and `"Options:"`; it fails when execution returns a non-zero exit code, either marker is
+missing, or an exception occurs.
 
 - *Parameters*: `Context context`, `DemaConsulting.TestResults.TestResults testResults`.
 - *Returns*: `void`.
@@ -50,7 +57,9 @@ asserts the content contains both `"Usage:"` and `"Options:"`. Records pass or f
 exception is caught by a broad `catch (Exception)` and recorded via `HandleTestException`.
 
 **RunLintCleanFileTest**: Verifies that linting a clean Markdown file produces a zero exit
-code.
+code. Expected outcome: the self-check passes when the linter returns exit code `0` for a
+compliant Markdown file; it fails when the linter reports any non-zero exit code or an
+exception occurs.
 
 - *Parameters*: `Context context`, `DemaConsulting.TestResults.TestResults testResults`.
 - *Returns*: `void`.
@@ -64,7 +73,10 @@ or fail. Any exception is caught by a broad `catch (Exception)` and recorded via
 `HandleTestException`.
 
 **RunLintViolationFileTest**: Verifies that linting a Markdown file with multiple known
-violations reports every expected rule code and returns a non-zero exit code.
+violations reports every expected rule code and returns a non-zero exit code. Expected outcome:
+the self-check passes when the linter returns a non-zero exit code and the log contains all of
+`STE100-4.1`, `STE100-8.1`, `STE100-4.2`, and `STE100-DICT`; it fails when the linter returns
+exit code `0`, any expected rule code is missing, or an exception occurs.
 
 - *Parameters*: `Context context`, `DemaConsulting.TestResults.TestResults testResults`.
 - *Returns*: `void`.
@@ -76,6 +88,8 @@ contains `STE100-4.1`, `STE100-8.1`, `STE100-4.2`, and `STE100-DICT`. Records pa
 exception is caught by a broad `catch (Exception)` and recorded via `HandleTestException`.
 
 **RunLintJsonOutputTest**: Verifies that `--format json` produces valid, parseable JSON.
+Expected outcome: the self-check passes when the captured log parses successfully as JSON; it
+fails when the output is not valid JSON or an exception occurs.
 
 - *Parameters*: `Context context`, `DemaConsulting.TestResults.TestResults testResults`.
 - *Returns*: `void`.

@@ -61,9 +61,16 @@ test/
 
 In-house items have corresponding artifacts in parallel directory trees:
 
-- Requirements: `docs/reqstream/{system}/.../{item}.yaml` (kebab-case)
-- Design docs: `docs/design/{system}/.../{item}.md` (kebab-case)
-- Verification design: `docs/verification/{system}/.../{item}.md` (kebab-case)
+- Requirements: `docs/reqstream/{system-name}/.../{item}.yaml` for system artifacts and deeper
+  descendants such as `docs/reqstream/{system-name}/{subsystem-name}.yaml` or
+  `docs/reqstream/{system-name}/{subsystem-name}/{unit-name}.yaml` (kebab-case)
+- Design docs: `docs/design/{system-name}.md` for the system document, with descendants under
+  `docs/design/{system-name}/...` such as `docs/design/{system-name}/{subsystem-name}.md` or
+  `docs/design/{system-name}/{subsystem-name}/{unit-name}.md` (kebab-case)
+- Verification design: `docs/verification/{system-name}.md` for the system document, with
+  descendants under `docs/verification/{system-name}/...` such as
+  `docs/verification/{system-name}/{subsystem-name}.md` or
+  `docs/verification/{system-name}/{subsystem-name}/{unit-name}.md` (kebab-case)
 - Source code: `src/{System}/.../{Item}.cs` (PascalCase for C#)
 - Tests: `test/{System}.Tests/.../{Item}Tests.cs` (PascalCase for C#)
 

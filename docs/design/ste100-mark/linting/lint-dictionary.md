@@ -4,9 +4,11 @@
 
 #### Purpose
 
-`LintDictionary` builds and serves the effective vocabulary used by the dictionary check.
-Its single responsibility is to merge all configured dictionary sources into one
-case-insensitive lookup structure.
+`LintDictionary` builds and serves the effective vocabulary used by the dictionary check. Its
+single responsibility is to merge the embedded illustrative baseline, any project-supplied
+dictionary file, and inline allow/disallow/ignore configuration into one case-insensitive
+lookup structure that `DictionaryChecker` can evaluate consistently for every file in a lint
+run.
 
 > **Dictionary notice:** The embedded default dictionary resource is a small,
 > originally-authored, representative example. It is **not** the official ASD-STE100 Part 2
@@ -40,8 +42,8 @@ case-insensitively by term.
 **Entries**: `IReadOnlyCollection<DictionaryEntry>` - exposes the merged entry values.
 
 **DictionarySenseYaml**: internal YAML binding class used both while parsing dictionary files
-(embedded and project) and by `LintConfig`'s `DictionaryConfig.Disallow` for inline entries -
-a single shared binding type for the one per-term sense-list schema.
+(embedded and project) and by `LintConfig.DictionaryConfig.Disallow` for inline entries - a
+single shared binding type for the per-term sense-list schema.
 
 #### Key Methods
 
@@ -52,9 +54,8 @@ a single shared binding type for the one per-term sense-list schema.
 - *Returns*: `LintDictionary` - merged dictionary ready for lookups.
 - *Preconditions*: Both arguments are non-null.
 - *Postconditions*: Merge order is embedded dictionary (unless disabled), project dictionary
-  file, inline `disallow`, then removal of every term listed in `allow` or `ignore`. Each layer
-  performs a full per-term sense-list replacement (not a per-sense merge) - the same
-  "last writer wins by term" semantics as the original flat schema.
+  file, inline `disallow`, then removal of every term listed in `allow` or `ignore`. Each
+  layer performs a full per-term sense-list replacement rather than a per-sense merge.
 
 **TryGetEntry**: Attempts an exact case-insensitive lookup by term.
 
@@ -65,28 +66,46 @@ a single shared binding type for the one per-term sense-list schema.
 
 **LoadEmbeddedDictionary**: Reads the embedded manifest resource and parses it.
 
+- *Parameters*: None.
+- *Returns*: `IEnumerable<DictionaryEntry>` - parsed embedded entries.
+- *Postconditions*: Throws if the resource is missing because that indicates a packaging
+  defect rather than user input.
+
 **LoadDictionaryFile**: Reads a project-supplied dictionary file from disk and parses it.
+
+- *Parameters*: `string path` - resolved file path.
+- *Returns*: `IEnumerable<DictionaryEntry>` - parsed project entries.
+- *Postconditions*: The file must exist and conform to the dictionary YAML schema.
 
 **ParseDictionaryYaml**: Converts raw YAML text into `DictionaryEntry` records.
 
-**ConvertSenses**: Converts a raw `List<DictionarySenseYaml>?` into an
-`IReadOnlyList<DictionarySense>`, returning an empty list for a null/empty input.
+- *Parameters*: `string yaml` - raw YAML content; `string source` - source description for
+  error reporting.
+- *Returns*: `List<DictionaryEntry>` - parsed entries in source declaration order.
+
+**ConvertSenses**: Converts raw YAML-bound senses into immutable `DictionarySense` records.
+
+- *Parameters*: `List<DictionarySenseYaml>? raw` - bound YAML sense list.
+- *Returns*: `IReadOnlyList<DictionarySense>` - immutable converted senses, or an empty list
+  when no senses were supplied.
 
 #### Error Handling
 
 `Load` throws `InvalidOperationException` when the embedded manifest resource is missing,
 when a configured project dictionary file does not exist, or when YamlDotNet cannot parse a
 dictionary source. `TryGetEntry` delegates to the underlying dictionary and propagates
-`ArgumentNullException` for a null key.
+`ArgumentNullException` for a null key. The class performs file and resource I/O only during
+loading; once constructed, lookups are in-memory only.
 
 #### Dependencies
 
 - **LintConfig** - supplies `DictionaryConfig` settings.
-- **YamlDotNet** - deserializes term-to-alternatives mappings.
+- **YamlDotNet** - deserializes the dictionary YAML schema.
 - **.NET BCL** - uses `File`, `Path`, `StreamReader`, and assembly manifest-resource APIs.
-- **DictionaryChecker** - consumes the merged entries.
+- **DictionaryChecker** - consumes the merged entries during lint evaluation.
 
 #### Callers
 
 - **Linter** - loads the effective dictionary once per lint run.
-- **DictionaryChecker** - consumes `Entries` and `TryGetEntry` semantics.
+- **DictionaryChecker** - consumes `Entries` and `TryGetEntry` semantics while matching
+  disallowed terms.
