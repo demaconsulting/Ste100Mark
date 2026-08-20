@@ -84,6 +84,10 @@ files it matches.
   `Ignore`, does not remove the term from the effective dictionary project-wide.
 - `UseEmbedded`: `bool` - default `true`; disables the embedded illustrative baseline when
   `false`.
+- `Enabled`: `bool` - default `true`; when `false`, `Linter.RunCore` skips loading a dictionary
+  entirely and does not run `DictionaryChecker`, disabling the `STE100-DICT` check project-wide
+  without requiring any dictionary source. Distinct from `UseEmbedded`, which only removes the
+  embedded baseline while the check itself still runs against any remaining sources.
 
 **LintConfig**: root configuration class.
 

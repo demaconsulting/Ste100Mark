@@ -28,6 +28,17 @@ values.
   removed; inline code spans are retained verbatim.
 - `LineNumber`: `int` - 1-based source line where the segment begins.
 - `Role`: `SegmentRole` - heading, list item, table row, or paragraph.
+- `LineOffsets`: `IReadOnlyList<(int Offset, int Line)>` - for a single-line segment, always
+  `[(0, LineNumber)]` via the record's secondary constructor; for a multi-line paragraph, one
+  entry per folded source line giving that line's starting character offset within `Text`.
+  Consumed by `ResolveLine` so diagnostics can report the actual violating line rather than
+  always the paragraph's first line.
+
+**ResolveLine**: Resolves the true 1-based source line for a character offset within `Text`,
+walking `LineOffsets` to find the last entry whose offset does not exceed the given offset.
+
+- *Parameters*: `int charOffset` - character offset within `Text`.
+- *Returns*: `int` - the 1-based source line containing `charOffset`.
 
 **Regex set**: compiled regexes for fences, headings, list items, table rows, table
 separator rows, inline code spans, inline links, and blank lines. Each regex uses a
@@ -42,8 +53,9 @@ one-second timeout.
 - *Preconditions*: `markdown` is not null.
 - *Postconditions*: Fenced code blocks are skipped, inline code spans are retained verbatim,
   paragraphs are merged across adjacent lines, list items remain separate, each table row
-  cell becomes its own segment, and segment line numbers point to the start of each emitted
-  segment.
+  cell becomes its own segment, segment line numbers point to the start of each emitted
+  segment, and each multi-line paragraph's `LineOffsets` records every folded line's true
+  source line for later `ResolveLine` lookups.
 
 **CleanLine**: Rewrites inline links to keep visible text, leaving inline code spans
 untouched.
@@ -81,7 +93,8 @@ character for checks that only need a yes or no signal.
 **FlushParagraph**: Emits the accumulated paragraph buffer, if non-empty, as a paragraph
 segment and resets the buffer state.
 
-- *Parameters*: `List<ProseSegment> segments`; `StringBuilder buffer`; `ref int startLine`.
+- *Parameters*: `List<ProseSegment> segments`; `StringBuilder buffer`;
+  `List<(int Offset, int Line)> lineOffsets`; `ref int startLine`.
 - *Returns*: `void`.
 
 #### Error Handling

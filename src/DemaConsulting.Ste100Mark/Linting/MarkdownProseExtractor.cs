@@ -57,7 +57,56 @@ internal enum SegmentRole
 /// </param>
 /// <param name="LineNumber">1-based line number in the source file where the segment begins.</param>
 /// <param name="Role">Structural role the segment plays in the source document.</param>
-internal sealed record ProseSegment(string Text, int LineNumber, SegmentRole Role);
+/// <param name="LineOffsets">
+///     Maps each source line folded into <see cref="Text"/> to the character offset within
+///     <see cref="Text"/> where that line's content starts, in ascending offset order. A
+///     single-line segment (<see cref="SegmentRole.Heading"/>, <see cref="SegmentRole.ListItem"/>,
+///     <see cref="SegmentRole.TableRow"/>) always has exactly one entry, <c>(0, LineNumber)</c>. A
+///     multi-line <see cref="SegmentRole.Paragraph"/> has one entry per source line it was folded
+///     from, since <see cref="MarkdownProseExtractor"/> joins paragraph lines with a single space.
+///     Used by <see cref="ResolveLine"/> to report the true source line of a match/sentence found
+///     at a given offset within <see cref="Text"/>, rather than always reporting the segment's
+///     first line.
+/// </param>
+internal sealed record ProseSegment(
+    string Text,
+    int LineNumber,
+    SegmentRole Role,
+    IReadOnlyList<(int Offset, int Line)> LineOffsets)
+{
+    /// <summary>
+    ///     Initializes a single-line segment (<see cref="SegmentRole.Heading"/>,
+    ///     <see cref="SegmentRole.ListItem"/>, or <see cref="SegmentRole.TableRow"/>), whose entire
+    ///     <see cref="Text"/> originates from <paramref name="lineNumber"/>.
+    /// </summary>
+    public ProseSegment(string text, int lineNumber, SegmentRole role)
+        : this(text, lineNumber, role, [(0, lineNumber)])
+    {
+    }
+
+    /// <summary>
+    ///     Resolves the true 1-based source line number for a character offset within
+    ///     <see cref="Text"/>, accounting for multi-line paragraphs whose lines were joined with a
+    ///     single space (see <see cref="LineOffsets"/>).
+    /// </summary>
+    /// <param name="charOffset">Character offset within <see cref="Text"/>.</param>
+    /// <returns>The 1-based source line number containing <paramref name="charOffset"/>.</returns>
+    public int ResolveLine(int charOffset)
+    {
+        var line = LineOffsets[0].Line;
+        foreach (var (offset, lineNumber) in LineOffsets)
+        {
+            if (offset > charOffset)
+            {
+                break;
+            }
+
+            line = lineNumber;
+        }
+
+        return line;
+    }
+}
 
 /// <summary>
 ///     Extracts the prose portions of a Markdown document that STE100 rules apply to, filtering out
@@ -144,6 +193,7 @@ internal static class MarkdownProseExtractor
 
         var paragraphBuffer = new StringBuilder();
         var paragraphStartLine = -1;
+        var paragraphLineOffsets = new List<(int Offset, int Line)>();
         var inFence = false;
 
         for (var i = 0; i < lines.Length; i++)
@@ -155,7 +205,7 @@ internal static class MarkdownProseExtractor
             // every line (including the delimiters themselves) while inside one.
             if (FenceRegex.IsMatch(rawLine))
             {
-                FlushParagraph(segments, paragraphBuffer, ref paragraphStartLine);
+                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
                 inFence = !inFence;
                 continue;
             }
@@ -174,14 +224,14 @@ internal static class MarkdownProseExtractor
 
             if (BlankLineRegex.IsMatch(cleaned))
             {
-                FlushParagraph(segments, paragraphBuffer, ref paragraphStartLine);
+                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
                 continue;
             }
 
             var headingMatch = HeadingRegex.Match(cleaned);
             if (headingMatch.Success)
             {
-                FlushParagraph(segments, paragraphBuffer, ref paragraphStartLine);
+                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
                 segments.Add(new ProseSegment(headingMatch.Groups["text"].Value, lineNumber, SegmentRole.Heading));
                 continue;
             }
@@ -191,7 +241,7 @@ internal static class MarkdownProseExtractor
             {
                 // Rule 8.4: each vertical-list item is counted as its own sentence against the
                 // sentence word-count limit, so list items are never merged into a paragraph.
-                FlushParagraph(segments, paragraphBuffer, ref paragraphStartLine);
+                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
                 segments.Add(new ProseSegment(listItemMatch.Groups["text"].Value, lineNumber, SegmentRole.ListItem));
                 continue;
             }
@@ -207,7 +257,7 @@ internal static class MarkdownProseExtractor
                 // sentence and should not be merged with unrelated cells), so a cell with a few
                 // words is checked on its own terms, while a cell containing a genuine descriptive
                 // paragraph is still fully checked.
-                FlushParagraph(segments, paragraphBuffer, ref paragraphStartLine);
+                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
                 if (!TableSeparatorRowRegex.IsMatch(cleaned))
                 {
                     foreach (var cell in SplitTableRowCells(cleaned))
@@ -232,10 +282,11 @@ internal static class MarkdownProseExtractor
                 paragraphBuffer.Append(' ');
             }
 
+            paragraphLineOffsets.Add((paragraphBuffer.Length, lineNumber));
             paragraphBuffer.Append(cleaned.Trim());
         }
 
-        FlushParagraph(segments, paragraphBuffer, ref paragraphStartLine);
+        FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
 
         return segments;
     }
@@ -331,17 +382,26 @@ internal static class MarkdownProseExtractor
 
     /// <summary>
     ///     Emits the accumulated paragraph buffer as a <see cref="ProseSegment"/>, if non-empty, and
-    ///     resets the buffer for the next paragraph.
+    ///     resets the buffer and offset map for the next paragraph.
     /// </summary>
     /// <param name="segments">Segment list to append to.</param>
     /// <param name="buffer">Paragraph text accumulated so far.</param>
+    /// <param name="lineOffsets">
+    ///     Per-line offset map accumulated so far (see <see cref="ProseSegment.LineOffsets"/>);
+    ///     copied into the emitted segment and then cleared.
+    /// </param>
     /// <param name="startLine">Line number the paragraph started on.</param>
-    private static void FlushParagraph(List<ProseSegment> segments, StringBuilder buffer, ref int startLine)
+    private static void FlushParagraph(
+        List<ProseSegment> segments,
+        StringBuilder buffer,
+        List<(int Offset, int Line)> lineOffsets,
+        ref int startLine)
     {
         if (buffer.Length > 0)
         {
-            segments.Add(new ProseSegment(buffer.ToString(), startLine, SegmentRole.Paragraph));
+            segments.Add(new ProseSegment(buffer.ToString(), startLine, SegmentRole.Paragraph, [.. lineOffsets]));
             buffer.Clear();
+            lineOffsets.Clear();
         }
 
         startLine = -1;

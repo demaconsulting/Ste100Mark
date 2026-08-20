@@ -172,7 +172,7 @@ internal static class StructuralRules
 
             diagnostics.Add(new Diagnostic(
                 file,
-                segment.LineNumber,
+                segment.ResolveLine(sentence.StartOffset),
                 null,
                 "STE100-4.1",
                 Severity.Error,
@@ -190,19 +190,29 @@ internal static class StructuralRules
     /// </summary>
     private static void EvaluateSemicolons(string file, ProseSegment segment, RulesConfig rules, List<Diagnostic> diagnostics)
     {
-        if (rules.AllowSemicolons || !MarkdownProseExtractor.MaskInlineCodeSpans(segment.Text).Contains(';'))
+        if (rules.AllowSemicolons)
         {
             return;
         }
 
-        diagnostics.Add(new Diagnostic(
-            file,
-            segment.LineNumber,
-            null,
-            "STE100-8.1",
-            Severity.Error,
-            "Semicolons are not permitted in ASD-STE100 prose.",
-            "Split into two separate sentences."));
+        var codeSpans = MarkdownProseExtractor.FindInlineCodeSpans(segment.Text);
+        for (var i = 0; i < segment.Text.Length; i++)
+        {
+            if (segment.Text[i] != ';' || MarkdownProseExtractor.OverlapsInlineCodeSpan(i, 1, codeSpans))
+            {
+                continue;
+            }
+
+            diagnostics.Add(new Diagnostic(
+                file,
+                segment.ResolveLine(i),
+                null,
+                "STE100-8.1",
+                Severity.Error,
+                "Semicolons are not permitted in ASD-STE100 prose.",
+                "Split into two separate sentences."));
+            return;
+        }
     }
 
     /// <summary>
@@ -233,7 +243,7 @@ internal static class StructuralRules
 
             diagnostics.Add(new Diagnostic(
                 file,
-                segment.LineNumber,
+                segment.ResolveLine(match.Index),
                 null,
                 "STE100-4.2",
                 Severity.Error,
@@ -283,7 +293,7 @@ internal static class StructuralRules
         {
             diagnostics.Add(new Diagnostic(
                 file,
-                segment.LineNumber,
+                segment.ResolveLine(sentence.StartOffset),
                 null,
                 "STE100-ADV-PASSIVE",
                 rules.PassiveVoice,
@@ -318,7 +328,7 @@ internal static class StructuralRules
         {
             diagnostics.Add(new Diagnostic(
                 file,
-                segment.LineNumber,
+                segment.ResolveLine(sentence.StartOffset),
                 null,
                 "STE100-ADV-COMPLEXVERB",
                 rules.ComplexVerb,
@@ -363,7 +373,7 @@ internal static class StructuralRules
 
             diagnostics.Add(new Diagnostic(
                 file,
-                segment.LineNumber,
+                segment.ResolveLine(match.Index),
                 null,
                 "STE100-ADV-INGFORM",
                 rules.IngForm,

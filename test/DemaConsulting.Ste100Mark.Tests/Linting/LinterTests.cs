@@ -313,4 +313,78 @@ public sealed class LinterTests : IDisposable
             Console.SetOut(originalOut);
         }
     }
+
+    /// <summary>
+    ///     Test that <c>dictionary.enabled: false</c> disables the dictionary/vocabulary check
+    ///     entirely, while structural/mechanical checks (here, the semicolon rule) still run.
+    /// </summary>
+    [Fact]
+    public void Run_DictionaryDisabled_SuppressesDictionaryFindingsButKeepsStructuralChecks()
+    {
+        // Arrange: a file that violates both the embedded dictionary ("utilize") and the
+        // structural semicolon rule, with the dictionary check disabled via configuration.
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, "doc.md"),
+            "# Title\n\nPlease utilize the tool; then store it.\n");
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"),
+            """
+            dictionary:
+              enabled: false
+            """);
+
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["doc.md"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: the dictionary finding is suppressed, but the semicolon finding still fires
+            var output = outWriter.ToString();
+            Assert.DoesNotContain("STE100-DICT", output, StringComparison.Ordinal);
+            Assert.Contains("STE100-8.1", output, StringComparison.Ordinal);
+            Assert.Equal(1, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that the dictionary check runs by default (<c>dictionary.enabled</c> defaults to
+    ///     <see langword="true"/>) when no <c>dictionary:</c> section is present at all.
+    /// </summary>
+    [Fact]
+    public void Run_NoDictionaryConfigSection_DictionaryCheckRunsByDefault()
+    {
+        // Arrange: a file violating the embedded dictionary, with no dictionary configuration
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, "doc.md"),
+            "# Title\n\nPlease utilize the tool.\n");
+
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["doc.md"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: the dictionary finding still fires
+            var output = outWriter.ToString();
+            Assert.Contains("STE100-DICT", output, StringComparison.Ordinal);
+            Assert.Equal(1, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
 }

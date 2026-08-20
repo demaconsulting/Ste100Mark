@@ -84,7 +84,12 @@ internal static class Linter
             ? Directory.GetCurrentDirectory()
             : Path.GetDirectoryName(Path.GetFullPath(configPath)) ?? Directory.GetCurrentDirectory();
 
-        var dictionary = LintDictionary.Load(config, configDirectory);
+        // The dictionary check as a whole is opt-out (dictionary.enabled: false), for projects that
+        // want only the structural/mechanical STE100 checks enforced, without ASD-STE100 vocabulary
+        // restrictions. The dictionary itself is only loaded when the check is enabled, so a project
+        // that disables it is not required to supply (or license) any dictionary file.
+        var dictionaryEnabled = config.Dictionary?.Enabled ?? true;
+        var dictionary = dictionaryEnabled ? LintDictionary.Load(config, configDirectory) : null;
         var files = ResolveFiles(context.Globs, config);
 
         var diagnostics = new List<Diagnostic>();
@@ -94,12 +99,16 @@ internal static class Linter
             var content = File.ReadAllText(file);
             var mode = config.ResolveMode(relativePath);
             var rules = config.ResolveRules(relativePath);
-            var allowedTerms = config.ResolveAllowedTerms(relativePath);
-            var allowedPhrases = config.ResolveAllowedPhrases(relativePath);
             var segments = MarkdownProseExtractor.Extract(content);
 
             diagnostics.AddRange(StructuralRules.Evaluate(relativePath, segments, mode, rules));
-            diagnostics.AddRange(DictionaryChecker.Evaluate(relativePath, segments, dictionary, mode, allowedTerms, allowedPhrases));
+
+            if (dictionary is not null)
+            {
+                var allowedTerms = config.ResolveAllowedTerms(relativePath);
+                var allowedPhrases = config.ResolveAllowedPhrases(relativePath);
+                diagnostics.AddRange(DictionaryChecker.Evaluate(relativePath, segments, dictionary, mode, allowedTerms, allowedPhrases));
+            }
         }
 
         DiagnosticReporter.Report(context, diagnostics, files.Count);

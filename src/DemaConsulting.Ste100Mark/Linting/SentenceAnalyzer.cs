@@ -28,7 +28,12 @@ namespace DemaConsulting.Ste100Mark.Linting;
 /// </summary>
 /// <param name="Text">The sentence text, as split from its containing segment.</param>
 /// <param name="WordCount">Word count computed per <see cref="SentenceAnalyzer.CountWords"/>.</param>
-internal sealed record Sentence(string Text, int WordCount);
+/// <param name="StartOffset">
+///     Character offset within the containing <see cref="ProseSegment.Text"/> where this sentence
+///     begins, used by <see cref="ProseSegment.ResolveLine"/> to report the sentence's true source
+///     line in a multi-line paragraph rather than always reporting the segment's first line.
+/// </param>
+internal sealed record Sentence(string Text, int WordCount, int StartOffset);
 
 /// <summary>
 ///     Splits prose text into sentences and counts words per official ASD-STE100 Issue 9 Rules
@@ -107,6 +112,7 @@ internal static class SentenceAnalyzer
     {
         ArgumentNullException.ThrowIfNull(text);
 
+        var leadingTrim = text.Length - text.TrimStart().Length;
         var trimmed = text.Trim();
         if (trimmed.Length == 0)
         {
@@ -114,30 +120,52 @@ internal static class SentenceAnalyzer
         }
 
         var sentences = new List<Sentence>();
-        foreach (var part in SentenceSplitRegex.Split(trimmed))
+        var partStart = 0;
+        foreach (Match splitMatch in SentenceSplitRegex.Matches(trimmed))
         {
-            var sentenceText = part.Trim();
-            if (sentenceText.Length == 0)
-            {
-                continue;
-            }
-
-            sentences.Add(new Sentence(sentenceText, CountWords(sentenceText)));
-
-            // Rule 8.5: a parenthetical that itself forms a complete sentence (starts with a
-            // capital letter and ends with terminal punctuation) is counted separately from its
-            // containing sentence, in addition to counting as a single word within it.
-            foreach (Match match in ParentheticalRegex.Matches(sentenceText))
-            {
-                var inner = match.Value[1..^1].Trim();
-                if (LooksLikeCompleteSentence(inner))
-                {
-                    sentences.Add(new Sentence(inner, CountWords(inner)));
-                }
-            }
+            AddSentenceParts(trimmed[partStart..splitMatch.Index], partStart + leadingTrim, sentences);
+            partStart = splitMatch.Index + splitMatch.Length;
         }
 
+        AddSentenceParts(trimmed[partStart..], partStart + leadingTrim, sentences);
+
         return sentences;
+    }
+
+    /// <summary>
+    ///     Trims one raw split part, and if non-empty, adds its <see cref="Sentence"/> (with its
+    ///     resolved start offset within the original segment text) plus any complete-sentence
+    ///     parentheticals it contains (Rule 8.5), to <paramref name="sentences"/>.
+    /// </summary>
+    /// <param name="part">Raw (untrimmed) text between two sentence split points.</param>
+    /// <param name="partOffset">Offset of <paramref name="part"/> within the original segment text.</param>
+    /// <param name="sentences">Sentence list to append to.</param>
+    private static void AddSentenceParts(string part, int partOffset, List<Sentence> sentences)
+    {
+        var leadingWhitespace = part.Length - part.TrimStart().Length;
+        var sentenceText = part.Trim();
+        if (sentenceText.Length == 0)
+        {
+            return;
+        }
+
+        var sentenceOffset = partOffset + leadingWhitespace;
+        sentences.Add(new Sentence(sentenceText, CountWords(sentenceText), sentenceOffset));
+
+        // Rule 8.5: a parenthetical that itself forms a complete sentence (starts with a
+        // capital letter and ends with terminal punctuation) is counted separately from its
+        // containing sentence, in addition to counting as a single word within it.
+        foreach (Match match in ParentheticalRegex.Matches(sentenceText))
+        {
+            var innerRaw = match.Value[1..^1];
+            var innerLeadingWhitespace = innerRaw.Length - innerRaw.TrimStart().Length;
+            var inner = innerRaw.Trim();
+            if (LooksLikeCompleteSentence(inner))
+            {
+                var innerOffset = sentenceOffset + match.Index + 1 + innerLeadingWhitespace;
+                sentences.Add(new Sentence(inner, CountWords(inner), innerOffset));
+            }
+        }
     }
 
     /// <summary>

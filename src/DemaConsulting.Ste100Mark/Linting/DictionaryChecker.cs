@@ -232,7 +232,7 @@ internal static class DictionaryChecker
 
         return new Diagnostic(
             file,
-            segment.LineNumber,
+            segment.ResolveLine(match.Index),
             null,
             "STE100-DICT",
             Severity.Error,
@@ -259,7 +259,7 @@ internal static class DictionaryChecker
 
         return new Diagnostic(
             file,
-            segment.LineNumber,
+            segment.ResolveLine(match.Index),
             null,
             "STE100-DICT",
             Severity.Error,

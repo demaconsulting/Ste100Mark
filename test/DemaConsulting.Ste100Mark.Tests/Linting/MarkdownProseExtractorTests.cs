@@ -178,6 +178,51 @@ public class MarkdownProseExtractorTests
     }
 
     /// <summary>
+    ///     Test that <see cref="ProseSegment.ResolveLine"/> reports the true source line for an
+    ///     offset within a multi-line paragraph, not just the paragraph's first line.
+    /// </summary>
+    [Fact]
+    public void Extract_MultiLineParagraph_ResolveLineReportsEachLinesOwnLineNumber()
+    {
+        // Arrange: a five-line paragraph, where each line contributes one word to the merged text.
+        var markdown = "One two.\nThree four.\nFive six.\nSeven eight.\nNine ten.";
+
+        // Act: extract the paragraph segment
+        var segments = MarkdownProseExtractor.Extract(markdown);
+        var segment = Assert.Single(segments);
+
+        // Assert: the merged text is one space-joined paragraph starting on line 1 ...
+        Assert.Equal("One two. Three four. Five six. Seven eight. Nine ten.", segment.Text);
+        Assert.Equal(1, segment.LineNumber);
+
+        // ... but resolving the offset of each word reports that word's own source line, not
+        // always line 1.
+        Assert.Equal(1, segment.ResolveLine(segment.Text.IndexOf("One", StringComparison.Ordinal)));
+        Assert.Equal(2, segment.ResolveLine(segment.Text.IndexOf("Three", StringComparison.Ordinal)));
+        Assert.Equal(3, segment.ResolveLine(segment.Text.IndexOf("Five", StringComparison.Ordinal)));
+        Assert.Equal(4, segment.ResolveLine(segment.Text.IndexOf("Seven", StringComparison.Ordinal)));
+        Assert.Equal(5, segment.ResolveLine(segment.Text.IndexOf("Nine", StringComparison.Ordinal)));
+    }
+
+    /// <summary>
+    ///     Test that <see cref="ProseSegment.ResolveLine"/> on a single-line segment (heading, list
+    ///     item, or table row) always resolves to that segment's own line number, regardless of the
+    ///     offset queried, since these segments are never folded from multiple source lines.
+    /// </summary>
+    [Fact]
+    public void Extract_SingleLineSegment_ResolveLineAlwaysReturnsSegmentLine()
+    {
+        // Act: extract a heading on line 3 of a document
+        var segments = MarkdownProseExtractor.Extract("\n\n# A Heading With Several Words");
+        var segment = Assert.Single(segments);
+
+        // Assert: every offset within the single-line segment resolves to its one line number
+        Assert.Equal(3, segment.LineNumber);
+        Assert.Equal(3, segment.ResolveLine(0));
+        Assert.Equal(3, segment.ResolveLine(segment.Text.Length - 1));
+    }
+
+    /// <summary>
     ///     Test that a blank line separates two paragraphs into distinct segments.
     /// </summary>
     [Fact]

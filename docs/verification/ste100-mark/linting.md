@@ -97,6 +97,13 @@ lookup, whole-term matching, and suggestions. This scenario is tested by
 `Evaluate_InlineOverriddenTerm_UsesOverriddenSuggestion`, and
 `Evaluate_AllowListedTerm_NotFlagged`.
 
+**Ste100Mark-Linting-DictionaryDisable**: The `dictionary.enabled: false` switch is verified
+end-to-end to suppress every `STE100-DICT` finding while leaving structural/mechanical checks
+(the semicolon rule) unaffected, and the default (`enabled` omitted) is verified to still run
+the dictionary check. This scenario is tested by
+`Run_DictionaryDisabled_SuppressesDictionaryFindingsButKeepsStructuralChecks` and
+`Run_NoDictionaryConfigSection_DictionaryCheckRunsByDefault`.
+
 **Ste100Mark-Linting-InlineCodeSpans**: Inline code span handling is verified for verbatim
 retention in extracted prose, continued full exclusion of fenced code blocks, one-word
 counting toward Rule 4.1/8.4-8.7 limits, verbatim display in a word-limit diagnostic message,
@@ -178,6 +185,20 @@ is still reported inside the same verbless cell that suppresses adjacent verb-on
 instruction with no other finite verb is still flagged as a verb usage), and
 `Evaluate_SubjectNounWithDeterminerAndFollowingVerb_NotFlagged` (a determiner/finite-verb-follows
 regression guard).
+
+**Ste100Mark-Linting-AccurateLineNumbers**: Diagnostics on a multi-line paragraph are verified to
+report the actual violating source line rather than the paragraph's first line, for a paragraph
+extracted end-to-end (not the line-1-pinned test helper) with the violation placed on a later
+line, across the word-limit, semicolon, contraction, -ing form, and dictionary checks, plus the
+underlying `ProseSegment.ResolveLine` offset-to-line resolution for both a multi-line paragraph
+and a single-line segment. This scenario is tested by
+`Extract_MultiLineParagraph_ResolveLineReportsEachLinesOwnLineNumber`,
+`Extract_SingleLineSegment_ResolveLineAlwaysReturnsSegmentLine`,
+`Evaluate_LongSentenceOnLaterLineOfMultiLineParagraph_ReportsThatLine`,
+`Evaluate_SemicolonOnLaterLineOfMultiLineParagraph_ReportsThatLine`,
+`Evaluate_ContractionOnLaterLineOfMultiLineParagraph_ReportsThatLine`,
+`Evaluate_IngFormOnLaterLineOfMultiLineParagraph_ReportsThatLine`, and
+`Evaluate_DisallowedTermOnLaterLineOfMultiLineParagraph_ReportsThatLine`.
 
 **Ste100Mark-Linting-Configuration**: YAML configuration loading and resolution are verified for
 defaults, malformed files, missing files, complete schemas, first-match-wins mode profiles,

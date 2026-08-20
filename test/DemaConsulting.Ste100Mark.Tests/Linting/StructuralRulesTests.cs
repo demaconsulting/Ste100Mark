@@ -122,6 +122,105 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that a diagnostic on a sentence positioned partway through a multi-line paragraph
+    ///     reports that sentence's own source line, not the paragraph's first line. Regression test
+    ///     for the reported bug where every finding in a multi-line paragraph was reported at the
+    ///     paragraph's start line regardless of where the violation actually occurred.
+    /// </summary>
+    [Fact]
+    public void Evaluate_LongSentenceOnLaterLineOfMultiLineParagraph_ReportsThatLine()
+    {
+        // Arrange: a five-line paragraph (extracted end-to-end, so line numbers are real), where
+        // only the fourth line's sentence exceeds the 25-word descriptive limit.
+        var longSentence = "Word " + string.Join(' ', Enumerable.Repeat("word", 25)) + ".";
+        var markdown = string.Join(
+            '\n',
+            "First short sentence.",
+            "Second short sentence.",
+            "Third short sentence.",
+            longSentence,
+            "Fifth short sentence.");
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: the word-limit diagnostic reports line 4 (where the long sentence is), not line 1
+        // (the paragraph's start line).
+        var diagnostic = Assert.Single(diagnostics, d => d.RuleCode == "STE100-4.1");
+        Assert.Equal(4, diagnostic.Line);
+    }
+
+    /// <summary>
+    ///     Test that a semicolon positioned on a later line of a multi-line paragraph reports that
+    ///     line, not the paragraph's start line.
+    /// </summary>
+    [Fact]
+    public void Evaluate_SemicolonOnLaterLineOfMultiLineParagraph_ReportsThatLine()
+    {
+        // Arrange: a three-line paragraph where only the third line contains a semicolon.
+        var markdown = string.Join(
+            '\n',
+            "First line has no issue.",
+            "Second line has no issue.",
+            "Third line has an issue; it uses a semicolon.");
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: the semicolon diagnostic reports line 3, not line 1
+        var diagnostic = Assert.Single(diagnostics, d => d.RuleCode == "STE100-8.1");
+        Assert.Equal(3, diagnostic.Line);
+    }
+
+    /// <summary>
+    ///     Test that a contraction positioned on a later line of a multi-line paragraph reports that
+    ///     line, not the paragraph's start line.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ContractionOnLaterLineOfMultiLineParagraph_ReportsThatLine()
+    {
+        // Arrange: a four-line paragraph where only the fourth line contains a contraction.
+        var markdown = string.Join(
+            '\n',
+            "Line one is fine.",
+            "Line two is fine.",
+            "Line three is fine.",
+            "Line four isn't fine.");
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: the contraction diagnostic reports line 4, not line 1
+        var diagnostic = Assert.Single(diagnostics, d => d.RuleCode == "STE100-4.2");
+        Assert.Equal(4, diagnostic.Line);
+    }
+
+    /// <summary>
+    ///     Test that the advisory <c>-ing</c> form heuristic on a later line of a multi-line
+    ///     paragraph reports that line, not the paragraph's start line.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngFormOnLaterLineOfMultiLineParagraph_ReportsThatLine()
+    {
+        // Arrange: a three-line paragraph where only the third line has an -ing word mid-sentence.
+        var markdown = string.Join(
+            '\n',
+            "The first line is short.",
+            "The second line is short too.",
+            "The unit is monitoring the reading continuously today.");
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: at least one -ing-form diagnostic reports line 3, not line 1
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Line == 3);
+    }
+
+    /// <summary>
     ///     Test that a contraction is flagged by default (Rule 4.2).
     /// </summary>
     [Fact]
