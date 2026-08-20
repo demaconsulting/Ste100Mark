@@ -19,7 +19,7 @@
 sections:
   - title: Platform Support
     requirements:
-      - id: Template-Platform-Windows
+      - id: Ste100Mark-Platform-Windows
         title: The tool shall execute successfully on Windows platforms.
         justification: |
           The GitHub Actions build workflow runs the build, pack, and full `dotnet test` suite on
@@ -31,7 +31,7 @@ sections:
           - "windows@Ste100Mark_VersionDisplay"
           - "windows@Ste100Mark_HelpDisplay"
 
-      - id: Template-Platform-Linux
+      - id: Ste100Mark-Platform-Linux
         title: The tool shall execute successfully on Linux platforms.
         justification: |
           The GitHub Actions build workflow runs the build, pack, and full `dotnet test` suite on
@@ -43,7 +43,7 @@ sections:
           - "ubuntu@Ste100Mark_VersionDisplay"
           - "ubuntu@Ste100Mark_HelpDisplay"
 
-      - id: Template-Platform-MacOS
+      - id: Ste100Mark-Platform-MacOS
         title: The tool shall execute successfully on macOS platforms.
         justification: |
           The GitHub Actions build workflow runs the build, pack, and full `dotnet test` suite on
@@ -55,7 +55,7 @@ sections:
           - "macos@Ste100Mark_VersionDisplay"
           - "macos@Ste100Mark_HelpDisplay"
 
-      - id: Template-Platform-Net8
+      - id: Ste100Mark-Platform-Net8
         title: The tool shall support .NET 8 runtime.
         justification: |
           The GitHub Actions build workflow installs .NET 8.x, 9.x, and 10.x on every
@@ -66,7 +66,7 @@ sections:
           - "dotnet8.x@Ste100Mark_VersionDisplay"
           - "dotnet8.x@Ste100Mark_HelpDisplay"
 
-      - id: Template-Platform-Net9
+      - id: Ste100Mark-Platform-Net9
         title: The tool shall support .NET 9 runtime.
         justification: |
           The GitHub Actions build workflow installs .NET 8.x, 9.x, and 10.x on every
@@ -77,7 +77,7 @@ sections:
           - "dotnet9.x@Ste100Mark_VersionDisplay"
           - "dotnet9.x@Ste100Mark_HelpDisplay"
 
-      - id: Template-Platform-Net10
+      - id: Ste100Mark-Platform-Net10
         title: The tool shall support .NET 10 runtime.
         justification: |
           The GitHub Actions build workflow installs .NET 8.x, 9.x, and 10.x on every

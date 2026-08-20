@@ -9,7 +9,7 @@
 sections:
   - title: Cli Subsystem Requirements
     requirements:
-      - id: Template-Cli-ArgumentParsing
+      - id: Ste100Mark-Cli-ArgumentParsing
         title: The Cli subsystem shall accept command-line arguments and expose the parsed flag state to callers.
         justification: |
           Provides a standardized approach to command-line argument parsing across all
@@ -28,7 +28,7 @@ sections:
           - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
           - CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag
 
-      - id: Template-Cli-OutputChannels
+      - id: Ste100Mark-Cli-OutputChannels
         title: >-
           The Cli subsystem shall expose output channels (standard output and
           error) so that callers can produce output without direct console
@@ -41,7 +41,7 @@ sections:
           - CliSubsystem_SilentFlow_ContextAndProgram_SuppressesOutput
           - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
 
-      - id: Template-Cli-Version
+      - id: Ste100Mark-Cli-Version
         title: >-
           The Cli subsystem shall support -v and --version flags to display the tool version and
           then exit successfully.
@@ -52,7 +52,7 @@ sections:
           - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits
           - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits_WithShortVFlag
 
-      - id: Template-Cli-Help
+      - id: Ste100Mark-Cli-Help
         title: >-
           The Cli subsystem shall support -?, -h, and --help flags to display usage information
           and then exit successfully.
@@ -64,7 +64,7 @@ sections:
           - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits_WithShortQuestionFlag
           - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits_WithShortHFlag
 
-      - id: Template-Cli-Silent
+      - id: Ste100Mark-Cli-Silent
         title: The Cli subsystem shall support --silent flag to suppress console output.
         justification: |
           Enables automated scripts and CI/CD pipelines to run the tool without
@@ -72,7 +72,7 @@ sections:
         tests:
           - CliSubsystem_SilentFlow_ContextAndProgram_SuppressesOutput
 
-      - id: Template-Cli-Validate
+      - id: Ste100Mark-Cli-Validate
         title: The Cli subsystem shall support --validate flag to run self-validation and then exit successfully.
         justification: |
           Provides a built-in mechanism to verify the tool is functioning correctly
@@ -80,14 +80,14 @@ sections:
         tests:
           - CliSubsystem_ValidateFlow_ContextAndProgram_RunsValidationAndExits
 
-      - id: Template-Cli-Results
+      - id: Ste100Mark-Cli-Results
         title: The Cli subsystem shall support --results flag to specify a test results output file.
         justification: |
           Enables integration with CI/CD systems that expect standard test result formats.
         tests:
           - CliSubsystem_ResultsFlow_ContextAndProgram_WritesResultsFile
 
-      - id: Template-Cli-ResultAlias
+      - id: Ste100Mark-Cli-ResultAlias
         title: The Cli subsystem shall accept `--result` as a legacy alias for `--results` when parsing arguments.
         justification: |
           Backward compatibility with scripts that use the earlier `--result` spelling
@@ -95,7 +95,7 @@ sections:
         tests:
           - CliSubsystem_ResultAliasFlow_ContextAndProgram_WritesResultsFile
 
-      - id: Template-Cli-Depth
+      - id: Ste100Mark-Cli-Depth
         title: The Cli subsystem shall support --depth flag to control the heading depth of markdown output.
         justification: |
           Enables validation output to be embedded within larger markdown documents at
@@ -104,14 +104,14 @@ sections:
         tests:
           - CliSubsystem_DepthFlow_ContextAndProgram_AdjustsHeadingDepth
 
-      - id: Template-Cli-Log
+      - id: Ste100Mark-Cli-Log
         title: The Cli subsystem shall support --log flag to write output to a log file.
         justification: |
           Provides persistent logging for debugging and audit trails.
         tests:
           - CliSubsystem_LogFlow_ContextAndProgram_WritesLogFile
 
-      - id: Template-Cli-Config
+      - id: Ste100Mark-Cli-Config
         title: >-
           The Cli subsystem shall support --config flag to pass an explicit lint configuration
           file path to the lint flow.
@@ -122,7 +122,7 @@ sections:
           - CliSubsystem_ConfigFlow_ContextAndProgram_AcceptsExplicitConfigPath
           - Run_MissingExplicitConfigFile_ReportsErrorWithoutThrowing
 
-      - id: Template-Cli-Format
+      - id: Ste100Mark-Cli-Format
         title: >-
           The Cli subsystem shall support --format flag with `text` and `json` values to select
           diagnostic output format.
@@ -132,7 +132,7 @@ sections:
         tests:
           - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
 
-      - id: Template-Cli-Strict
+      - id: Ste100Mark-Cli-Strict
         title: >-
           The Cli subsystem shall support --strict flag to make warn-severity findings cause a
           failure exit code without changing their reported severity.
@@ -144,7 +144,7 @@ sections:
           - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
           - Run_WarnOnlyFinding_WithoutStrict_ProducesSuccessExitCode
 
-      - id: Template-Cli-ErrorOutput
+      - id: Ste100Mark-Cli-ErrorOutput
         title: The Cli subsystem shall write error messages to stderr.
         justification: |
           Error messages must be written to stderr so they remain visible to the user
@@ -153,7 +153,7 @@ sections:
           - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
           - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
 
-      - id: Template-Cli-InvalidArgs
+      - id: Ste100Mark-Cli-InvalidArgs
         title: The Cli subsystem shall reject unknown or malformed command-line arguments with a descriptive error.
         justification: |
           Providing clear feedback for invalid arguments helps users quickly correct
@@ -161,7 +161,7 @@ sections:
         tests:
           - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
 
-      - id: Template-Cli-ExitCode
+      - id: Ste100Mark-Cli-ExitCode
         title: The Cli subsystem shall return exit code 0 on success and a non-zero exit code on failure.
         justification: |
           Callers (scripts, CI/CD pipelines) must be able to detect success and failure

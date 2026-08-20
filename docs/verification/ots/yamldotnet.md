@@ -30,7 +30,7 @@ deserialized by YamlDotNet.
 **Expected**: YamlDotNet parses every section into the strongly typed `LintConfig` model without
 error.
 
-**Requirement coverage**: `Template-OTS-YamlDotNet`.
+**Requirement coverage**: `Ste100Mark-OTS-YamlDotNet`.
 
 #### Load_MalformedYaml_ThrowsInvalidOperationException
 
@@ -39,7 +39,7 @@ error.
 **Expected**: YamlDotNet raises a parse error that the caller wraps in
 `InvalidOperationException`.
 
-**Requirement coverage**: `Template-OTS-YamlDotNet`.
+**Requirement coverage**: `Ste100Mark-OTS-YamlDotNet`.
 
 #### Load_NullPath_ReturnsDefaultConfiguration
 
@@ -47,7 +47,7 @@ error.
 
 **Expected**: The default configuration model is returned without invoking the deserializer.
 
-**Requirement coverage**: `Template-OTS-YamlDotNet`.
+**Requirement coverage**: `Ste100Mark-OTS-YamlDotNet`.
 
 #### Load_NonExistentPath_ThrowsInvalidOperationException
 
@@ -56,7 +56,7 @@ error.
 **Expected**: The caller reports a consistent `InvalidOperationException` before any
 YamlDotNet deserialization is attempted.
 
-**Requirement coverage**: `Template-OTS-YamlDotNet`.
+**Requirement coverage**: `Ste100Mark-OTS-YamlDotNet`.
 
 #### Load_DefaultConfig_IncludesEmbeddedEntries
 
@@ -66,7 +66,7 @@ in-memory dictionary model.
 **Expected**: YamlDotNet parses the embedded YAML into entries that are present in the merged
 dictionary.
 
-**Requirement coverage**: `Template-OTS-YamlDotNet`.
+**Requirement coverage**: `Ste100Mark-OTS-YamlDotNet`.
 
 #### Load_ProjectDictionaryFile_MergedOverEmbedded
 
@@ -76,7 +76,7 @@ the embedded dictionary.
 **Expected**: YamlDotNet parses the project file's entries, and they take precedence over
 embedded entries with the same term.
 
-**Requirement coverage**: `Template-OTS-YamlDotNet`.
+**Requirement coverage**: `Ste100Mark-OTS-YamlDotNet`.
 
 #### Load_MissingProjectDictionaryFile_ThrowsInvalidOperationException
 
@@ -85,7 +85,7 @@ embedded entries with the same term.
 **Expected**: The caller reports a consistent `InvalidOperationException` before any
 YamlDotNet deserialization is attempted.
 
-**Requirement coverage**: `Template-OTS-YamlDotNet`.
+**Requirement coverage**: `Ste100Mark-OTS-YamlDotNet`.
 
 #### Load_InlineDisallowEntry_AddedToMergedDictionary
 
@@ -95,4 +95,4 @@ deserialized by YamlDotNet.
 **Expected**: YamlDotNet parses the inline entry into the configuration model, and it is added
 to the merged dictionary.
 
-**Requirement coverage**: `Template-OTS-YamlDotNet`.
+**Requirement coverage**: `Ste100Mark-OTS-YamlDotNet`.

@@ -10,7 +10,7 @@
 sections:
   - title: SelfTest Subsystem Requirements
     requirements:
-      - id: Template-SelfTest-Qualification
+      - id: Ste100Mark-SelfTest-Qualification
         title: The tool shall provide a self-validation mechanism to qualify the tool in its deployment environment.
         justification: |
           In regulated environments, tool qualification evidence is required to demonstrate
@@ -22,7 +22,7 @@ sections:
         tests:
           - SelfTestSubsystem_ValidationWorkflow_NoResultFiles_CompletesSuccessfully
 
-      - id: Template-SelfTest-ResultsOutput
+      - id: Ste100Mark-SelfTest-ResultsOutput
         title: The tool shall write self-validation results to a standard test result file when --results is provided.
         justification: |
           CI/CD pipelines and requirements traceability tools (such as ReqStream) consume
@@ -35,7 +35,7 @@ sections:
           - SelfTestSubsystem_ValidationWorkflow_WithJUnitFile_GeneratesResults
           - SelfTestSubsystem_ValidationWorkflow_WithBothResultFiles_GeneratesBothResults
 
-      - id: Template-SelfTest-InvalidExtension
+      - id: Ste100Mark-SelfTest-InvalidExtension
         title: >-
           The tool shall report an error and set a non-zero exit code when an
           unsupported results file extension is provided.

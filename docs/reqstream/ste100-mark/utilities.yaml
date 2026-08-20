@@ -9,7 +9,7 @@
 sections:
   - title: Utilities Subsystem Requirements
     requirements:
-      - id: Template-Utilities-SafePaths
+      - id: Ste100Mark-Utilities-SafePaths
         title: >-
           The Utilities subsystem shall provide safe file path manipulation that
           prevents path traversal and absolute path injection.

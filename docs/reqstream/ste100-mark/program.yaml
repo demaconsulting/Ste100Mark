@@ -6,7 +6,7 @@
 sections:
   - title: Program Unit Requirements
     requirements:
-      - id: Template-Program-Version
+      - id: Ste100Mark-Program-Version
         title: The Program class shall support -v and --version flags to display version information.
         justification: |
           Users need to quickly identify the version of the tool they are using for
@@ -16,7 +16,7 @@ sections:
           - Program_Run_WithShortVersionFlag_DisplaysVersion
           - Program_Version_ReturnsNonEmptyString
 
-      - id: Template-Program-Help
+      - id: Ste100Mark-Program-Help
         title: The Program class shall support -?, -h, and --help flags to display usage information.
         justification: |
           Users need access to command-line usage documentation without requiring
@@ -26,7 +26,7 @@ sections:
           - Program_Run_WithShortHelpFlag_DisplaysUsage
           - Program_Run_WithQuestionMarkFlag_DisplaysUsage
 
-      - id: Template-Program-Validate
+      - id: Ste100Mark-Program-Validate
         title: The Program class shall support --validate flag to invoke the self-validation framework.
         justification: |
           Provides a built-in mechanism to verify the tool is functioning correctly
@@ -34,7 +34,7 @@ sections:
         tests:
           - Program_Run_WithValidateFlag_RunsValidation
 
-      - id: Template-Program-ExitCode-Success
+      - id: Ste100Mark-Program-ExitCode-Success
         title: The Program class shall leave the exit code at 0 when a requested command completes successfully.
         justification: |
           Callers need a stable success signal when version, help, validation, or default banner
@@ -48,7 +48,7 @@ sections:
           - Program_Run_WithShortHelpFlag_DisplaysUsage
           - Program_Run_WithQuestionMarkFlag_DisplaysUsage
 
-      - id: Template-Program-ExitCode-InvalidArguments
+      - id: Ste100Mark-Program-ExitCode-InvalidArguments
         title: The Program class shall return a non-zero exit code when command-line argument parsing fails.
         justification: |
           Callers (scripts and CI jobs) must be able to detect invalid invocation syntax
@@ -56,7 +56,7 @@ sections:
         tests:
           - Program_Main_WithInvalidArgs_ReturnsNonZeroExitCode
 
-      - id: Template-Program-ExitCode-ConfigError
+      - id: Ste100Mark-Program-ExitCode-ConfigError
         title: >-
           The Program class shall return a non-zero exit code when startup fails because required configuration input
           is invalid or missing.
@@ -68,7 +68,7 @@ sections:
         tests:
           - Program_Main_WithInvalidArgs_ReturnsNonZeroExitCode
 
-      - id: Template-Program-ExitCode-UnhandledException
+      - id: Ste100Mark-Program-ExitCode-UnhandledException
         title: The Program class shall return a non-zero exit code when an uncaught exception terminates execution.
         justification: |
           Unexpected failures must still surface as a non-zero process result so automation does

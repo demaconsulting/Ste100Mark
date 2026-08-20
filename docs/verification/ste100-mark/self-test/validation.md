@@ -55,13 +55,13 @@ no exception is thrown, and an error message indicating the unsupported format i
 the context. This scenario is tested by
 `Validation_Run_WithUnsupportedResultsFormat_DoesNotWriteFile`.
 
-**Template-Validation-LintCleanFileSelfCheck**: `Validation.Run` invokes `RunLintCleanFileTest`,
+**Ste100Mark-Validation-LintCleanFileSelfCheck**: `Validation.Run` invokes `RunLintCleanFileTest`,
 which lints a compliant Markdown file through `Program.Run` without `--validate` and expects
 exit code `0`. The scenario passes when the self-validation summary indicates all self-checks
 passed, demonstrating that the clean-file lint runner did not fail. This scenario is tested by
 `Validation_Run_WithSilentContext_PassesLintCleanFileSelfCheck`.
 
-**Template-Validation-LintViolationFileSelfCheck**: `Validation.Run` invokes
+**Ste100Mark-Validation-LintViolationFileSelfCheck**: `Validation.Run` invokes
 `RunLintViolationFileTest`, which lints a Markdown file containing known violations and expects
 a non-zero exit code together with `STE100-4.1`, `STE100-8.1`, `STE100-4.2`, and
 `STE100-DICT` in the captured diagnostics. The scenario passes when the self-validation summary
@@ -69,7 +69,7 @@ indicates all self-checks passed, demonstrating that the violation-file lint run
 expected failure. This scenario is tested by
 `Validation_Run_WithSilentContext_PassesLintViolationFileSelfCheck`.
 
-**Template-Validation-LintJsonOutputSelfCheck**: `Validation.Run` invokes
+**Ste100Mark-Validation-LintJsonOutputSelfCheck**: `Validation.Run` invokes
 `RunLintJsonOutputTest`, which requests `--format json` and parses the captured diagnostics as
 JSON. The scenario passes when the self-validation summary indicates all self-checks passed,
 demonstrating that the JSON-output lint runner produced parseable machine-readable output. This

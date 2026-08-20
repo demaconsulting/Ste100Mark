@@ -29,7 +29,7 @@ results directory.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 
-**Requirement coverage**: `Template-OTS-xUnit-Execute`, `Template-OTS-xUnit-Report`.
+**Requirement coverage**: `Ste100Mark-OTS-xUnit-Execute`, `Ste100Mark-OTS-xUnit-Report`.
 
 #### Context_Create_VersionFlag_SetsVersionTrue
 
@@ -38,7 +38,7 @@ sets the Version property to true.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 
-**Requirement coverage**: `Template-OTS-xUnit-Execute`, `Template-OTS-xUnit-Report`.
+**Requirement coverage**: `Ste100Mark-OTS-xUnit-Execute`, `Ste100Mark-OTS-xUnit-Report`.
 
 #### Context_Create_SilentFlag_SetsSilentTrue
 
@@ -47,7 +47,7 @@ sets the Silent property to true.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 
-**Requirement coverage**: `Template-OTS-xUnit-Execute`, `Template-OTS-xUnit-Report`.
+**Requirement coverage**: `Ste100Mark-OTS-xUnit-Execute`, `Ste100Mark-OTS-xUnit-Report`.
 
 #### Context_Create_LogFlag_OpensLogFile
 
@@ -56,7 +56,7 @@ opens a log file.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 
-**Requirement coverage**: `Template-OTS-xUnit-Execute`, `Template-OTS-xUnit-Report`.
+**Requirement coverage**: `Ste100Mark-OTS-xUnit-Execute`, `Ste100Mark-OTS-xUnit-Report`.
 
 #### Context_Create_UnknownArgument_ThrowsArgumentException
 
@@ -65,7 +65,7 @@ raises an exception.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 
-**Requirement coverage**: `Template-OTS-xUnit-Execute`, `Template-OTS-xUnit-Report`.
+**Requirement coverage**: `Ste100Mark-OTS-xUnit-Execute`, `Ste100Mark-OTS-xUnit-Report`.
 
 #### PathHelpers_SafePathCombine_ValidPaths_CombinesCorrectly
 
@@ -74,7 +74,7 @@ joins valid path segments.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 
-**Requirement coverage**: `Template-OTS-xUnit-Execute`, `Template-OTS-xUnit-Report`.
+**Requirement coverage**: `Ste100Mark-OTS-xUnit-Execute`, `Ste100Mark-OTS-xUnit-Report`.
 
 #### Program_Run_WithVersionFlag_DisplaysVersionOnly
 
@@ -83,7 +83,7 @@ version information when invoked with the --version flag.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 
-**Requirement coverage**: `Template-OTS-xUnit-Execute`, `Template-OTS-xUnit-Report`.
+**Requirement coverage**: `Ste100Mark-OTS-xUnit-Execute`, `Ste100Mark-OTS-xUnit-Report`.
 
 #### Validation_Run_WithSilentContext_PrintsSummary
 
@@ -92,4 +92,4 @@ summary even when the context is configured for silent operation.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 
-**Requirement coverage**: `Template-OTS-xUnit-Execute`, `Template-OTS-xUnit-Report`.
+**Requirement coverage**: `Ste100Mark-OTS-xUnit-Execute`, `Ste100Mark-OTS-xUnit-Report`.
