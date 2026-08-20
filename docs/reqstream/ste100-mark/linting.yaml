@@ -277,6 +277,30 @@ sections:
           - Evaluate_IngFormOnLaterLineOfMultiLineParagraph_ReportsThatLine
           - Evaluate_DisallowedTermOnLaterLineOfMultiLineParagraph_ReportsThatLine
 
+      - id: Ste100Mark-Linting-WrappedListItemPhraseMatching
+        title: >-
+          The Linting subsystem shall treat a bulleted or numbered list item's wrapped
+          continuation lines as part of that same list item's prose, so that a dictionary term or
+          an allow-in-phrase entry split across the line wrap is matched correctly, while a nested
+          list item or a genuinely separate list item is never folded into the wrong item.
+        justification: |
+          A Markdown author commonly wraps a long list item onto a following indented line with
+          no list marker of its own (a "lazy continuation", the same convention already applied to
+          paragraphs). Without merging these lines into the originating list item, the wrapped
+          text starts an unrelated new paragraph segment, so a phrase or term split across the
+          wrap (for example a configured allow-in-phrase entry) can never be recognized as a
+          single match. The merge must not bleed past a following line that itself starts a new
+          top-level or nested list item, a heading, or a table row, and an empty list marker line
+          (no visible text) must not lose its ListItem role or leak a stale line-offset entry into
+          whatever segment follows.
+        tests:
+          - Extract_ListItemWrappedAcrossLines_MergesIntoSingleListItemSegment
+          - Extract_TwoListItemsFirstWrapped_RemainSeparateSegments
+          - Extract_ListItemWithEmptyMarkerLineThenContinuation_KeepsListItemRole
+          - Extract_EmptyListMarkerThenSeparateItem_DoesNotLeakStaleLineOffset
+          - Extract_NestedListItem_DoesNotMergeIntoParentListItem
+          - Evaluate_AllowedPhraseSplitAcrossListItemLineWrap_SuppressesDiagnostic
+
       - id: Ste100Mark-Linting-Configuration
         title: >-
           The Linting subsystem shall load YAML configuration for include/exclude patterns,

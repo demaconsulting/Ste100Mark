@@ -200,6 +200,20 @@ and a single-line segment. This scenario is tested by
 `Evaluate_IngFormOnLaterLineOfMultiLineParagraph_ReportsThatLine`, and
 `Evaluate_DisallowedTermOnLaterLineOfMultiLineParagraph_ReportsThatLine`.
 
+**Ste100Mark-Linting-WrappedListItemPhraseMatching**: A list item's wrapped continuation
+lines (lazy-continuation lines with no list marker of their own) are verified to merge into
+the same `ListItem` segment as the item they continue, with `ResolveLine` correctly
+attributing each half to its true source line, while a genuinely separate list item, a
+nested (deeper-indented) list item, and an empty marker line's role/line-offset handling are
+all verified not to be affected by the merge. An end-to-end `DictionaryChecker` case confirms
+an allow-in-phrase entry split across such a wrap is now suppressed. This scenario is tested
+by `Extract_ListItemWrappedAcrossLines_MergesIntoSingleListItemSegment`,
+`Extract_TwoListItemsFirstWrapped_RemainSeparateSegments`,
+`Extract_ListItemWithEmptyMarkerLineThenContinuation_KeepsListItemRole`,
+`Extract_EmptyListMarkerThenSeparateItem_DoesNotLeakStaleLineOffset`,
+`Extract_NestedListItem_DoesNotMergeIntoParentListItem`, and
+`Evaluate_AllowedPhraseSplitAcrossListItemLineWrap_SuppressesDiagnostic`.
+
 **Ste100Mark-Linting-Configuration**: YAML configuration loading and resolution are verified for
 defaults, malformed files, missing files, complete schemas, first-match-wins mode profiles,
 and layered rules/dictionary profile deltas. This scenario is tested by

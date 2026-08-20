@@ -30,16 +30,21 @@ namespace DemaConsulting.Ste100Mark.Linting;
 /// </summary>
 internal enum SegmentRole
 {
-    /// <summary>A Markdown heading line (<c># </c> through <c>###### </c>).</summary>
+    /// <summary>A Markdown heading line (<c># </c> through <c>###### </c>). Always single-line.</summary>
     Heading,
 
-    /// <summary>A single bulleted or numbered list item line.</summary>
+    /// <summary>
+    ///     A bulleted or numbered list item, including any wrapped "lazy continuation" lines folded
+    ///     into it (a following line with no list marker of its own, up to the next blank line,
+    ///     heading, list item, or table row) - may therefore span multiple source lines, the same way
+    ///     <see cref="Paragraph"/> does.
+    /// </summary>
     ListItem,
 
-    /// <summary>A single Markdown table row line (a line whose first non-whitespace character is <c>|</c>).</summary>
+    /// <summary>A single Markdown table row line (a line whose first non-whitespace character is <c>|</c>). Always single-line.</summary>
     TableRow,
 
-    /// <summary>One or more consecutive non-heading, non-list-item lines forming a paragraph.</summary>
+    /// <summary>One or more consecutive non-heading, non-list-item, non-table-row lines forming a paragraph.</summary>
     Paragraph
 }
 
@@ -60,13 +65,13 @@ internal enum SegmentRole
 /// <param name="LineOffsets">
 ///     Maps each source line folded into <see cref="Text"/> to the character offset within
 ///     <see cref="Text"/> where that line's content starts, in ascending offset order. A
-///     single-line segment (<see cref="SegmentRole.Heading"/>, <see cref="SegmentRole.ListItem"/>,
-///     <see cref="SegmentRole.TableRow"/>) always has exactly one entry, <c>(0, LineNumber)</c>. A
-///     multi-line <see cref="SegmentRole.Paragraph"/> has one entry per source line it was folded
-///     from, since <see cref="MarkdownProseExtractor"/> joins paragraph lines with a single space.
-///     Used by <see cref="ResolveLine"/> to report the true source line of a match/sentence found
-///     at a given offset within <see cref="Text"/>, rather than always reporting the segment's
-///     first line.
+///     single-line segment (<see cref="SegmentRole.Heading"/> or <see cref="SegmentRole.TableRow"/>)
+///     always has exactly one entry, <c>(0, LineNumber)</c>. A multi-line
+///     <see cref="SegmentRole.Paragraph"/> or <see cref="SegmentRole.ListItem"/> has one entry per
+///     source line it was folded from, since <see cref="MarkdownProseExtractor"/> joins both
+///     paragraph lines and a list item's wrapped continuation lines with a single space. Used by
+///     <see cref="ResolveLine"/> to report the true source line of a match/sentence found at a given
+///     offset within <see cref="Text"/>, rather than always reporting the segment's first line.
 /// </param>
 internal sealed record ProseSegment(
     string Text,
@@ -75,9 +80,9 @@ internal sealed record ProseSegment(
     IReadOnlyList<(int Offset, int Line)> LineOffsets)
 {
     /// <summary>
-    ///     Initializes a single-line segment (<see cref="SegmentRole.Heading"/>,
-    ///     <see cref="SegmentRole.ListItem"/>, or <see cref="SegmentRole.TableRow"/>), whose entire
-    ///     <see cref="Text"/> originates from <paramref name="lineNumber"/>.
+    ///     Initializes a single-line segment (<see cref="SegmentRole.Heading"/> or
+    ///     <see cref="SegmentRole.TableRow"/>), whose entire <see cref="Text"/> originates from
+    ///     <paramref name="lineNumber"/>.
     /// </summary>
     public ProseSegment(string text, int lineNumber, SegmentRole role)
         : this(text, lineNumber, role, [(0, lineNumber)])
@@ -148,6 +153,16 @@ internal static class MarkdownProseExtractor
     private static readonly Regex ListItemRegex = new(@"^\s{0,3}(?:[-*+]|\d+[.)])\s+(?<text>.*)$", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
+    ///     Matches a bulleted or numbered list item line at any indentation depth, including a nested
+    ///     item indented more than the 3 leading spaces <see cref="ListItemRegex"/> permits for a
+    ///     top-level item. Used only to detect that a following line is itself a (nested) list item -
+    ///     and must therefore end the previous item's wrapped-continuation accumulation - rather than
+    ///     being folded in as continuation text. Nested items are otherwise flattened to top-level
+    ///     <see cref="SegmentRole.ListItem"/> segments; this extractor does not model list nesting.
+    /// </summary>
+    private static readonly Regex NestedListItemRegex = new(@"^\s*(?:[-*+]|\d+[.)])\s+(?<text>.*)$", RegexOptions.Compiled, RegexTimeout);
+
+    /// <summary>
     ///     Matches a Markdown table row line (a line whose first non-whitespace character is
     ///     <c>|</c>). Used to keep table rows out of the paragraph accumulator, since concatenating
     ///     several rows into one run-on "sentence" would corrupt sentence/word counting (the pipe
@@ -191,9 +206,10 @@ internal static class MarkdownProseExtractor
         var segments = new List<ProseSegment>();
         var lines = markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
 
-        var paragraphBuffer = new StringBuilder();
-        var paragraphStartLine = -1;
-        var paragraphLineOffsets = new List<(int Offset, int Line)>();
+        var buffer = new StringBuilder();
+        var bufferStartLine = -1;
+        var bufferRole = SegmentRole.Paragraph;
+        var lineOffsets = new List<(int Offset, int Line)>();
         var inFence = false;
 
         for (var i = 0; i < lines.Length; i++)
@@ -205,7 +221,7 @@ internal static class MarkdownProseExtractor
             // every line (including the delimiters themselves) while inside one.
             if (FenceRegex.IsMatch(rawLine))
             {
-                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
                 inFence = !inFence;
                 continue;
             }
@@ -224,14 +240,14 @@ internal static class MarkdownProseExtractor
 
             if (BlankLineRegex.IsMatch(cleaned))
             {
-                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
                 continue;
             }
 
             var headingMatch = HeadingRegex.Match(cleaned);
             if (headingMatch.Success)
             {
-                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
                 segments.Add(new ProseSegment(headingMatch.Groups["text"].Value, lineNumber, SegmentRole.Heading));
                 continue;
             }
@@ -240,9 +256,18 @@ internal static class MarkdownProseExtractor
             if (listItemMatch.Success)
             {
                 // Rule 8.4: each vertical-list item is counted as its own sentence against the
-                // sentence word-count limit, so list items are never merged into a paragraph.
-                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
-                segments.Add(new ProseSegment(listItemMatch.Groups["text"].Value, lineNumber, SegmentRole.ListItem));
+                // sentence word-count limit, so a list item is never merged with a preceding
+                // paragraph or a different list item. A wrapped continuation line of the *same*
+                // item (a following line with no list marker of its own, e.g. a long item that a
+                // Markdown author wrapped at 80 columns) is folded back into this item's text
+                // below, the same way a wrapped paragraph line is - otherwise a disallowed phrase
+                // spanning the wrap (for example "process error" split across two source lines)
+                // would never match, since it would straddle two disconnected segments.
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
+                bufferRole = SegmentRole.ListItem;
+                bufferStartLine = lineNumber;
+                lineOffsets.Add((0, lineNumber));
+                buffer.Append(listItemMatch.Groups["text"].Value.Trim());
                 continue;
             }
 
@@ -257,7 +282,7 @@ internal static class MarkdownProseExtractor
                 // sentence and should not be merged with unrelated cells), so a cell with a few
                 // words is checked on its own terms, while a cell containing a genuine descriptive
                 // paragraph is still fully checked.
-                FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
                 if (!TableSeparatorRowRegex.IsMatch(cleaned))
                 {
                     foreach (var cell in SplitTableRowCells(cleaned))
@@ -272,21 +297,44 @@ internal static class MarkdownProseExtractor
                 continue;
             }
 
-            // Any other non-blank line accumulates into the current paragraph buffer.
-            if (paragraphBuffer.Length == 0)
+            // A line starting a (possibly nested) list item always ends any active
+            // paragraph/list-item continuation, even when it is indented deeper than
+            // ListItemRegex's 3-space top-level limit: without this check, a nested item such as
+            // "- parent\n    - child" would fall into the continuation branch below and merge the
+            // child into the parent's ListItem segment, letting phrase/word checks cross what are
+            // really two separate items. Nested items are otherwise flattened - they are still
+            // emitted as their own top-level ListItem segment, just not merged into the parent's.
+            if (NestedListItemRegex.IsMatch(cleaned) && !listItemMatch.Success)
             {
-                paragraphStartLine = lineNumber;
-            }
-            else
-            {
-                paragraphBuffer.Append(' ');
+                FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
+                bufferRole = SegmentRole.ListItem;
+                bufferStartLine = lineNumber;
+                lineOffsets.Add((0, lineNumber));
+                buffer.Append(NestedListItemRegex.Match(cleaned).Groups["text"].Value.Trim());
+                continue;
             }
 
-            paragraphLineOffsets.Add((paragraphBuffer.Length, lineNumber));
-            paragraphBuffer.Append(cleaned.Trim());
+            // Any other non-blank line accumulates into the current buffer: either a continuation
+            // of the paragraph/list-item already being accumulated, or (when no buffer is active)
+            // the start of a new paragraph. Test bufferStartLine rather than buffer.Length so that
+            // a list item with no visible text on its marker line (e.g. "- " followed immediately
+            // by a continuation) is still recognized as active and keeps its ListItem role, instead
+            // of being reset to Paragraph.
+            if (bufferStartLine < 0)
+            {
+                bufferRole = SegmentRole.Paragraph;
+                bufferStartLine = lineNumber;
+            }
+            else if (buffer.Length > 0)
+            {
+                buffer.Append(' ');
+            }
+
+            lineOffsets.Add((buffer.Length, lineNumber));
+            buffer.Append(cleaned.Trim());
         }
 
-        FlushParagraph(segments, paragraphBuffer, paragraphLineOffsets, ref paragraphStartLine);
+        FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
 
         return segments;
     }
@@ -381,29 +429,40 @@ internal static class MarkdownProseExtractor
     }
 
     /// <summary>
-    ///     Emits the accumulated paragraph buffer as a <see cref="ProseSegment"/>, if non-empty, and
-    ///     resets the buffer and offset map for the next paragraph.
+    ///     Emits the accumulated buffer as a <see cref="ProseSegment"/>, if non-empty, and resets
+    ///     the buffer and offset map for whatever is accumulated next.
     /// </summary>
     /// <param name="segments">Segment list to append to.</param>
-    /// <param name="buffer">Paragraph text accumulated so far.</param>
+    /// <param name="buffer">Text accumulated so far (a paragraph or a list item and its wrapped continuation lines).</param>
     /// <param name="lineOffsets">
     ///     Per-line offset map accumulated so far (see <see cref="ProseSegment.LineOffsets"/>);
     ///     copied into the emitted segment and then cleared.
     /// </param>
-    /// <param name="startLine">Line number the paragraph started on.</param>
-    private static void FlushParagraph(
+    /// <param name="role">
+    ///     The role to emit the segment as - <see cref="SegmentRole.Paragraph"/> or
+    ///     <see cref="SegmentRole.ListItem"/> (a list item's wrapped continuation lines are folded
+    ///     into the same buffer and emitted together as one <see cref="SegmentRole.ListItem"/>
+    ///     segment, mirroring how a multi-line paragraph is folded and emitted as one segment).
+    /// </param>
+    /// <param name="startLine">Line number the buffer started on.</param>
+    private static void FlushBuffer(
         List<ProseSegment> segments,
         StringBuilder buffer,
         List<(int Offset, int Line)> lineOffsets,
+        SegmentRole role,
         ref int startLine)
     {
         if (buffer.Length > 0)
         {
-            segments.Add(new ProseSegment(buffer.ToString(), startLine, SegmentRole.Paragraph, [.. lineOffsets]));
+            segments.Add(new ProseSegment(buffer.ToString(), startLine, role, [.. lineOffsets]));
             buffer.Clear();
-            lineOffsets.Clear();
         }
 
+        // Always clear lineOffsets and reset startLine, even when buffer was empty (e.g. a list
+        // item with an empty marker such as "- " with no text of its own): otherwise a stale
+        // (0, lineNumber) entry recorded for that empty item would be carried forward and
+        // incorrectly attributed to whatever segment is accumulated next.
+        lineOffsets.Clear();
         startLine = -1;
     }
 }
