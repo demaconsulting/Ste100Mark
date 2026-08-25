@@ -363,6 +363,12 @@ sections:
           - Context_Create_StrictFlag_SetsStrictTrue
           - Program_Run_NoArguments_DisplaysDefaultBehavior
           - Run_PositionalGlobs_OverrideConfigInclude
+          - Run_RelativeGlobPattern_MatchesConfiguredFiles
+          - Run_AbsoluteGlobPattern_MatchesConfiguredFiles
+          - Run_RelativeLiteralFilePath_MatchesSingleFile
+          - Run_AbsoluteLiteralFilePath_MatchesSingleFile
+          - Run_AbsoluteIncludeWithRelativeExclude_ExcludesMatchedFile
+          - Run_AbsoluteIncludeWithAbsoluteExclude_ExcludesMatchedFile
 
       - id: Ste100Mark-Linting-OutputFormats
         title: The Linting subsystem shall report diagnostics in human-readable text and structured JSON formats.

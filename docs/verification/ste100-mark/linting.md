@@ -262,7 +262,15 @@ scenario is tested by `Context_Create_NoArguments_ReturnsLintingDefaults`,
 `Context_Create_FormatFlag_UnsupportedValue_ThrowsArgumentException`,
 `Context_Create_FormatFlag_WithoutValue_ThrowsArgumentException`,
 `Context_Create_StrictFlag_SetsStrictTrue`, `Program_Run_NoArguments_DisplaysDefaultBehavior`,
-and `Run_PositionalGlobs_OverrideConfigInclude`.
+and `Run_PositionalGlobs_OverrideConfigInclude`. Support for glob patterns and literal file
+paths that are absolute (a Windows drive letter, a UNC path, or a POSIX-style leading `/`), in
+addition to patterns relative to the current directory, is verified by
+`Run_RelativeGlobPattern_MatchesConfiguredFiles`,
+`Run_AbsoluteGlobPattern_MatchesConfiguredFiles`,
+`Run_RelativeLiteralFilePath_MatchesSingleFile`,
+`Run_AbsoluteLiteralFilePath_MatchesSingleFile`,
+`Run_AbsoluteIncludeWithRelativeExclude_ExcludesMatchedFile`, and
+`Run_AbsoluteIncludeWithAbsoluteExclude_ExcludesMatchedFile`.
 
 **Ste100Mark-Linting-OutputFormats**: Text and JSON reporting are verified at the formatter level
 and through the published CLI JSON path. This scenario is tested by

@@ -43,6 +43,13 @@ internal static class Linter
     private const string DefaultIncludePattern = "**/*.md";
 
     /// <summary>
+    ///     Glob metacharacters recognized by <see cref="Matcher"/>; used to locate the first
+    ///     wildcard segment of a rooted pattern so its fixed directory prefix can be split off as
+    ///     the matcher root.
+    /// </summary>
+    private static readonly char[] GlobMetaCharacters = ['*', '?', '['];
+
+    /// <summary>
     ///     Runs a full lint pass using the globs, configuration path, output format, and strict flag
     ///     carried on <paramref name="context"/>.
     /// </summary>
@@ -169,41 +176,164 @@ internal static class Linter
     ///     configuration's <c>include</c>/<c>exclude</c> patterns (mode, rules, and dictionary
     ///     configuration still apply). Otherwise, the configuration's <c>include</c> patterns are
     ///     used (defaulting to <c>**/*.md</c> when empty) together with its <c>exclude</c> patterns.
+    ///     Include and exclude patterns are each resolved independently to a set of absolute file
+    ///     paths via <see cref="ResolvePatterns"/>, and excluded paths are then subtracted from the
+    ///     included paths by absolute path equality; this supports include and exclude patterns
+    ///     that use different roots (for example, an absolute include combined with a relative
+    ///     exclude), which a single shared <see cref="Matcher"/> instance cannot do because a
+    ///     <see cref="Matcher"/> only ever matches patterns relative to one root directory. Every
+    ///     pattern - relative or rooted (a Windows drive letter, a UNC path, or a POSIX-style
+    ///     leading <c>/</c>) - is supported: rooted patterns are split into a fixed root directory
+    ///     and a remaining pattern relative to it, so absolute globs and absolute literal file
+    ///     paths now match, whereas previously they were fed unchanged to a <see cref="Matcher"/>
+    ///     rooted at the current directory and silently matched nothing.
     /// </remarks>
     /// <param name="globs">Positional glob arguments from the command line.</param>
     /// <param name="config">Resolved lint configuration.</param>
     /// <returns>Matched absolute file paths, sorted for deterministic output.</returns>
     private static List<string> ResolveFiles(IReadOnlyList<string> globs, LintConfig config)
     {
-        var matcher = new Matcher();
+        List<string> includePatterns;
+        List<string> excludePatterns;
 
         if (globs.Count > 0)
         {
-            foreach (var glob in globs)
-            {
-                matcher.AddInclude(glob);
-            }
+            includePatterns = [.. globs];
+            excludePatterns = [];
         }
         else
         {
-            var includePatterns = config.Include.Count > 0 ? config.Include : [DefaultIncludePattern];
-            foreach (var pattern in includePatterns)
-            {
-                matcher.AddInclude(pattern);
-            }
-
-            foreach (var pattern in config.Exclude)
-            {
-                matcher.AddExclude(pattern);
-            }
+            includePatterns = config.Include.Count > 0 ? [.. config.Include] : [DefaultIncludePattern];
+            excludePatterns = [.. config.Exclude];
         }
 
-        var root = Directory.GetCurrentDirectory();
-        var result = matcher.Execute(new DirectoryInfoWrapper(new DirectoryInfo(root)));
+        var includedFiles = ResolvePatterns(includePatterns);
+        if (excludePatterns.Count == 0)
+        {
+            return includedFiles
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .ToList();
+        }
 
-        return result.Files
-            .Select(f => Path.GetFullPath(Path.Combine(root, f.Path)))
+        var excludedFiles = ResolvePatterns(excludePatterns).ToHashSet(StringComparer.Ordinal);
+        return includedFiles
+            .Where(f => !excludedFiles.Contains(f))
+            .Distinct(StringComparer.Ordinal)
             .OrderBy(p => p, StringComparer.Ordinal)
             .ToList();
+    }
+
+    /// <summary>
+    ///     Resolves a list of glob/literal-path patterns to a set of matched absolute file paths.
+    /// </summary>
+    /// <remarks>
+    ///     Because a <see cref="Matcher"/> only matches patterns relative to a single root
+    ///     directory, patterns are first grouped by their effective root - the current directory
+    ///     for a non-rooted (relative) pattern, or the fixed directory computed by
+    ///     <see cref="ResolvePatternRoot"/> for a rooted (absolute) pattern - and one
+    ///     <see cref="Matcher"/> is executed per root group. A root that does not exist on disk is
+    ///     skipped rather than throwing, so a rooted pattern under a nonexistent directory simply
+    ///     contributes zero matches, consistent with how a relative pattern that matches nothing
+    ///     also contributes zero matches.
+    /// </remarks>
+    /// <param name="patterns">Glob or literal file-path patterns to resolve.</param>
+    /// <returns>
+    ///     Matched absolute file paths; may contain duplicates if multiple patterns/roots resolve
+    ///     to the same file, and is not sorted (callers are responsible for deduplication and
+    ///     ordering).
+    /// </returns>
+    private static List<string> ResolvePatterns(IReadOnlyList<string> patterns)
+    {
+        var patternsByRoot = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var pattern in patterns)
+        {
+            string root;
+            string remainingPattern;
+            if (Path.IsPathRooted(pattern))
+            {
+                (root, remainingPattern) = ResolvePatternRoot(pattern);
+            }
+            else
+            {
+                root = Directory.GetCurrentDirectory();
+                remainingPattern = pattern;
+            }
+
+            if (!patternsByRoot.TryGetValue(root, out var rootPatterns))
+            {
+                rootPatterns = [];
+                patternsByRoot[root] = rootPatterns;
+            }
+
+            rootPatterns.Add(remainingPattern);
+        }
+
+        var files = new List<string>();
+        foreach (var (root, rootPatterns) in patternsByRoot)
+        {
+            // A rooted pattern's directory prefix may not exist (a typo'd absolute path, or a
+            // configuration written for a different machine); skip it silently so it contributes
+            // zero matches instead of throwing, matching the existing "no files matched" contract.
+            if (!Directory.Exists(root))
+            {
+                continue;
+            }
+
+            var matcher = new Matcher();
+            foreach (var rootPattern in rootPatterns)
+            {
+                matcher.AddInclude(rootPattern);
+            }
+
+            var result = matcher.Execute(new DirectoryInfoWrapper(new DirectoryInfo(root)));
+            files.AddRange(result.Files.Select(f => Path.GetFullPath(Path.Combine(root, f.Path))));
+        }
+
+        return files;
+    }
+
+    /// <summary>
+    ///     Splits a rooted (absolute) pattern into a fixed root directory and the remaining
+    ///     pattern relative to that root, at the first glob metacharacter (<c>*</c>, <c>?</c>, or
+    ///     <c>[</c>).
+    /// </summary>
+    /// <remarks>
+    ///     A literal absolute file path with no glob metacharacter (for example,
+    ///     <c>C:\docs\readme.md</c>) reduces to its parent directory and file name. Both
+    ///     <c>\</c> and <c>/</c> path separators are accepted, since Windows accepts either; the
+    ///     returned root always uses <see cref="Path.GetFullPath(string)" /> normalization. A
+    ///     drive-relative pattern with no directory separator before its first wildcard (for
+    ///     example, <c>C:*.md</c>) is a rare corner case of raw <see cref="Path" /> APIs that falls
+    ///     back to the pattern's path root; this is a known, documented limitation rather than a
+    ///     regression, since it is not a form of pattern this method is required to fully support.
+    /// </remarks>
+    /// <param name="pattern">Rooted glob or literal file-path pattern.</param>
+    /// <returns>The fixed absolute root directory and the remaining pattern relative to it.</returns>
+    private static (string Root, string Pattern) ResolvePatternRoot(string pattern)
+    {
+        var normalized = pattern.Replace('\\', '/');
+        var metaIndex = normalized.IndexOfAny(GlobMetaCharacters);
+        if (metaIndex < 0)
+        {
+            // Literal absolute file path: reduce to (parent directory, file name).
+            var directory = Path.GetDirectoryName(pattern);
+            var fileName = Path.GetFileName(pattern);
+            return (Path.GetFullPath(string.IsNullOrEmpty(directory) ? "." : directory), fileName);
+        }
+
+        var separatorIndex = normalized.LastIndexOf('/', Math.Max(metaIndex - 1, 0));
+        if (separatorIndex < 0)
+        {
+            // Drive-relative pattern with no directory separator before the first wildcard; fall
+            // back to the pattern's path root (see remarks).
+            var pathRoot = Path.GetPathRoot(pattern) ?? Directory.GetCurrentDirectory();
+            var normalizedRoot = pathRoot.Replace('\\', '/');
+            return (Path.GetFullPath(pathRoot), normalized[normalizedRoot.Length..]);
+        }
+
+        var rootDirectory = normalized[..(separatorIndex + 1)];
+        var remainingPattern = normalized[(separatorIndex + 1)..];
+        return (Path.GetFullPath(rootDirectory), remainingPattern);
     }
 }

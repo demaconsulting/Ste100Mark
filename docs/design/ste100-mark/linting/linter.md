@@ -57,6 +57,36 @@ dictionary rules against that per-file configuration, and reports the aggregated
 - *Postconditions*: Positional globs fully replace configured include/exclude patterns for the
   invocation.
 
+Include and exclude patterns are each resolved independently to absolute file paths via
+`ResolvePatterns`, and excludes are subtracted from includes by absolute path equality. This
+supports include/exclude patterns rooted differently from one another (for example, an
+absolute include with a relative exclude), which a single shared `Matcher` cannot do.
+
+**ResolvePatterns**: Resolves a list of glob/literal-path patterns to matched absolute file
+paths.
+
+- *Parameters*: `IReadOnlyList<string> patterns` - glob or literal file-path patterns.
+- *Returns*: `List<string>` - matched absolute file paths (unsorted, may contain duplicates).
+
+Because a `Matcher` only matches patterns relative to one root directory, patterns are grouped
+by their effective root - the current directory for a relative pattern, or the fixed directory
+computed by `ResolvePatternRoot` for a rooted (absolute) pattern - and one `Matcher` runs per
+root group. A root that does not exist on disk is skipped, contributing zero matches rather
+than throwing.
+
+**ResolvePatternRoot**: Splits a rooted pattern into a fixed root directory and the remaining
+pattern relative to it, at the first glob metacharacter (`*`, `?`, `[`).
+
+- *Parameters*: `string pattern` - rooted glob or literal file-path pattern.
+- *Returns*: `(string Root, string Pattern)` - the fixed absolute root directory and the
+  remaining pattern relative to it.
+
+A literal absolute file path with no metacharacter reduces to its parent directory and file
+name. Both `\` and `/` separators are accepted. This enables absolute globs (Windows drive
+letters, UNC paths, or POSIX-style leading `/`) and absolute literal file paths to match,
+whereas previously they were fed unchanged to a `Matcher` rooted at the current directory and
+silently matched nothing.
+
 #### Error Handling
 
 `Run` propagates `ArgumentNullException` for a null context. It catches

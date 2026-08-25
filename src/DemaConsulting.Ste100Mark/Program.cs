@@ -171,7 +171,8 @@ internal static class Program
         context.WriteLine("  --format <text|json>       Diagnostic output format (default: text)");
         context.WriteLine("  --strict                   Promote warn-severity findings to errors for exit code");
         context.WriteLine("");
-        context.WriteLine("[globs...] are optional Markdown glob patterns to lint (e.g. \"docs/**/*.md\").");
+        context.WriteLine("[globs...] are optional Markdown glob patterns to lint (e.g. \"docs/**/*.md\"), and");
+        context.WriteLine("may be relative to the current directory or absolute.");
         context.WriteLine("When omitted, the include/exclude patterns from the resolved configuration are used.");
     }
 
