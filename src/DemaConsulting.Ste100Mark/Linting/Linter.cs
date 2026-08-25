@@ -186,7 +186,12 @@ internal static class Linter
     ///     leading <c>/</c>) - is supported: rooted patterns are split into a fixed root directory
     ///     and a remaining pattern relative to it, so absolute globs and absolute literal file
     ///     paths now match, whereas previously they were fed unchanged to a <see cref="Matcher"/>
-    ///     rooted at the current directory and silently matched nothing.
+    ///     rooted at the current directory and silently matched nothing. Both include and exclude
+    ///     roots are canonicalized via <see cref="CanonicalizeRoot"/> inside
+    ///     <see cref="ResolvePatterns"/> before matching, so the absolute-path equality used here
+    ///     to subtract excluded files still works when a root directory is reached through a
+    ///     symbolic link (for example, an absolute include or exclude rooted under macOS's
+    ///     symlinked <c>/tmp</c>/<c>/var</c>).
     /// </remarks>
     /// <param name="globs">Positional glob arguments from the command line.</param>
     /// <param name="config">Resolved lint configuration.</param>
@@ -232,10 +237,19 @@ internal static class Linter
     ///     directory, patterns are first grouped by their effective root - the current directory
     ///     for a non-rooted (relative) pattern, or the fixed directory computed by
     ///     <see cref="ResolvePatternRoot"/> for a rooted (absolute) pattern - and one
-    ///     <see cref="Matcher"/> is executed per root group. A root that does not exist on disk is
-    ///     skipped rather than throwing, so a rooted pattern under a nonexistent directory simply
-    ///     contributes zero matches, consistent with how a relative pattern that matches nothing
-    ///     also contributes zero matches.
+    ///     <see cref="Matcher"/> is executed per root group. Every root is passed through
+    ///     <see cref="CanonicalizeRoot"/> before grouping so that the same physical directory
+    ///     always produces the same root string, whether it was reached via a relative pattern
+    ///     (root = <see cref="Directory.GetCurrentDirectory"/>, which the OS may return already
+    ///     symlink-resolved) or a rooted pattern (root computed purely by
+    ///     <see cref="Path.GetFullPath(string)"/>, which never resolves symlinks); without this,
+    ///     the exclude-subtraction in <see cref="ResolveFiles"/> could silently fail to match an
+    ///     included file and its exclusion by absolute-path equality (for example, an absolute
+    ///     include combined with a relative exclude, both naming the same file under a symlinked
+    ///     directory such as macOS's <c>/tmp</c>, <c>/var</c>, or <c>/etc</c>). A root that does
+    ///     not exist on disk is skipped rather than throwing, so a rooted pattern under a
+    ///     nonexistent directory simply contributes zero matches, consistent with how a relative
+    ///     pattern that matches nothing also contributes zero matches.
     /// </remarks>
     /// <param name="patterns">Glob or literal file-path patterns to resolve.</param>
     /// <returns>
@@ -260,6 +274,7 @@ internal static class Linter
                 remainingPattern = pattern;
             }
 
+            root = CanonicalizeRoot(root);
             if (!patternsByRoot.TryGetValue(root, out var rootPatterns))
             {
                 rootPatterns = [];
@@ -291,6 +306,77 @@ internal static class Linter
         }
 
         return files;
+    }
+
+    /// <summary>
+    ///     Resolves a directory path to the same canonical, symlink-resolved form the operating
+    ///     system uses for <see cref="Directory.GetCurrentDirectory"/>, so that a root computed
+    ///     from a rooted pattern (via <see cref="Path.GetFullPath(string)"/>, which never follows
+    ///     symlinks) compares equal to the current directory when both name the same physical
+    ///     directory.
+    /// </summary>
+    /// <remarks>
+    ///     Implemented as a component-by-component walk from the path's root, resolving each
+    ///     ancestor directory that is itself a symbolic link or junction via
+    ///     <see cref="FileSystemInfo.ResolveLinkTarget"/> - the same technique POSIX's canonical
+    ///     path resolution uses - rather than by temporarily mutating the process-wide current
+    ///     directory (for example via <c>SetCurrentDirectory</c>/<c>GetCurrentDirectory</c>
+    ///     round-tripping), because <see cref="Linter"/> offers no guarantee against concurrent
+    ///     callers and mutating global process state would be a data race. This matters on
+    ///     platforms where common directories are themselves symlinks - macOS aliases
+    ///     <c>/tmp</c>, <c>/var</c>, and <c>/etc</c> to <c>/private/...</c>, and Linux/Windows
+    ///     junctions and symlinks are common in containerized or virtualized checkouts. A
+    ///     directory (or any ancestor) that does not exist, or that cannot be inspected due to
+    ///     access restrictions, is left unresolved from that point rather than throwing, so this
+    ///     method never fails - it only ever improves the precision of the returned path where the
+    ///     OS permits.
+    /// </remarks>
+    /// <param name="path">Absolute directory path to canonicalize.</param>
+    /// <returns>
+    ///     The symlink-resolved absolute path, or <paramref name="path"/> unchanged where
+    ///     resolution was not possible.
+    /// </returns>
+    private static string CanonicalizeRoot(string path)
+    {
+        var root = Path.GetPathRoot(path);
+        if (string.IsNullOrEmpty(root))
+        {
+            // Not an absolute path (should not normally happen since callers always pass a
+            // Path.GetFullPath or Directory.GetCurrentDirectory result); return unchanged.
+            return path;
+        }
+
+        var segments = path[root.Length..]
+            .Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+
+        var current = root;
+        foreach (var segment in segments)
+        {
+            current = Path.Combine(current, segment);
+
+            try
+            {
+                // Only ancestors that are themselves reparse points (symlinks/junctions) resolve
+                // to a non-null target; ordinary directories pass through unchanged.
+                var target = new DirectoryInfo(current).ResolveLinkTarget(returnFinalTarget: true);
+                if (target is not null)
+                {
+                    current = target.FullName;
+                }
+            }
+            catch (IOException)
+            {
+                // Ancestor does not exist or is otherwise unreadable; keep the unresolved
+                // segment and continue, matching the "best effort" contract documented above.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Ancestor exists but cannot be inspected under current permissions; same
+                // best-effort fallback as the IOException case.
+            }
+        }
+
+        return current;
     }
 
     /// <summary>
