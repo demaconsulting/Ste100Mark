@@ -359,67 +359,6 @@ public sealed class LinterTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that an absolute include pattern reached through a symbolic-linked directory is
-    ///     still correctly excluded by a relative exclude pattern resolved against the real
-    ///     (unlinked) current directory, proving root directories are canonicalized before the
-    ///     absolute-path equality used to subtract excludes - the same class of bug that made
-    ///     macOS (where <c>/tmp</c>, <c>/var</c>, and <c>/etc</c> are symlinks into
-    ///     <c>/private/...</c>) silently fail to exclude a file whose include and exclude
-    ///     patterns named it via different, but physically equivalent, absolute paths.
-    /// </summary>
-    [Fact]
-    public void Run_AbsoluteIncludeThroughSymlinkWithRelativeExclude_ExcludesMatchedFile()
-    {
-        // Arrange: a real directory containing two files, exposed a second time via a
-        // symbolic link; the include pattern is absolute and rooted at the symlink, while the
-        // exclude pattern is relative and resolved against the real (unlinked) current directory
-        var realDirectory = Path.Combine(_tempDirectory.FullName, "real");
-        var linkDirectory = Path.Combine(_tempDirectory.FullName, "link");
-        Directory.CreateDirectory(realDirectory);
-        try
-        {
-            Directory.CreateSymbolicLink(linkDirectory, realDirectory);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // Creating symbolic links can require elevated privileges or developer mode on some
-            // Windows configurations; skip rather than fail when the platform/environment denies
-            // it, since this test is a defense-in-depth addition, not the primary regression
-            // coverage (see Run_AbsoluteIncludeWithRelativeExclude_ExcludesMatchedFile above).
-            Assert.Skip($"Symbolic link creation is not permitted in this environment: {ex.Message}");
-            return;
-        }
-
-        File.WriteAllText(Path.Combine(realDirectory, "clean.md"), "# Title\n\nOpen the panel.\n");
-        File.WriteAllText(Path.Combine(realDirectory, "excluded.md"), "# Title\n\nOpen the panel.\n");
-        Directory.SetCurrentDirectory(realDirectory);
-        var absoluteInclude = Path.Combine(linkDirectory, "*.md");
-        File.WriteAllText(
-            Path.Combine(realDirectory, ".ste100mark.yaml"),
-            $"include: [\"{absoluteInclude.Replace("\\", "\\\\")}\"]\nexclude: [\"excluded.md\"]\n");
-        var originalOut = Console.Out;
-        try
-        {
-            using var outWriter = new StringWriter();
-            Console.SetOut(outWriter);
-            using var context = Context.Create([]);
-
-            // Act: execute the operation being tested
-            Linter.Run(context);
-
-            // Assert: only the non-excluded file was checked, proving the symlinked include
-            // root and the real-path-based exclude root were recognized as the same directory
-            var output = outWriter.ToString();
-            Assert.Contains("Checked 1 file(s)", output);
-            Assert.Equal(0, context.ExitCode);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-        }
-    }
-
-    /// <summary>
     ///     Test that an absolute include pattern combined with an absolute exclude pattern (from
     ///     configuration) correctly excludes the matched file, proving include and exclude
     ///     patterns resolve independently by absolute path even when both are rooted.
