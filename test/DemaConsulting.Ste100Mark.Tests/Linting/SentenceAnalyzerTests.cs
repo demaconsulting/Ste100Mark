@@ -84,6 +84,38 @@ public class SentenceAnalyzerTests
     }
 
     /// <summary>
+    ///     Test that a sentence starting with an inline code span is still recognized as a new
+    ///     sentence, rather than being merged with the previous sentence.
+    /// </summary>
+    [Fact]
+    public void Split_SentenceStartingWithCodeSpan_TreatedAsSeparateSentence()
+    {
+        // Act: execute the operation being tested
+        var sentences = SentenceAnalyzer.Split("Run the build first. `dotnet build` compiles the project.");
+
+        // Assert: verify expected behavior
+        Assert.Equal(2, sentences.Count);
+        Assert.Equal("Run the build first.", sentences[0].Text);
+        Assert.Equal("`dotnet build` compiles the project.", sentences[1].Text);
+    }
+
+    /// <summary>
+    ///     Test that a sentence starting with italic or bold emphasis is still recognized as a new
+    ///     sentence, rather than being merged with the previous sentence.
+    /// </summary>
+    [Fact]
+    public void Split_SentenceStartingWithEmphasis_TreatedAsSeparateSentence()
+    {
+        // Act: execute the operation being tested
+        var sentences = SentenceAnalyzer.Split("This is done first. *Emphasis* starts the next sentence.");
+
+        // Assert: verify expected behavior
+        Assert.Equal(2, sentences.Count);
+        Assert.Equal("This is done first.", sentences[0].Text);
+        Assert.Equal("*Emphasis* starts the next sentence.", sentences[1].Text);
+    }
+
+    /// <summary>
     ///     Test that a parenthetical span counts as exactly one word within its containing sentence
     ///     (Rule 8.5), regardless of how many words it contains.
     /// </summary>

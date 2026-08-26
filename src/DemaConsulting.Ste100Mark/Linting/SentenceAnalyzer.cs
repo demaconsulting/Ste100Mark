@@ -72,13 +72,19 @@ internal static class SentenceAnalyzer
     /// <summary>
     ///     Splits after a sentence-terminating <c>.</c>, <c>!</c>, <c>?</c>, or <c>:</c> when
     ///     followed by whitespace and then an uppercase letter, digit, quote, opening parenthesis,
-    ///     or end of text. Rule 4.1 treats a colon introducing a vertical list the same as a period;
-    ///     since <see cref="MarkdownProseExtractor"/> already emits each list item as its own
-    ///     segment, treating ':' as a general sentence terminator here also covers the (rarer) case
-    ///     of a colon-introduced clause appearing within a single paragraph segment.
+    ///     backtick, asterisk, underscore, or end of text. The Markdown emphasis/code markers
+    ///     (backtick, asterisk, underscore) are included because a sentence commonly starts with an
+    ///     inline code span or italic/bold text (for example, <c>`code`</c> or <c>*emphasis*</c>)
+    ///     rather than a plain letter; without them, such a sentence boundary is missed and the
+    ///     next sentence's word count is merged into the previous one, which can produce a false
+    ///     Rule 8.4 excess-length sentence finding. Rule 4.1 treats a colon introducing a vertical list
+    ///     the same as a period; since <see cref="MarkdownProseExtractor"/> already emits each list
+    ///     item as its own segment, treating ':' as a general sentence terminator here also covers
+    ///     the (rarer) case of a colon-introduced clause appearing within a single paragraph
+    ///     segment.
     /// </summary>
     private static readonly Regex SentenceSplitRegex =
-        new(@"(?<=[.!?:])\s+(?=[A-Z0-9""'(]|$)", RegexOptions.Compiled, RegexTimeout);
+        new(@"(?<=[.!?:])\s+(?=[A-Z0-9""'(`*_]|$)", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>Matches a double-quoted span (Rule 8.6: quoted text counts as one word).</summary>
     private static readonly Regex QuotedTextRegex = new("\"[^\"]*\"", RegexOptions.Compiled, RegexTimeout);
