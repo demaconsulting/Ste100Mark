@@ -100,19 +100,23 @@ public class SentenceAnalyzerTests
     }
 
     /// <summary>
-    ///     Test that a sentence starting with italic or bold emphasis is still recognized as a new
-    ///     sentence, rather than being merged with the previous sentence.
+    ///     Test that a sentence starting with italic or bold emphasis (using either the asterisk or
+    ///     underscore Markdown marker) is still recognized as a new sentence, rather than being
+    ///     merged with the previous sentence.
     /// </summary>
-    [Fact]
-    public void Split_SentenceStartingWithEmphasis_TreatedAsSeparateSentence()
+    [Theory]
+    [InlineData("*")]
+    [InlineData("_")]
+    public void Split_SentenceStartingWithEmphasis_TreatedAsSeparateSentence(string marker)
     {
         // Act: execute the operation being tested
-        var sentences = SentenceAnalyzer.Split("This is done first. *Emphasis* starts the next sentence.");
+        var sentences = SentenceAnalyzer.Split(
+            $"This is done first. {marker}Emphasis{marker} starts the next sentence.");
 
         // Assert: verify expected behavior
         Assert.Equal(2, sentences.Count);
         Assert.Equal("This is done first.", sentences[0].Text);
-        Assert.Equal("*Emphasis* starts the next sentence.", sentences[1].Text);
+        Assert.Equal($"{marker}Emphasis{marker} starts the next sentence.", sentences[1].Text);
     }
 
     /// <summary>
