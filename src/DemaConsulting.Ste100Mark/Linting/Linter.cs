@@ -309,6 +309,12 @@ internal static class Linter
     }
 
     /// <summary>
+    ///     Maximum number of symlink substitutions <see cref="CanonicalizeRoot"/> follows before
+    ///     giving up, guarding against a symlink cycle producing unbounded recursion.
+    /// </summary>
+    private const int MaxSymlinkResolutionDepth = 32;
+
+    /// <summary>
     ///     Resolves a directory path to the same canonical, symlink-resolved form the operating
     ///     system uses for <see cref="Directory.GetCurrentDirectory"/>, so that a root computed
     ///     from a rooted pattern (via <see cref="Path.GetFullPath(string)"/>, which never follows
@@ -325,18 +331,26 @@ internal static class Linter
     ///     callers and mutating global process state would be a data race. This matters on
     ///     platforms where common directories are themselves symlinks - macOS aliases
     ///     <c>/tmp</c>, <c>/var</c>, and <c>/etc</c> to <c>/private/...</c>, and Linux/Windows
-    ///     junctions and symlinks are common in containerized or virtualized checkouts. A
-    ///     directory (or any ancestor) that does not exist, or that cannot be inspected due to
-    ///     access restrictions, is left unresolved from that point rather than throwing, so this
-    ///     method never fails - it only ever improves the precision of the returned path where the
-    ///     OS permits.
+    ///     junctions and symlinks are common in containerized or virtualized checkouts. A single
+    ///     left-to-right component walk is not sufficient on its own: when an ancestor resolves
+    ///     to a symlink target, that target string (as recorded by the symlink) may itself
+    ///     contain further unresolved symlinked ancestors - for example, resolving a directory
+    ///     symlink can land on a path under macOS's <c>/var</c>, which is itself a symlink to
+    ///     <c>/private/var</c>. Each time a component resolves to a new target, this method
+    ///     recurses on that target so its own ancestors are walked too, up to
+    ///     <see cref="MaxSymlinkResolutionDepth"/> substitutions to guard against a symlink
+    ///     cycle. A directory (or any ancestor) that does not exist, or that cannot be inspected
+    ///     due to access restrictions, is left unresolved from that point rather than throwing,
+    ///     so this method never fails - it only ever improves the precision of the returned path
+    ///     where the OS permits.
     /// </remarks>
     /// <param name="path">Absolute directory path to canonicalize.</param>
+    /// <param name="depth">Number of symlink substitutions already followed.</param>
     /// <returns>
     ///     The symlink-resolved absolute path, or <paramref name="path"/> unchanged where
-    ///     resolution was not possible.
+    ///     resolution was not possible or the depth limit was reached.
     /// </returns>
-    private static string CanonicalizeRoot(string path)
+    private static string CanonicalizeRoot(string path, int depth = 0)
     {
         var root = Path.GetPathRoot(path);
         if (string.IsNullOrEmpty(root))
@@ -354,6 +368,13 @@ internal static class Linter
         {
             current = Path.Combine(current, segment);
 
+            if (depth >= MaxSymlinkResolutionDepth)
+            {
+                // Depth limit reached (likely a symlink cycle); stop resolving further and
+                // return the best-effort path accumulated so far.
+                continue;
+            }
+
             try
             {
                 // Only ancestors that are themselves reparse points (symlinks/junctions) resolve
@@ -361,7 +382,11 @@ internal static class Linter
                 var target = new DirectoryInfo(current).ResolveLinkTarget(returnFinalTarget: true);
                 if (target is not null)
                 {
-                    current = target.FullName;
+                    // The target's own path may itself have unresolved symlinked ancestors (for
+                    // example, landing under macOS's symlinked /var); recurse to resolve those
+                    // too rather than continuing the original component walk on an
+                    // only-partially-resolved path.
+                    current = CanonicalizeRoot(target.FullName, depth + 1);
                 }
             }
             catch (IOException)
