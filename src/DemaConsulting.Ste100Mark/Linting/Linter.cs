@@ -41,18 +41,18 @@ internal static class Linter
     ///     throughout this class.
     /// </summary>
     /// <remarks>
-    ///     Windows and macOS file systems are case-insensitive by default, so two absolute paths
-    ///     that differ only in case (for example, a user-supplied absolute pattern with different
-    ///     drive-letter casing than <see cref="Directory.GetCurrentDirectory"/>) name the same
-    ///     file; comparing them with an ordinal, case-sensitive comparer would treat them as
-    ///     different, causing the exclude-subtraction in <see cref="ResolveFiles"/> to silently
-    ///     fail to match, and <see cref="ResolvePatterns"/> to group the same physical root
-    ///     directory twice. Linux is case-sensitive, so ordinal comparison is used there.
+    ///     Case sensitivity is a per-volume/per-directory file system setting, not something that
+    ///     can be inferred from the operating system alone: Windows directories can opt in to
+    ///     case sensitivity, and Linux/macOS volumes can be formatted or mounted case-insensitive.
+    ///     Rather than guessing from <see cref="OperatingSystem"/>, every root produced by
+    ///     <see cref="ResolvePatterns"/> is first normalized to its actual on-disk casing (and
+    ///     symlink-resolved) by <see cref="CanonicalizeRoot"/>, and file names returned by
+    ///     <see cref="Matcher"/> already reflect the casing <see cref="DirectoryInfoWrapper"/>
+    ///     enumerated from disk. Because every path compared here is therefore already in its
+    ///     true, on-disk form, ordinary case-sensitive ordinal comparison is correct everywhere,
+    ///     regardless of platform or volume case-sensitivity setting.
     /// </remarks>
-    private static readonly StringComparer PathComparer =
-        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal;
+    private static readonly StringComparer PathComparer = StringComparer.Ordinal;
 
     /// <summary>
     ///     Default include pattern used when neither positional glob arguments nor a configured
@@ -209,9 +209,10 @@ internal static class Linter
     ///     <see cref="ResolvePatterns"/> before matching, so the absolute-path equality used here
     ///     to subtract excluded files still works when a root directory is reached through a
     ///     symbolic link (for example, an absolute include or exclude rooted under macOS's
-    ///     symlinked <c>/tmp</c>/<c>/var</c>). Path equality, deduplication, and ordering use
-    ///     <see cref="PathComparer"/>, which is case-insensitive on Windows and macOS, so an
-    ///     include and exclude naming the same file with different casing still resolve as equal.
+    ///     symlinked <c>/tmp</c>/<c>/var</c>) or spelled with different casing than the current
+    ///     directory. Path equality, deduplication, and ordering use <see cref="PathComparer"/>
+    ///     (ordinal), which is correct because every path involved has already been normalized to
+    ///     its true on-disk casing by <see cref="CanonicalizeRoot"/>.
     /// </remarks>
     /// <param name="globs">Positional glob arguments from the command line.</param>
     /// <param name="config">Resolved lint configuration.</param>
@@ -262,16 +263,20 @@ internal static class Linter
     ///     always produces the same root string, whether it was reached via a relative pattern
     ///     (root = <see cref="Directory.GetCurrentDirectory"/>, which the OS may return already
     ///     symlink-resolved) or a rooted pattern (root computed purely by
-    ///     <see cref="Path.GetFullPath(string)"/>, which never resolves symlinks); without this,
-    ///     the exclude-subtraction in <see cref="ResolveFiles"/> could silently fail to match an
-    ///     included file and its exclusion by absolute-path equality (for example, an absolute
-    ///     include combined with a relative exclude, both naming the same file under a symlinked
-    ///     directory such as macOS's <c>/tmp</c>, <c>/var</c>, or <c>/etc</c>). Roots are grouped
-    ///     using <see cref="PathComparer"/>, so on Windows and macOS two roots that differ only
-    ///     in case are still recognized as the same physical directory. A root that does
-    ///     not exist on disk is skipped rather than throwing, so a rooted pattern under a
-    ///     nonexistent directory simply contributes zero matches, consistent with how a relative
-    ///     pattern that matches nothing also contributes zero matches.
+    ///     <see cref="Path.GetFullPath(string)"/>, which resolves neither symlinks nor casing);
+    ///     without this, the exclude-subtraction in <see cref="ResolveFiles"/> could silently
+    ///     fail to match an included file and its exclusion by absolute-path equality (for
+    ///     example, an absolute include combined with a relative exclude, both naming the same
+    ///     file under a symlinked directory such as macOS's <c>/tmp</c>, <c>/var</c>, or
+    ///     <c>/etc</c>, or spelled with different casing). Roots are grouped using
+    ///     <see cref="PathComparer"/> (ordinal), which is correct here because
+    ///     <see cref="CanonicalizeRoot"/> has already normalized every root to its true on-disk
+    ///     casing - two roots that differ only in as-supplied case are recognized as the same
+    ///     physical directory regardless of whether the underlying volume is itself case
+    ///     sensitive. A root that does not exist on disk is skipped rather than throwing, so a
+    ///     rooted pattern under a nonexistent directory simply contributes zero matches,
+    ///     consistent with how a relative pattern that matches nothing also contributes zero
+    ///     matches.
     /// </remarks>
     /// <param name="patterns">Glob or literal file-path patterns to resolve.</param>
     /// <returns>
@@ -337,40 +342,48 @@ internal static class Linter
     private const int MaxSymlinkResolutionDepth = 32;
 
     /// <summary>
-    ///     Resolves a directory path to the same canonical, symlink-resolved form the operating
-    ///     system uses for <see cref="Directory.GetCurrentDirectory"/>, so that a root computed
-    ///     from a rooted pattern (via <see cref="Path.GetFullPath(string)"/>, which never follows
-    ///     symlinks) compares equal to the current directory when both name the same physical
-    ///     directory.
+    ///     Resolves a directory path to its true on-disk form: the actual casing of each path
+    ///     component as recorded by the file system, with any symbolic link or junction ancestor
+    ///     followed to its target, so that two differently-spelled paths naming the same physical
+    ///     directory always canonicalize to an identical string.
     /// </summary>
     /// <remarks>
-    ///     Implemented as a component-by-component walk from the path's root, resolving each
-    ///     ancestor directory that is itself a symbolic link or junction via
-    ///     <see cref="FileSystemInfo.ResolveLinkTarget"/> - the same technique POSIX's canonical
-    ///     path resolution uses - rather than by temporarily mutating the process-wide current
-    ///     directory (for example via <c>SetCurrentDirectory</c>/<c>GetCurrentDirectory</c>
-    ///     round-tripping), because <see cref="Linter"/> offers no guarantee against concurrent
-    ///     callers and mutating global process state would be a data race. This matters on
-    ///     platforms where common directories are themselves symlinks - macOS aliases
-    ///     <c>/tmp</c>, <c>/var</c>, and <c>/etc</c> to <c>/private/...</c>, and Linux/Windows
-    ///     junctions and symlinks are common in containerized or virtualized checkouts. A single
-    ///     left-to-right component walk is not sufficient on its own: when an ancestor resolves
-    ///     to a symlink target, that target string (as recorded by the symlink) may itself
-    ///     contain further unresolved symlinked ancestors - for example, resolving a directory
-    ///     symlink can land on a path under macOS's <c>/var</c>, which is itself a symlink to
+    ///     Case sensitivity is a per-volume/per-directory file system setting - not something
+    ///     that can be inferred from the operating system - so this method does not guess based
+    ///     on <see cref="OperatingSystem"/>; it instead normalizes to whatever casing the file
+    ///     system actually stored, which is correct regardless of case sensitivity. It also
+    ///     resolves symlinks/junctions, so a root computed from a rooted pattern (via
+    ///     <see cref="Path.GetFullPath(string)"/>, which follows neither symlinks nor casing)
+    ///     compares equal to <see cref="Directory.GetCurrentDirectory"/> when both name the same
+    ///     physical directory. Implemented as a component-by-component walk from the path's
+    ///     root: for each component, <see cref="FindActualCaseName"/> looks up its true on-disk
+    ///     spelling within its parent directory, and <see cref="FileSystemInfo.ResolveLinkTarget"/>
+    ///     follows it if it is itself a symbolic link or junction - the same technique POSIX's
+    ///     canonical path resolution uses - rather than by temporarily mutating the process-wide
+    ///     current directory (for example via <c>SetCurrentDirectory</c>/
+    ///     <c>GetCurrentDirectory</c> round-tripping), because <see cref="Linter"/> offers no
+    ///     guarantee against concurrent callers and mutating global process state would be a data
+    ///     race. Symlink resolution matters on platforms where common directories are themselves
+    ///     symlinks - macOS aliases <c>/tmp</c>, <c>/var</c>, and <c>/etc</c> to
+    ///     <c>/private/...</c>, and Linux/Windows junctions and symlinks are common in
+    ///     containerized or virtualized checkouts. A single left-to-right component walk is not
+    ///     sufficient on its own for symlinks: when an ancestor resolves to a symlink target,
+    ///     that target string (as recorded by the symlink) may itself contain further unresolved
+    ///     symlinked or differently-cased ancestors - for example, resolving a directory symlink
+    ///     can land on a path under macOS's <c>/var</c>, which is itself a symlink to
     ///     <c>/private/var</c>. Each time a component resolves to a new target, this method
     ///     recurses on that target so its own ancestors are walked too, up to
     ///     <see cref="MaxSymlinkResolutionDepth"/> substitutions to guard against a symlink
     ///     cycle. A directory (or any ancestor) that does not exist, or that cannot be inspected
-    ///     due to access restrictions, is left unresolved from that point rather than throwing,
-    ///     so this method never fails - it only ever improves the precision of the returned path
-    ///     where the OS permits.
+    ///     due to access restrictions, is left with its original (unresolved, as-supplied)
+    ///     casing from that point rather than throwing, so this method never fails - it only ever
+    ///     improves the precision of the returned path where the OS permits.
     /// </remarks>
     /// <param name="path">Absolute directory path to canonicalize.</param>
     /// <param name="depth">Number of symlink substitutions already followed.</param>
     /// <returns>
-    ///     The symlink-resolved absolute path, or <paramref name="path"/> unchanged where
-    ///     resolution was not possible or the depth limit was reached.
+    ///     The on-disk-cased, symlink-resolved absolute path, or <paramref name="path"/>
+    ///     unchanged where resolution was not possible or the depth limit was reached.
     /// </returns>
     private static string CanonicalizeRoot(string path, int depth = 0)
     {
@@ -385,10 +398,14 @@ internal static class Linter
         var segments = path[root.Length..]
             .Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
 
-        var current = root;
+        // A drive letter itself has no "true casing" recorded anywhere on disk (unlike a
+        // directory entry); normalize it so two paths differing only in drive-letter case
+        // still canonicalize identically.
+        var current = root.Length == 3 && root[1] == ':' ? char.ToUpperInvariant(root[0]) + root[1..] : root;
         foreach (var segment in segments)
         {
-            current = Path.Combine(current, segment);
+            var actualSegment = FindActualCaseName(current, segment) ?? segment;
+            current = Path.Combine(current, actualSegment);
 
             if (depth >= MaxSymlinkResolutionDepth)
             {
@@ -404,10 +421,10 @@ internal static class Linter
                 var target = new DirectoryInfo(current).ResolveLinkTarget(returnFinalTarget: true);
                 if (target is not null)
                 {
-                    // The target's own path may itself have unresolved symlinked ancestors (for
-                    // example, landing under macOS's symlinked /var); recurse to resolve those
-                    // too rather than continuing the original component walk on an
-                    // only-partially-resolved path.
+                    // The target's own path may itself have unresolved symlinked or
+                    // differently-cased ancestors (for example, landing under macOS's symlinked
+                    // /var); recurse to resolve those too rather than continuing the original
+                    // component walk on an only-partially-resolved path.
                     current = CanonicalizeRoot(target.FullName, depth + 1);
                 }
             }
@@ -424,6 +441,49 @@ internal static class Linter
         }
 
         return current;
+    }
+
+    /// <summary>
+    ///     Looks up the true on-disk spelling of a directory entry, by name, within its parent
+    ///     directory.
+    /// </summary>
+    /// <remarks>
+    ///     Case sensitivity varies per volume and per directory rather than per operating system,
+    ///     so the only reliable way to determine whether <paramref name="name"/> and an existing
+    ///     entry are "the same" file is to ask the file system itself: this enumerates
+    ///     <paramref name="parentDirectory"/> and returns the stored name of the first entry that
+    ///     matches <paramref name="name"/> case-insensitively (which is always at least as
+    ///     permissive as the file system's actual case sensitivity). Returns <see langword="null"/>
+    ///     rather than throwing when <paramref name="parentDirectory"/> does not exist or cannot
+    ///     be enumerated, or when no entry matches, so callers can fall back to the as-supplied
+    ///     name.
+    /// </remarks>
+    /// <param name="parentDirectory">Directory to search within.</param>
+    /// <param name="name">Entry name to look up, in whatever casing was supplied.</param>
+    /// <returns>The entry's true on-disk name, or <see langword="null"/> if not found.</returns>
+    private static string? FindActualCaseName(string parentDirectory, string name)
+    {
+        try
+        {
+            foreach (var entry in Directory.EnumerateFileSystemEntries(parentDirectory))
+            {
+                var entryName = Path.GetFileName(entry);
+                if (string.Equals(entryName, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return entryName;
+                }
+            }
+        }
+        catch (IOException)
+        {
+            // Parent directory does not exist or is otherwise unreadable.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Parent directory exists but cannot be enumerated under current permissions.
+        }
+
+        return null;
     }
 
     /// <summary>

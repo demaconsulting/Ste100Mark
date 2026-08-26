@@ -359,6 +359,49 @@ public sealed class LinterTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that an absolute include pattern spelled with different directory casing than the
+    ///     current directory still correctly excludes the matched file via a relative exclude
+    ///     pattern, proving root directories are normalized to their true on-disk casing before
+    ///     the absolute-path equality used to subtract excludes - rather than relying on an
+    ///     operating-system-based guess about case sensitivity, since case sensitivity is a
+    ///     per-volume/per-directory file system setting, not a per-OS one.
+    /// </summary>
+    [Fact]
+    public void Run_AbsoluteIncludeWithMismatchedCasingAndRelativeExclude_ExcludesMatchedFile()
+    {
+        // Arrange: two files matched by an absolute include glob whose directory portion is
+        // spelled in a different case than the actual on-disk directory, with one file excluded
+        // by a relative exclude pattern resolved against the true-cased current directory
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "clean.md"), "# Title\n\nOpen the panel.\n");
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "excluded.md"), "# Title\n\nOpen the panel.\n");
+        var mismatchedCaseDirectory = _tempDirectory.FullName.ToUpperInvariant();
+        var absoluteInclude = Path.Combine(mismatchedCaseDirectory, "*.md");
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"),
+            $"include: [\"{absoluteInclude.Replace("\\", "\\\\")}\"]\nexclude: [\"excluded.md\"]\n");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create([]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: only the non-excluded file was checked, proving the mismatched-case
+            // include root and the true-cased exclude root were recognized as the same directory
+            var output = outWriter.ToString();
+            Assert.Contains("Checked 1 file(s)", output);
+            Assert.Equal(0, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
     ///     Test that an absolute include pattern combined with an absolute exclude pattern (from
     ///     configuration) correctly excludes the matched file, proving include and exclude
     ///     patterns resolve independently by absolute path even when both are rooted.
