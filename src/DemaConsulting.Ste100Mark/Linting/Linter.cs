@@ -453,12 +453,13 @@ internal static class Linter
     ///     Case sensitivity varies per volume and per directory rather than per operating system,
     ///     so the only reliable way to determine whether <paramref name="name"/> and an existing
     ///     entry are "the same" file is to ask the file system itself: this enumerates
-    ///     <paramref name="parentDirectory"/> and returns the stored name of the first entry that
-    ///     matches <paramref name="name"/> case-insensitively (which is always at least as
-    ///     permissive as the file system's actual case sensitivity). Returns <see langword="null"/>
-    ///     rather than throwing when <paramref name="parentDirectory"/> does not exist or cannot
-    ///     be enumerated, or when no entry matches, so callers can fall back to the as-supplied
-    ///     name.
+    ///     <paramref name="parentDirectory"/> and prefers an exact (ordinal) match, since a
+    ///     case-sensitive file system may legitimately contain sibling entries that differ only
+    ///     by case. Only when no exact match exists does it fall back to the first
+    ///     case-insensitive match (which is always at least as permissive as the file system's
+    ///     actual case sensitivity). Returns <see langword="null"/> rather than throwing when
+    ///     <paramref name="parentDirectory"/> does not exist or cannot be enumerated, or when no
+    ///     entry matches at all, so callers can fall back to the as-supplied name.
     /// </remarks>
     /// <param name="parentDirectory">Directory to search within.</param>
     /// <param name="name">Entry name to look up, in whatever casing was supplied.</param>
@@ -467,14 +468,28 @@ internal static class Linter
     {
         try
         {
+            // Prefer an exact (ordinal) match first: on a case-sensitive file system, two
+            // sibling entries may legitimately differ only by case (for example "Foo" and
+            // "foo"), and an exact match unambiguously identifies the correct one. Only fall
+            // back to a case-insensitive match - used to recover the true on-disk casing of an
+            // as-supplied path segment - when no exact match exists.
+            string? caseInsensitiveMatch = null;
             foreach (var entry in Directory.EnumerateFileSystemEntries(parentDirectory))
             {
                 var entryName = Path.GetFileName(entry);
-                if (string.Equals(entryName, name, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(entryName, name, StringComparison.Ordinal))
                 {
                     return entryName;
                 }
+
+                if (caseInsensitiveMatch is null &&
+                    string.Equals(entryName, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    caseInsensitiveMatch = entryName;
+                }
             }
+
+            return caseInsensitiveMatch;
         }
         catch (IOException)
         {

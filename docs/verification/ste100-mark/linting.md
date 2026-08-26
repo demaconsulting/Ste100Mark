@@ -269,8 +269,9 @@ addition to patterns relative to the current directory, is verified by
 `Run_AbsoluteGlobPattern_MatchesConfiguredFiles`,
 `Run_RelativeLiteralFilePath_MatchesSingleFile`,
 `Run_AbsoluteLiteralFilePath_MatchesSingleFile`,
-`Run_AbsoluteIncludeWithRelativeExclude_ExcludesMatchedFile`, and
-`Run_AbsoluteIncludeWithAbsoluteExclude_ExcludesMatchedFile`.
+`Run_AbsoluteIncludeWithRelativeExclude_ExcludesMatchedFile`,
+`Run_AbsoluteIncludeWithAbsoluteExclude_ExcludesMatchedFile`, and
+`Run_AbsoluteIncludeWithMismatchedCasingAndRelativeExclude_ExcludesMatchedFile`.
 
 **Ste100Mark-Linting-OutputFormats**: Text and JSON reporting are verified at the formatter level
 and through the published CLI JSON path. This scenario is tested by

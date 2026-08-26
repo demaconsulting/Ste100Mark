@@ -369,6 +369,7 @@ sections:
           - Run_AbsoluteLiteralFilePath_MatchesSingleFile
           - Run_AbsoluteIncludeWithRelativeExclude_ExcludesMatchedFile
           - Run_AbsoluteIncludeWithAbsoluteExclude_ExcludesMatchedFile
+          - Run_AbsoluteIncludeWithMismatchedCasingAndRelativeExclude_ExcludesMatchedFile
 
       - id: Ste100Mark-Linting-OutputFormats
         title: The Linting subsystem shall report diagnostics in human-readable text and structured JSON formats.

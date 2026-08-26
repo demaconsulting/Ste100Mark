@@ -402,7 +402,7 @@ The following command-line options are supported:
 
 | Option | Description |
 | --- | --- |
-| `[globs...]` | Optional Markdown globs to lint (relative or absolute). Defaults to config include/exclude patterns. |
+| `[globs...]` | Optional Markdown globs/paths to lint (relative or absolute). Defaults to include/exclude patterns. |
 | `-v`, `--version` | Display version information |
 | `-?`, `-h`, `--help` | Display help message |
 | `--silent` | Suppress console output |
