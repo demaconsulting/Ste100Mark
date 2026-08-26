@@ -202,8 +202,9 @@ internal static class Linter
     ///     <see cref="Matcher"/> only ever matches patterns relative to one root directory. Every
     ///     pattern - relative or rooted (a Windows drive letter, a UNC path, or a POSIX-style
     ///     leading <c>/</c>) - is supported: rooted patterns are split into a fixed root directory
-    ///     and a remaining pattern relative to it, so absolute globs and absolute literal file
-    ///     paths now match, whereas previously they were fed unchanged to a <see cref="Matcher"/>
+    ///     and a remaining pattern relative to it, so any absolute pattern now matches - whether
+    ///     it contains glob metacharacters or is a plain literal file path, which is simply a
+    ///     pattern with none - whereas previously it was fed unchanged to a <see cref="Matcher"/>
     ///     rooted at the current directory and silently matched nothing. Both include and exclude
     ///     roots are canonicalized via <see cref="CanonicalizeRoot"/> inside
     ///     <see cref="ResolvePatterns"/> before matching, so the absolute-path equality used here
@@ -251,7 +252,8 @@ internal static class Linter
     }
 
     /// <summary>
-    ///     Resolves a list of glob/literal-path patterns to a set of matched absolute file paths.
+    ///     Resolves a list of glob patterns (including plain literal file paths, which are simply
+    ///     patterns with no wildcard characters) to a set of matched absolute file paths.
     /// </summary>
     /// <remarks>
     ///     Because a <see cref="Matcher"/> only matches patterns relative to a single root
@@ -278,7 +280,7 @@ internal static class Linter
     ///     consistent with how a relative pattern that matches nothing also contributes zero
     ///     matches.
     /// </remarks>
-    /// <param name="patterns">Glob or literal file-path patterns to resolve.</param>
+    /// <param name="patterns">Glob patterns (or plain literal file paths) to resolve.</param>
     /// <returns>
     ///     Matched absolute file paths; may contain duplicates if multiple patterns/roots resolve
     ///     to the same file, and is not sorted (callers are responsible for deduplication and
@@ -501,7 +503,7 @@ internal static class Linter
     ///     back to the pattern's path root; this is a known, documented limitation rather than a
     ///     regression, since it is not a form of pattern this method is required to fully support.
     /// </remarks>
-    /// <param name="pattern">Rooted glob or literal file-path pattern.</param>
+    /// <param name="pattern">Rooted glob pattern (or plain literal file path).</param>
     /// <returns>The fixed absolute root directory and the remaining pattern relative to it.</returns>
     private static (string Root, string Pattern) ResolvePatternRoot(string pattern)
     {

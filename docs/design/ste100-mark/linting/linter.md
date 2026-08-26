@@ -62,10 +62,10 @@ Include and exclude patterns are each resolved independently to absolute file pa
 supports include/exclude patterns rooted differently from one another (for example, an
 absolute include with a relative exclude), which a single shared `Matcher` cannot do.
 
-**ResolvePatterns**: Resolves a list of glob/literal-path patterns to matched absolute file
-paths.
+**ResolvePatterns**: Resolves a list of glob patterns (including plain literal file paths, which
+are simply patterns with no wildcard characters) to matched absolute file paths.
 
-- *Parameters*: `IReadOnlyList<string> patterns` - glob or literal file-path patterns.
+- *Parameters*: `IReadOnlyList<string> patterns` - glob patterns (or plain literal file paths).
 - *Returns*: `List<string>` - matched absolute file paths (unsorted, may contain duplicates).
 
 Because a `Matcher` only matches patterns relative to one root directory, patterns are grouped
@@ -77,15 +77,15 @@ than throwing.
 **ResolvePatternRoot**: Splits a rooted pattern into a fixed root directory and the remaining
 pattern relative to it, at the first glob metacharacter (`*`, `?`, `[`).
 
-- *Parameters*: `string pattern` - rooted glob or literal file-path pattern.
+- *Parameters*: `string pattern` - rooted glob pattern (or plain literal file path).
 - *Returns*: `(string Root, string Pattern)` - the fixed absolute root directory and the
   remaining pattern relative to it.
 
 A literal absolute file path with no metacharacter reduces to its parent directory and file
-name. Both `\` and `/` separators are accepted. This enables absolute globs (Windows drive
-letters, UNC paths, or POSIX-style leading `/`) and absolute literal file paths to match,
-whereas previously they were fed unchanged to a `Matcher` rooted at the current directory and
-silently matched nothing.
+name. Both `\` and `/` separators are accepted. This enables any absolute pattern (Windows drive
+letters, UNC paths, or POSIX-style leading `/`) to match, whether or not it contains wildcard
+characters, whereas previously it was fed unchanged to a `Matcher` rooted at the current
+directory and silently matched nothing.
 
 #### Error Handling
 
