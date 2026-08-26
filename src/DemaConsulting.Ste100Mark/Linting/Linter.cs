@@ -37,6 +37,24 @@ namespace DemaConsulting.Ste100Mark.Linting;
 internal static class Linter
 {
     /// <summary>
+    ///     Comparer used for absolute file/directory path equality, deduplication, and ordering
+    ///     throughout this class.
+    /// </summary>
+    /// <remarks>
+    ///     Windows and macOS file systems are case-insensitive by default, so two absolute paths
+    ///     that differ only in case (for example, a user-supplied absolute pattern with different
+    ///     drive-letter casing than <see cref="Directory.GetCurrentDirectory"/>) name the same
+    ///     file; comparing them with an ordinal, case-sensitive comparer would treat them as
+    ///     different, causing the exclude-subtraction in <see cref="ResolveFiles"/> to silently
+    ///     fail to match, and <see cref="ResolvePatterns"/> to group the same physical root
+    ///     directory twice. Linux is case-sensitive, so ordinal comparison is used there.
+    /// </remarks>
+    private static readonly StringComparer PathComparer =
+        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+
+    /// <summary>
     ///     Default include pattern used when neither positional glob arguments nor a configured
     ///     <c>include</c> list are available.
     /// </summary>
@@ -191,7 +209,9 @@ internal static class Linter
     ///     <see cref="ResolvePatterns"/> before matching, so the absolute-path equality used here
     ///     to subtract excluded files still works when a root directory is reached through a
     ///     symbolic link (for example, an absolute include or exclude rooted under macOS's
-    ///     symlinked <c>/tmp</c>/<c>/var</c>).
+    ///     symlinked <c>/tmp</c>/<c>/var</c>). Path equality, deduplication, and ordering use
+    ///     <see cref="PathComparer"/>, which is case-insensitive on Windows and macOS, so an
+    ///     include and exclude naming the same file with different casing still resolve as equal.
     /// </remarks>
     /// <param name="globs">Positional glob arguments from the command line.</param>
     /// <param name="config">Resolved lint configuration.</param>
@@ -216,16 +236,16 @@ internal static class Linter
         if (excludePatterns.Count == 0)
         {
             return includedFiles
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(p => p, StringComparer.Ordinal)
+                .Distinct(PathComparer)
+                .OrderBy(p => p, PathComparer)
                 .ToList();
         }
 
-        var excludedFiles = ResolvePatterns(excludePatterns).ToHashSet(StringComparer.Ordinal);
+        var excludedFiles = ResolvePatterns(excludePatterns).ToHashSet(PathComparer);
         return includedFiles
             .Where(f => !excludedFiles.Contains(f))
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(p => p, StringComparer.Ordinal)
+            .Distinct(PathComparer)
+            .OrderBy(p => p, PathComparer)
             .ToList();
     }
 
@@ -246,7 +266,9 @@ internal static class Linter
     ///     the exclude-subtraction in <see cref="ResolveFiles"/> could silently fail to match an
     ///     included file and its exclusion by absolute-path equality (for example, an absolute
     ///     include combined with a relative exclude, both naming the same file under a symlinked
-    ///     directory such as macOS's <c>/tmp</c>, <c>/var</c>, or <c>/etc</c>). A root that does
+    ///     directory such as macOS's <c>/tmp</c>, <c>/var</c>, or <c>/etc</c>). Roots are grouped
+    ///     using <see cref="PathComparer"/>, so on Windows and macOS two roots that differ only
+    ///     in case are still recognized as the same physical directory. A root that does
     ///     not exist on disk is skipped rather than throwing, so a rooted pattern under a
     ///     nonexistent directory simply contributes zero matches, consistent with how a relative
     ///     pattern that matches nothing also contributes zero matches.
@@ -259,7 +281,7 @@ internal static class Linter
     /// </returns>
     private static List<string> ResolvePatterns(IReadOnlyList<string> patterns)
     {
-        var patternsByRoot = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var patternsByRoot = new Dictionary<string, List<string>>(PathComparer);
         foreach (var pattern in patterns)
         {
             string root;
