@@ -157,22 +157,28 @@ internal static class Program
     /// <param name="context">The context for output.</param>
     private static void PrintHelp(Context context)
     {
-        context.WriteLine("Usage: ste100mark [globs...] [options]");
-        context.WriteLine("");
-        context.WriteLine("Options:");
-        context.WriteLine("  -v, --version              Display version information");
-        context.WriteLine("  -?, -h, --help             Display this help message");
-        context.WriteLine("  --silent                   Suppress console output");
-        context.WriteLine("  --validate                 Run self-validation");
-        context.WriteLine("  --results <file>           Write validation results to file (.trx or .xml)");
-        context.WriteLine("  --depth <#>                Set heading depth for markdown output (default: 1)");
-        context.WriteLine("  --log <file>               Write output to log file");
-        context.WriteLine("  --config <file>            Path to lint configuration file (default: .ste100mark.yaml)");
-        context.WriteLine("  --format <text|json>       Diagnostic output format (default: text)");
-        context.WriteLine("  --strict                   Promote warn-severity findings to errors for exit code");
-        context.WriteLine("");
-        context.WriteLine("[globs...] are optional Markdown glob patterns to lint (e.g. \"docs/**/*.md\").");
-        context.WriteLine("When omitted, the include/exclude patterns from the resolved configuration are used.");
+        context.WriteLine(
+            """
+            Usage: ste100mark [globs...] [options]
+
+            Options:
+              -v, --version              Display version information
+              -?, -h, --help             Display this help message
+              --silent                   Suppress console output
+              --validate                 Run self-validation
+              --results <file>           Write validation results to file (.trx or .xml)
+              --depth <#>                Set heading depth for markdown output (default: 1)
+              --log <file>               Write output to log file
+              --config <file>            Path to lint configuration file (default: .ste100mark.yaml)
+              --format <text|json>       Diagnostic output format (default: text)
+              --strict                   Promote warn-severity findings to errors for exit code
+
+            [globs...] are optional Markdown glob patterns to lint (e.g. "docs/**/*.md"); a
+            literal file path is simply a pattern with no wildcard characters, so plain paths
+            work the same way, and either form may be relative to the current directory or
+            absolute.
+            When omitted, the include/exclude patterns from the resolved configuration are used.
+            """);
     }
 
     /// <summary>

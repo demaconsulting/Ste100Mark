@@ -197,6 +197,250 @@ public sealed class LinterTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a relative glob pattern (e.g. <c>docs/**/*.md</c>) matches files nested under a
+    ///     subdirectory, as a regression baseline for the absolute-glob equivalent below.
+    /// </summary>
+    [Fact]
+    public void Run_RelativeGlobPattern_MatchesConfiguredFiles()
+    {
+        // Arrange: a nested Markdown file matched only via a recursive relative glob
+        Directory.CreateDirectory(Path.Combine(_tempDirectory.FullName, "docs"));
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "docs", "clean.md"), "# Title\n\nOpen the panel.\n");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["docs/**/*.md"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: the nested file was found via the relative glob
+            var output = outWriter.ToString();
+            Assert.Contains("Checked 1 file(s)", output);
+            Assert.Equal(0, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that an absolute glob pattern (rooted at the temp directory's own absolute path)
+    ///     matches the same nested files a relative glob would, proving absolute glob patterns are
+    ///     no longer silently ignored.
+    /// </summary>
+    [Fact]
+    public void Run_AbsoluteGlobPattern_MatchesConfiguredFiles()
+    {
+        // Arrange: a nested Markdown file matched via an absolute recursive glob
+        Directory.CreateDirectory(Path.Combine(_tempDirectory.FullName, "docs"));
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "docs", "clean.md"), "# Title\n\nOpen the panel.\n");
+        var absoluteGlob = Path.Combine(_tempDirectory.FullName, "docs", "**", "*.md");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create([absoluteGlob]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: the nested file was found via the absolute glob
+            var output = outWriter.ToString();
+            Assert.Contains("Checked 1 file(s)", output);
+            Assert.Equal(0, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that a relative literal file path (no glob metacharacters) matches exactly one
+    ///     file, as a regression baseline for the absolute-literal-path equivalent below.
+    /// </summary>
+    [Fact]
+    public void Run_RelativeLiteralFilePath_MatchesSingleFile()
+    {
+        // Arrange: a single Markdown file referenced by its relative literal path
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "clean.md"), "# Title\n\nOpen the panel.\n");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["clean.md"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: the file was found via its relative literal path
+            var output = outWriter.ToString();
+            Assert.Contains("Checked 1 file(s)", output);
+            Assert.Equal(0, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that an absolute literal file path (no glob metacharacters) matches exactly one
+    ///     file, proving absolute literal paths are no longer silently ignored.
+    /// </summary>
+    [Fact]
+    public void Run_AbsoluteLiteralFilePath_MatchesSingleFile()
+    {
+        // Arrange: a single Markdown file referenced by its absolute literal path
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "clean.md"), "# Title\n\nOpen the panel.\n");
+        var absolutePath = Path.Combine(_tempDirectory.FullName, "clean.md");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create([absolutePath]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: the file was found via its absolute literal path
+            var output = outWriter.ToString();
+            Assert.Contains("Checked 1 file(s)", output);
+            Assert.Equal(0, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that an absolute include pattern combined with a relative exclude pattern (from
+    ///     configuration) correctly excludes the matched file, proving include and exclude
+    ///     patterns resolve correctly even when rooted differently.
+    /// </summary>
+    [Fact]
+    public void Run_AbsoluteIncludeWithRelativeExclude_ExcludesMatchedFile()
+    {
+        // Arrange: two files matched by an absolute include glob, one excluded by a relative
+        // exclude pattern from configuration
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "clean.md"), "# Title\n\nOpen the panel.\n");
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "excluded.md"), "# Title\n\nOpen the panel.\n");
+        var absoluteInclude = Path.Combine(_tempDirectory.FullName, "*.md");
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"),
+            $"include: [\"{absoluteInclude.Replace("\\", "\\\\")}\"]\nexclude: [\"excluded.md\"]\n");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create([]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: only the non-excluded file was checked
+            var output = outWriter.ToString();
+            Assert.Contains("Checked 1 file(s)", output);
+            Assert.Equal(0, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that an absolute include pattern spelled with different directory casing than the
+    ///     current directory still correctly excludes the matched file via a relative exclude
+    ///     pattern, proving root directories are normalized to their true on-disk casing before
+    ///     the absolute-path equality used to subtract excludes - rather than relying on an
+    ///     operating-system-based guess about case sensitivity, since case sensitivity is a
+    ///     per-volume/per-directory file system setting, not a per-OS one.
+    /// </summary>
+    [Fact]
+    public void Run_AbsoluteIncludeWithMismatchedCasingAndRelativeExclude_ExcludesMatchedFile()
+    {
+        // Arrange: two files matched by an absolute include glob whose directory portion is
+        // spelled in a different case than the actual on-disk directory, with one file excluded
+        // by a relative exclude pattern resolved against the true-cased current directory
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "clean.md"), "# Title\n\nOpen the panel.\n");
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "excluded.md"), "# Title\n\nOpen the panel.\n");
+        var mismatchedCaseDirectory = _tempDirectory.FullName.ToUpperInvariant();
+        var absoluteInclude = Path.Combine(mismatchedCaseDirectory, "*.md");
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"),
+            $"include: [\"{absoluteInclude.Replace("\\", "\\\\")}\"]\nexclude: [\"excluded.md\"]\n");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create([]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: only the non-excluded file was checked, proving the mismatched-case
+            // include root and the true-cased exclude root were recognized as the same directory
+            var output = outWriter.ToString();
+            Assert.Contains("Checked 1 file(s)", output);
+            Assert.Equal(0, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that an absolute include pattern combined with an absolute exclude pattern (from
+    ///     configuration) correctly excludes the matched file, proving include and exclude
+    ///     patterns resolve independently by absolute path even when both are rooted.
+    /// </summary>
+    [Fact]
+    public void Run_AbsoluteIncludeWithAbsoluteExclude_ExcludesMatchedFile()
+    {
+        // Arrange: two files matched by an absolute include glob, one excluded by an absolute
+        // exclude pattern from configuration
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "clean.md"), "# Title\n\nOpen the panel.\n");
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "excluded.md"), "# Title\n\nOpen the panel.\n");
+        var absoluteInclude = Path.Combine(_tempDirectory.FullName, "*.md");
+        var absoluteExclude = Path.Combine(_tempDirectory.FullName, "excluded.md");
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"),
+            $"include: [\"{absoluteInclude.Replace("\\", "\\\\")}\"]\n" +
+            $"exclude: [\"{absoluteExclude.Replace("\\", "\\\\")}\"]\n");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create([]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: only the non-excluded file was checked
+            var output = outWriter.ToString();
+            Assert.Contains("Checked 1 file(s)", output);
+            Assert.Equal(0, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
     ///     Test that an explicit --config pointing at a missing file reports an error rather than
     ///     throwing out of Run.
     /// </summary>
