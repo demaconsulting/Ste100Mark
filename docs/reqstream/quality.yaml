@@ -30,6 +30,12 @@ sections:
         tags: [quality]
         children:
           - Ste100Mark-OTS-BuildMark
+        tests:
+          - BuildMark_MarkdownReportGeneration
+          - BuildMark_GitIntegration
+          - BuildMark_IssueTracking
+          - BuildMark_KnownIssuesReporting
+          - BuildMark_RulesRouting
 
       - id: Ste100Mark-Quality-TraceableVersions
         title: >-
@@ -48,6 +54,11 @@ sections:
         tags: [quality]
         children:
           - Ste100Mark-OTS-VersionMark
+        tests:
+          - VersionMark_CapturesVersions
+          - VersionMark_GeneratesMarkdownReport
+          - VersionMark_LintPassesForValidConfig
+          - VersionMark_LintReportsErrorsForInvalidConfig
 
       - id: Ste100Mark-Quality-StaticAnalysis
         title: >-
@@ -68,6 +79,14 @@ sections:
           - Ste100Mark-OTS-SarifMark
           - Ste100Mark-OTS-SarifMark-Enforcement
           - Ste100Mark-OTS-SonarMark
+        tests:
+          - SarifMark_SarifReading
+          - SarifMark_MarkdownReportGeneration
+          - SarifMark_Enforcement
+          - SonarMark_QualityGateRetrieval
+          - SonarMark_IssuesRetrieval
+          - SonarMark_HotSpotsRetrieval
+          - SonarMark_MarkdownReportGeneration
 
       - id: Ste100Mark-Quality-PeerReview
         title: >-
@@ -89,6 +108,12 @@ sections:
           - Ste100Mark-OTS-ReviewMark-Lint
           - Ste100Mark-OTS-ReviewMark-Elaborate
           - Ste100Mark-OTS-ReviewMark-Enforce
+        tests:
+          - ReviewMark_ReviewPlanGeneration
+          - ReviewMark_ReviewReportGeneration
+          - ReviewMark_Lint
+          - ReviewMark_Elaborate
+          - ReviewMark_Enforce
 
       - id: Ste100Mark-Quality-DocumentationGeneration
         title: >-
@@ -110,6 +135,26 @@ sections:
           - Ste100Mark-OTS-Pandoc
           - Ste100Mark-OTS-WeasyPrint
           - Ste100Mark-OTS-FileAssert
+        tests:
+          - Pandoc_BuildNotesHtml
+          - Pandoc_CodeQualityHtml
+          - Pandoc_ReviewPlanHtml
+          - Pandoc_ReviewReportHtml
+          - Pandoc_DesignHtml
+          - Pandoc_VerificationHtml
+          - Pandoc_UserGuideHtml
+          - WeasyPrint_BuildNotesPdf
+          - WeasyPrint_CodeQualityPdf
+          - WeasyPrint_ReviewPlanPdf
+          - WeasyPrint_ReviewReportPdf
+          - WeasyPrint_DesignPdf
+          - WeasyPrint_VerificationPdf
+          - WeasyPrint_UserGuidePdf
+          - FileAssert_Results
+          - FileAssert_File
+          - FileAssert_Text
+          - FileAssert_Html
+          - FileAssert_Pdf
 
       - id: Ste100Mark-Quality-TestInfrastructure
         title: >-
@@ -127,6 +172,15 @@ sections:
         children:
           - Ste100Mark-OTS-xUnit-Execute
           - Ste100Mark-OTS-xUnit-Report
+        tests:
+          - Context_Create_NoArguments_ReturnsDefaultContext
+          - Context_Create_VersionFlag_SetsVersionTrue
+          - Context_Create_SilentFlag_SetsSilentTrue
+          - Context_Create_LogFlag_OpensLogFile
+          - Context_Create_UnknownArgument_ThrowsArgumentException
+          - PathHelpers_SafePathCombine_ValidPaths_CombinesCorrectly
+          - Program_Run_WithVersionFlag_DisplaysVersionOnly
+          - Validation_Run_WithSilentContext_PrintsSummary
 
       - id: Ste100Mark-Quality-RequirementsTraceability
         title: >-
@@ -144,6 +198,13 @@ sections:
         tags: [quality]
         children:
           - Ste100Mark-OTS-ReqStream
+        tests:
+          - ReqStream_RequirementsProcessing
+          - ReqStream_TraceMatrix
+          - ReqStream_ReportExport
+          - ReqStream_TagsFiltering
+          - ReqStream_EnforcementMode
+          - ReqStream_Lint
 
       - id: Ste100Mark-Quality-ArchitectureTraceability
         title: >-
@@ -164,3 +225,7 @@ sections:
         children:
           - Ste100Mark-OTS-SysML2Tools-Lint
           - Ste100Mark-OTS-SysML2Tools-Render
+        tests:
+          - SysML2Tools_LintSelfTest
+          - SysML2Tools_RenderSvgSelfTest
+          - SysML2Tools_DesignDiagramsSvg
