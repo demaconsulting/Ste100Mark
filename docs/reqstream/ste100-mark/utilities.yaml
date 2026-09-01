@@ -19,6 +19,11 @@ sections:
           path traversal sequences (such as '..') and absolute paths to prevent unintended
           file system access. This requirement captures the subsystem-level safety guarantee
           that all consumers of the Utilities subsystem can rely upon.
+        children:
+          - Ste100Mark-PathHelpers-SafeCombine
+          - Ste100Mark-PathHelpers-SafeCombine-PathTraversal
+          - Ste100Mark-PathHelpers-SafeCombine-RootedPath
+          - Ste100Mark-PathHelpers-SafeCombine-NullInputs
         tests:
           - UtilitiesSubsystem_PathResolutionWorkflow_ValidPaths_ResolvesCorrectly
           - UtilitiesSubsystem_DirectoryCreationWorkflow_ValidPaths_CreatesDirectories

@@ -16,6 +16,10 @@ sections:
           Users need to quickly identify the version of the tool they are using for
           troubleshooting and compatibility verification. The version display must
           work from a standard dotnet invocation without additional configuration.
+        tags: [system]
+        children:
+          - Ste100Mark-Program-Version
+          - Ste100Mark-Cli-Version
         tests:
           - Ste100Mark_VersionFlag_Provided_OutputsVersion
 
@@ -25,6 +29,10 @@ sections:
           Users need access to command-line usage documentation without requiring
           external resources. Help output must be accessible from a standard dotnet
           invocation and must list the available options so that users can self-serve.
+        tags: [system]
+        children:
+          - Ste100Mark-Program-Help
+          - Ste100Mark-Cli-Help
         tests:
           - Ste100Mark_HelpFlag_Provided_OutputsUsageInformation
 
@@ -36,6 +44,15 @@ sections:
           is used to generate compliance artifacts. The validation mode exercises
           core behaviors and produces a structured test result file, providing the
           qualification evidence required by quality management systems.
+        tags: [system]
+        children:
+          - Ste100Mark-Program-Validate
+          - Ste100Mark-Cli-Validate
+          - Ste100Mark-SelfTest-Qualification
+          - Ste100Mark-Validation-Run
+          - Ste100Mark-Validation-LintCleanFileSelfCheck
+          - Ste100Mark-Validation-LintViolationFileSelfCheck
+          - Ste100Mark-Validation-LintJsonOutputSelfCheck
         tests:
           - Ste100Mark_ValidateFlag_Provided_RunsValidation
 
@@ -44,6 +61,12 @@ sections:
         justification: |
           Enables automated scripts and CI/CD pipelines to run the tool without
           cluttering output logs when only the exit code is needed.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-Silent
+          - Ste100Mark-Cli-OutputChannels
+          - Ste100Mark-Context-Silent
+          - Ste100Mark-Context-ConsoleOutput
         tests:
           - Ste100Mark_SilentFlag_Provided_SuppressesOutput
 
@@ -53,6 +76,12 @@ sections:
           Provides persistent logging for debugging and compliance audit trails.
           Log files enable post-run inspection of tool output without requiring
           console capture.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-Log
+          - Ste100Mark-Context-LogOutput
+          - Ste100Mark-Context-LogFailure
+          - Ste100Mark-Context-Dispose
         tests:
           - Ste100Mark_LogFlag_Provided_WritesOutputToFile
 
@@ -61,6 +90,14 @@ sections:
         justification: |
           A non-zero exit code enables CI/CD pipelines to detect and
           surface misconfiguration failures automatically.
+        tags: [system]
+        children:
+          - Ste100Mark-Program-ExitCode-InvalidArguments
+          - Ste100Mark-Program-ExitCode-UnhandledException
+          - Ste100Mark-Cli-InvalidArgs
+          - Ste100Mark-Cli-ExitCode
+          - Ste100Mark-Context-InvalidArgs
+          - Ste100Mark-Context-ExitCode
         tests:
           - Ste100Mark_UnknownArgument_Provided_ReturnsError
 
@@ -69,6 +106,10 @@ sections:
         justification: |
           Clear feedback for unrecognized arguments helps users quickly correct
           mistakes and prevents silent misconfiguration.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-ErrorOutput
+          - Ste100Mark-Context-ErrorOutput
         tests:
           - Ste100Mark_UnknownArgument_Provided_ReturnsError
 
@@ -79,6 +120,12 @@ sections:
         justification: |
           Enables integration with CI/CD systems that expect standard test result formats.
           TRX format is compatible with MSTest; JUnit XML is compatible with many CI tools.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-Results
+          - Ste100Mark-SelfTest-ResultsOutput
+          - Ste100Mark-Validation-TrxResults
+          - Ste100Mark-Validation-XmlResults
         tests:
           - Ste100Mark_ValidateWithTrxResults_Requested_GeneratesTrxFile
           - Ste100Mark_ValidateWithXmlResults_Requested_GeneratesJUnitFile
@@ -89,6 +136,9 @@ sections:
           Enables validation output to be embedded within larger markdown documents at
           the appropriate heading level, supporting documentation workflows that combine
           multiple reports.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-Depth
         tests:
           - Ste100Mark_ValidateFlag_Provided_RunsValidation
           - Ste100Mark_ValidateWithDepth_DepthThree_OutputsCorrectHeadingLevel
@@ -99,6 +149,10 @@ sections:
           A non-zero exit code on results-write failure enables CI/CD pipelines to detect
           and surface output errors automatically, preventing silent loss of validation
           evidence in compliance-critical workflows.
+        tags: [system]
+        children:
+          - Ste100Mark-SelfTest-InvalidExtension
+          - Ste100Mark-Validation-InvalidExtension
         tests:
           - Ste100Mark_ValidateWithBadExtension_ExtensionInvalid_ReturnsNonZero
 
@@ -108,6 +162,9 @@ sections:
           When a user invokes the tool without any recognized action flag, the tool shall
           display a banner identifying itself and run its primary logic so that the
           invocation is never silently empty.
+        tags: [system]
+        children:
+          - Ste100Mark-Program-ExitCode-Success
         tests:
           - Ste100Mark_NoArguments_Invoked_DisplaysBanner
 
@@ -116,5 +173,91 @@ sections:
         justification: |
           Backward compatibility with scripts that use the earlier `--result` spelling
           prevents breakage when upgrading to newer tool versions.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-ResultAlias
         tests:
           - Ste100Mark_ResultAlias_LegacyFlag_WritesResultsFile
+
+      - id: Ste100Mark-System-Lint
+        title: >-
+          The tool shall lint Markdown files against configurable ASD-STE100 style rules and
+          report each violation with a rule code and severity.
+        justification: |
+          Linting Markdown prose against ASD-STE100-style rules is the tool's primary purpose:
+          detecting non-compliant sentence structure and vocabulary and signaling failures via
+          the process exit code so CI pipelines can gate on writing-style compliance.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-ArgumentParsing
+          - Ste100Mark-Context-ArgumentParsing
+          - Ste100Mark-Context-GlobArgumentParsing
+          - Ste100Mark-Utilities-SafePaths
+          - Ste100Mark-Linting-WordLimits
+          - Ste100Mark-Linting-Semicolons
+          - Ste100Mark-Linting-Contractions
+          - Ste100Mark-Linting-ParagraphAdvisory
+          - Ste100Mark-Linting-PassiveVoiceAdvisory
+          - Ste100Mark-Linting-ComplexVerbAdvisory
+          - Ste100Mark-Linting-IngFormAdvisory
+          - Ste100Mark-Linting-Dictionary
+          - Ste100Mark-Linting-DictionaryDisable
+          - Ste100Mark-Linting-InlineCodeSpans
+          - Ste100Mark-Linting-DictionaryPos
+          - Ste100Mark-Linting-AccurateLineNumbers
+          - Ste100Mark-Linting-WrappedListItemPhraseMatching
+          - Ste100Mark-Linting-ExitCode
+          - Ste100Mark-Linting-CliIntegration
+        tests:
+          - Ste100Mark_LintCleanFile_ReturnsZeroExitCode
+          - Ste100Mark_LintFileWithSemicolon_ReportsErrorAndReturnsNonZero
+
+      - id: Ste100Mark-System-LintConfig
+        title: >-
+          The tool shall load lint configuration (include/exclude scope, default mode, rule
+          tuning, dictionary settings, and glob-scoped profiles) from a YAML file, using an
+          explicit `--config` path when provided, and shall report an error when the specified
+          configuration file is missing.
+        justification: |
+          Projects need a repeatable, human-editable way to control file scope, writing mode,
+          rule severity, and vocabulary policy without recompiling the tool, and callers must be
+          able to select a specific configuration file for a single invocation and receive clear
+          feedback when that file does not exist.
+        tags: [system]
+        children:
+          - Ste100Mark-Program-ExitCode-ConfigError
+          - Ste100Mark-Cli-Config
+          - Ste100Mark-Context-ConfigArgumentParsing
+          - Ste100Mark-Linting-Configuration
+          - Ste100Mark-Linting-Profiles
+        tests:
+          - Ste100Mark_LintWithMissingConfigFile_ReturnsNonZeroWithErrorMessage
+
+      - id: Ste100Mark-System-LintOutputFormat
+        title: >-
+          The tool shall report lint diagnostics in human-readable text format by default and in
+          structured JSON format when `--format json` is provided.
+        justification: |
+          Human operators need readable console diagnostics, while CI integrations need
+          machine-readable output that can be parsed without banner text mixed in.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-Format
+          - Ste100Mark-Context-FormatArgumentParsing
+          - Ste100Mark-Linting-OutputFormats
+        tests:
+          - Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument
+
+      - id: Ste100Mark-System-LintStrict
+        title: >-
+          The tool shall promote warn-severity lint findings to a failure exit code when
+          `--strict` is provided, without changing their reported severity.
+        justification: |
+          Teams need to enforce stricter CI gates for advisory findings while preserving the
+          underlying diagnostic severity reported to users and tooling.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-Strict
+          - Ste100Mark-Context-StrictArgumentParsing
+        tests:
+          - Ste100Mark_LintWithStrictFlag_PromotesWarningsToFailure
