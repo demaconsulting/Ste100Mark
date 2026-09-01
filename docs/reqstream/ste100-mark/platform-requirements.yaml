@@ -26,6 +26,7 @@ sections:
           the `windows-latest` matrix leg after installing .NET 8.x, 9.x, and 10.x. This
           requirement is therefore limited to the Windows environment that the CI matrix actually
           exercises and can prove with platform-filtered evidence.
+        tags: [system]
         tests:
           # Tests link to "windows" to ensure results come from the windows-latest CI matrix leg
           - "windows@Ste100Mark_VersionDisplay"
@@ -38,6 +39,7 @@ sections:
           the `ubuntu-latest` matrix leg after installing .NET 8.x, 9.x, and 10.x. This
           requirement is therefore limited to the Linux environment that the CI matrix actually
           exercises and can prove with platform-filtered evidence.
+        tags: [system]
         tests:
           # Tests link to "ubuntu" to ensure results come from the ubuntu-latest CI matrix leg
           - "ubuntu@Ste100Mark_VersionDisplay"
@@ -50,6 +52,7 @@ sections:
           the `macos-latest` matrix leg after installing .NET 8.x, 9.x, and 10.x. This
           requirement is therefore limited to the macOS environment that the CI matrix actually
           exercises and can prove with platform-filtered evidence.
+        tags: [system]
         tests:
           # Tests link to "macos" to ensure results come from the macos-latest CI matrix leg
           - "macos@Ste100Mark_VersionDisplay"
@@ -62,6 +65,7 @@ sections:
           `windows-latest`, `ubuntu-latest`, and `macos-latest` build-matrix leg before running the
           build and test steps. This requirement is therefore bounded to the .NET 8.x runtime that
           the CI matrix actually provisions and exercises across those operating systems.
+        tags: [system]
         tests:
           - "dotnet8.x@Ste100Mark_VersionDisplay"
           - "dotnet8.x@Ste100Mark_HelpDisplay"
@@ -73,6 +77,7 @@ sections:
           `windows-latest`, `ubuntu-latest`, and `macos-latest` build-matrix leg before running the
           build and test steps. This requirement is therefore bounded to the .NET 9.x runtime that
           the CI matrix actually provisions and exercises across those operating systems.
+        tags: [system]
         tests:
           - "dotnet9.x@Ste100Mark_VersionDisplay"
           - "dotnet9.x@Ste100Mark_HelpDisplay"
@@ -84,6 +89,7 @@ sections:
           `windows-latest`, `ubuntu-latest`, and `macos-latest` build-matrix leg before running the
           build and test steps. This requirement is therefore bounded to the .NET 10.x runtime
           that the CI matrix actually provisions and exercises across those operating systems.
+        tags: [system]
         tests:
           - "dotnet10.x@Ste100Mark_VersionDisplay"
           - "dotnet10.x@Ste100Mark_HelpDisplay"

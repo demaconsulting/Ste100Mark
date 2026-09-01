@@ -309,6 +309,8 @@ sections:
           Projects need a repeatable way to control file scope, default writing mode, rule
           severity, and vocabulary policy without recompiling the tool. YAML configuration
           provides a human-editable, repository-local contract for those settings.
+        children:
+          - Ste100Mark-OTS-YamlDotNet
         tests:
           - Load_NullPath_ReturnsDefaultConfiguration
           - Load_NonExistentPath_ThrowsInvalidOperationException
@@ -350,6 +352,8 @@ sections:
           The default tool path must be controllable from the command line so users and CI
           jobs can choose file scope, configuration file, output format, and strict-mode
           behavior for each run.
+        children:
+          - Ste100Mark-OTS-FileSystemGlobbing
         tests:
           - Context_Create_NoArguments_ReturnsLintingDefaults
           - Context_Create_PositionalArgument_CollectedAsGlob
