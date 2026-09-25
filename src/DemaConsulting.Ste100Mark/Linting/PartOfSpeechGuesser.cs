@@ -104,20 +104,21 @@ internal static class PartOfSpeechGuesser
     ///     list deliberately omits any such word that is also a common technical-writing plural
     ///     noun (for example "results", "checks", "tests", "supports", "measures", "monitors",
     ///     "returns", "changes", "turns", "sets", "reports", "triggers", "causes", "means",
-    ///     "remains", "increases", "decreases") - including one of those would let a following
-    ///     plural-noun object make the guesser misread the preceding match as a noun subject
-    ///     instead of, for example, the imperative verb of a procedure step (see
+    ///     "remains", "increases", "decreases", "moves", "runs", "starts", "stops", "shows",
+    ///     "displays", "controls", "reads", "writes") - including one of those would let a
+    ///     following plural-noun object make the guesser misread the preceding match as a noun
+    ///     subject instead of, for example, the imperative verb of a procedure step (see
     ///     <see cref="HasNounSignal"/>'s separate <c>PluralNounSuffix</c> signal, which already
     ///     covers plural nouns on their own terms).
     /// </summary>
     private static readonly HashSet<string> FiniteVerbForms =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            "moves", "has", "does", "goes", "runs", "opens", "closes", "starts", "stops",
-            "operates", "requires", "indicates", "shows", "displays", "connects", "controls",
+            "has", "does", "goes", "opens", "closes",
+            "operates", "requires", "indicates", "connects",
             "occurs", "applies", "appears", "provides", "allows", "produces", "contains",
             "includes", "represents", "reduces", "affects", "detects", "enables", "disables",
-            "activates", "reads", "writes", "sends", "receives", "verifies", "confirms",
+            "activates", "sends", "receives", "verifies", "confirms",
             "adjusts", "prevents", "generates"
         };
 

@@ -53,6 +53,28 @@ public class PartOfSpeechGuesserTests
     }
 
     /// <summary>
+    ///     Test that a plural-noun object ("reads") following an imperative verb ("Log") does not
+    ///     falsely resolve the verb as a noun. Regression test for a reported bug where "reads"
+    ///     and "writes" (also common technical-writing plural nouns, e.g. "device reads/writes")
+    ///     were included in <c>FiniteVerbForms</c>.
+    /// </summary>
+    [Fact]
+    public void Guess_ImperativeLogFollowedByAmbiguousPluralNoun_ReturnsVerb()
+    {
+        // Arrange: "Log reads daily." - "log" is the imperative verb; "reads" is its plural-noun
+        // object, not a finite verb form. A trailing finite verb ("operates") elsewhere in the
+        // segment keeps the unrelated verbless-segment noun signal from firing.
+        const string text = "Log reads daily. The system operates continuously.";
+        var index = text.IndexOf("Log", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Log".Length, LintMode.Procedure);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
     ///     Test that a term preceded by the infinitive marker "to" is guessed as a verb.
     /// </summary>
     [Fact]
@@ -408,15 +430,16 @@ public class PartOfSpeechGuesserTests
     }
 
     /// <summary>
-    ///     Test that a term followed by a finite verb form ("moves") is guessed as a noun,
+    ///     Test that a term followed by a finite verb form ("operates") is guessed as a noun,
     ///     because the match is the subject of the clause.
     /// </summary>
     [Fact]
     public void Guess_FollowedByFiniteVerb_ReturnsNoun()
     {
-        // Arrange: "impact moves" - the match is the subject, preceded by a neutral word so only
-        // the following-finite-verb signal is exercised.
-        const string text = "Consider impact moves quickly.";
+        // Arrange: "impact operates" - the match is the subject, preceded by a neutral word so
+        // only the following-finite-verb signal is exercised. "operates" (rather than "moves") is
+        // used because it has no common plural-noun reading, unlike "moves" ("chess moves").
+        const string text = "Consider impact operates quickly.";
         var index = text.IndexOf("impact", StringComparison.Ordinal);
 
         // Act: execute the operation being tested

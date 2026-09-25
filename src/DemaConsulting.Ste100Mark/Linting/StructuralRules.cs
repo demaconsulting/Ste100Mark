@@ -137,7 +137,9 @@ internal static class StructuralRules
     ///     The file's resolved <see cref="LintConfig.ResolveAllowedTerms"/> vocabulary. A term a
     ///     project has approved via the dictionary allow/ignore lists is also excluded from the
     ///     <c>-ing</c>-form advisory (see <see cref="EvaluateIngForm"/>), so approving a word once
-    ///     suppresses it from every check, not only <see cref="DictionaryChecker"/>. Pass
+    ///     suppresses it from both the <c>-ing</c>-form advisory and <see cref="DictionaryChecker"/>.
+    ///     This does not extend to the passive-voice or complex-verb advisories, since those match
+    ///     whole-sentence tense patterns rather than individual terms. Pass
     ///     <see langword="null"/> or an empty collection when no per-file allowance applies.
     /// </param>
     /// <returns>All diagnostics produced for the file, in segment order.</returns>
