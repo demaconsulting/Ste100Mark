@@ -229,8 +229,8 @@ internal static class DictionaryChecker
         }
 
         return candidates.Count == 1
-            ? ConfidentDiagnostic(file, segment, match, candidates[0], labelPos: entry.Senses.Count > 1)
-            : AmbiguousDiagnostic(file, segment, match, candidates);
+            ? ConfidentDiagnostic(file, segment, match, entry.Term, candidates[0], labelPos: entry.Senses.Count > 1)
+            : AmbiguousDiagnostic(file, segment, match, entry.Term, candidates);
     }
 
     /// <summary>
@@ -287,6 +287,21 @@ internal static class DictionaryChecker
     }
 
     /// <summary>
+    ///     Determines whether a sense is "purely" self-referential: its <em>only</em> alternative
+    ///     is the entry's own headword, with no other genuine replacement word offered (for example
+    ///     <c>test (v) -&gt; TEST</c>). For such a sense, "avoid X; use X instead" would be a
+    ///     nonsensical no-op message, since there is no actual word swap to make - the real
+    ///     correction is a change of grammatical role. This is distinct from a sense whose
+    ///     alternatives include the headword <em>alongside</em> other real alternatives (for
+    ///     example <c>check (v) -&gt; MAKE SURE, MEASURE, EXAMINE, CHECK</c>), which already reads as
+    ///     an actionable message and is left untouched.
+    /// </summary>
+    private static bool IsPureSelfReferentialSense(DictionarySense sense, string term)
+    {
+        return sense.Alternatives.Count == 1 && IsSelfReferentialSense(sense, term);
+    }
+
+    /// <summary>
     ///     Builds a diagnostic for a confidently-resolved sense (either the sole sense of a
     ///     single-sense term, or the single surviving candidate of a multi-sense term).
     /// </summary>
@@ -294,9 +309,27 @@ internal static class DictionaryChecker
         string file,
         ProseSegment segment,
         Match match,
+        string term,
         DictionarySense sense,
         bool labelPos)
     {
+        if (IsPureSelfReferentialSense(sense, term))
+        {
+            // "Avoid 'test'; use 'TEST' instead" is a nonsensical no-op wording, since the only
+            // "alternative" is the same word. The real, actionable correction is a change of
+            // grammatical role, not a word swap, so the message is phrased accordingly and no
+            // word-substitution suggestion is offered.
+            return new Diagnostic(
+                file,
+                segment.ResolveLine(match.Index),
+                null,
+                "STE100-DICT",
+                Severity.Error,
+                $"Avoid using '{match.Value}' as a {PosLabel(sense.Pos)}; ASD-STE100 approves " +
+                $"'{term}' only in a different grammatical role.",
+                $"Rewrite the sentence so '{term}' is not used as a {PosLabel(sense.Pos)}.");
+        }
+
         string message;
         if (sense.Alternatives.Count > 0)
         {
@@ -329,14 +362,17 @@ internal static class DictionaryChecker
         string file,
         ProseSegment segment,
         Match match,
+        string term,
         IReadOnlyList<DictionarySense> candidates)
     {
-        var corrections = string.Join("; ", candidates.Select(s =>
-            s.Alternatives.Count > 0
-                ? $"as a {PosLabel(s.Pos)}, use {JoinAlternatives(s.Alternatives)}"
-                : $"as a {PosLabel(s.Pos)}"));
-        var suggestion = string.Join("; ", candidates.Select(s =>
-            $"{string.Join(", ", s.Alternatives)} ({PosLabel(s.Pos)})"));
+        // A candidate whose only alternative is the entry's own headword (see
+        // IsPureSelfReferentialSense) is phrased as a role restriction, not a word swap, for the
+        // same reason as ConfidentDiagnostic - "use 'test'" is a nonsensical no-op when the term
+        // being flagged already is "test".
+        var corrections = string.Join("; ", candidates.Select(s => CorrectionClause(s, term)));
+        var suggestion = string.Join("; ", candidates
+            .Where(s => !IsPureSelfReferentialSense(s, term))
+            .Select(s => $"{string.Join(", ", s.Alternatives)} ({PosLabel(s.Pos)})"));
 
         return new Diagnostic(
             file,
@@ -346,6 +382,24 @@ internal static class DictionaryChecker
             Severity.Error,
             $"Ambiguous part of speech for '{match.Value}' \u2014 possible corrections: {corrections}.",
             suggestion.Length > 0 ? suggestion : null);
+    }
+
+    /// <summary>
+    ///     Renders one candidate sense's clause for <see cref="AmbiguousDiagnostic"/>'s
+    ///     "possible corrections" message, using role-restriction wording for a purely
+    ///     self-referential sense (see <see cref="IsPureSelfReferentialSense"/>) instead of a
+    ///     nonsensical "use 'X'" word-swap suggestion.
+    /// </summary>
+    private static string CorrectionClause(DictionarySense sense, string term)
+    {
+        if (IsPureSelfReferentialSense(sense, term))
+        {
+            return $"as a {PosLabel(sense.Pos)}, only a different grammatical role is approved";
+        }
+
+        return sense.Alternatives.Count > 0
+            ? $"as a {PosLabel(sense.Pos)}, use {JoinAlternatives(sense.Alternatives)}"
+            : $"as a {PosLabel(sense.Pos)}";
     }
 
     /// <summary>

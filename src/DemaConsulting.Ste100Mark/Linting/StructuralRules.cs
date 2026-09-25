@@ -110,6 +110,22 @@ internal static class StructuralRules
         new(@"\b[a-z][a-z-]{2,}ing\b", RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout);
 
     /// <summary>
+    ///     Common words that end in <c>-ing</c> but are never a present-participle verb form (they
+    ///     are prepositions, pronouns, or plain nouns with no corresponding base verb), so
+    ///     <see cref="EvaluateIngForm"/> excludes them unconditionally rather than relying on the
+    ///     project-supplied allow list to cover every one of them. Deliberately excludes words
+    ///     that have a genuine, if uncommon, present-participle verb use in technical writing
+    ///     (for example "evening" in "evening out the load", or "ceiling" in "ceiling the price")
+    ///     - those must instead rely on the project-supplied allow list, since unconditionally
+    ///     excluding them here would cause the advisory to miss real occurrences.
+    /// </summary>
+    private static readonly HashSet<string> IngFormExclusions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "during", "morning", "something", "anything", "nothing", "everything",
+        "spring", "king", "ring", "thing", "string",
+    };
+
+    /// <summary>
     ///     Evaluates every structural/mechanical rule and advisory heuristic against the prose
     ///     segments of a single Markdown file.
     /// </summary>
@@ -117,12 +133,22 @@ internal static class StructuralRules
     /// <param name="segments">Prose segments produced by <see cref="MarkdownProseExtractor"/>.</param>
     /// <param name="mode">Resolved writing mode, determining the sentence word-count limit.</param>
     /// <param name="rules">Rule tuning from the effective <see cref="LintConfig"/>.</param>
+    /// <param name="allowedTerms">
+    ///     The file's resolved <see cref="LintConfig.ResolveAllowedTerms"/> vocabulary. A term a
+    ///     project has approved via the dictionary allow/ignore lists is also excluded from the
+    ///     <c>-ing</c>-form advisory (see <see cref="EvaluateIngForm"/>), so approving a word once
+    ///     suppresses it from both the <c>-ing</c>-form advisory and <see cref="DictionaryChecker"/>.
+    ///     This does not extend to the passive-voice or complex-verb advisories, since those match
+    ///     whole-sentence tense patterns rather than individual terms. Pass
+    ///     <see langword="null"/> or an empty collection when no per-file allowance applies.
+    /// </param>
     /// <returns>All diagnostics produced for the file, in segment order.</returns>
     public static IReadOnlyList<Diagnostic> Evaluate(
         string file,
         IReadOnlyList<ProseSegment> segments,
         LintMode mode,
-        RulesConfig rules)
+        RulesConfig rules,
+        IReadOnlyCollection<string>? allowedTerms = null)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(segments);
@@ -140,7 +166,7 @@ internal static class StructuralRules
             EvaluateContractions(file, segment, rules, diagnostics);
             EvaluateComplexVerb(file, segment, sentences, rules, diagnostics);
             EvaluatePassiveVoice(file, segment, sentences, rules, diagnostics);
-            EvaluateIngForm(file, segment, rules, diagnostics);
+            EvaluateIngForm(file, segment, rules, allowedTerms, diagnostics);
 
             if (segment.Role == SegmentRole.Paragraph)
             {
@@ -346,9 +372,18 @@ internal static class StructuralRules
     ///     character immediately preceding or following the match is <c>.</c>) is skipped, since
     ///     such a match is unlikely to be a present-participle verb form embedded mid-sentence. A
     ///     match appearing only inside an inline code span is not flagged, since inline code
-    ///     content is excluded from grammar-sensitive checks.
+    ///     content is excluded from grammar-sensitive checks. A match whose exact word is either in
+    ///     <see cref="IngFormExclusions"/> (never a verb form, e.g. "during") or in
+    ///     <paramref name="allowedTerms"/> (a project-approved dictionary term, e.g. "metering") is
+    ///     also skipped, so approving a term once suppresses it from this advisory too, not only
+    ///     <see cref="DictionaryChecker"/>.
     /// </summary>
-    private static void EvaluateIngForm(string file, ProseSegment segment, RulesConfig rules, List<Diagnostic> diagnostics)
+    private static void EvaluateIngForm(
+        string file,
+        ProseSegment segment,
+        RulesConfig rules,
+        IReadOnlyCollection<string>? allowedTerms,
+        List<Diagnostic> diagnostics)
     {
         if (rules.IngForm == Severity.Off)
         {
@@ -359,6 +394,12 @@ internal static class StructuralRules
         foreach (Match match in IngFormRegex.Matches(segment.Text))
         {
             if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, codeSpans))
+            {
+                continue;
+            }
+
+            if (IngFormExclusions.Contains(match.Value) ||
+                (allowedTerms is { Count: > 0 } && allowedTerms.Contains(match.Value)))
             {
                 continue;
             }

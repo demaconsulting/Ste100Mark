@@ -29,6 +29,52 @@ namespace DemaConsulting.Ste100Mark.Tests.Linting;
 public class PartOfSpeechGuesserTests
 {
     /// <summary>
+    ///     Test that a plural-noun object following an imperative verb does not falsely resolve
+    ///     the verb as a noun. Regression test for a reported bug where common technical-writing
+    ///     plural nouns (e.g. "results", "checks", "tests") were included in
+    ///     <c>FiniteVerbForms</c>, so the "FollowedByFiniteVerb" noun signal fired on the object of
+    ///     an imperative sentence and produced a conflicting/incorrect guess.
+    /// </summary>
+    [Fact]
+    public void Guess_ImperativeFollowedByAmbiguousPluralNoun_ReturnsVerb()
+    {
+        // Arrange: "Test results daily." - "test" is the imperative verb; "results" is its plural-
+        // noun object, not a finite verb form. A trailing finite verb ("operates") elsewhere in the
+        // segment keeps the unrelated verbless-segment noun signal from firing, isolating the
+        // FollowedByFiniteVerb/ambiguous-plural-exclusion behavior under test.
+        const string text = "Test results daily. The system operates continuously.";
+        var index = text.IndexOf("Test", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Test".Length, LintMode.Procedure);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that a plural-noun object ("reads") following an imperative verb ("Log") does not
+    ///     falsely resolve the verb as a noun. Regression test for a reported bug where "reads"
+    ///     and "writes" (also common technical-writing plural nouns, e.g. "device reads/writes")
+    ///     were included in <c>FiniteVerbForms</c>.
+    /// </summary>
+    [Fact]
+    public void Guess_ImperativeLogFollowedByAmbiguousPluralNoun_ReturnsVerb()
+    {
+        // Arrange: "Log reads daily." - "log" is the imperative verb; "reads" is its plural-noun
+        // object, not a finite verb form. A trailing finite verb ("operates") elsewhere in the
+        // segment keeps the unrelated verbless-segment noun signal from firing.
+        const string text = "Log reads daily. The system operates continuously.";
+        var index = text.IndexOf("Log", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Log".Length, LintMode.Procedure);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
     ///     Test that a term preceded by the infinitive marker "to" is guessed as a verb.
     /// </summary>
     [Fact]
@@ -153,10 +199,12 @@ public class PartOfSpeechGuesserTests
     public void Guess_SentenceStartInDescriptiveMode_ReturnsNull()
     {
         // Arrange: identical structure as the Procedure-mode test, but Descriptive mode, with the
-        // match followed by a neutral word (not an article) so only the sentence-start/mode
-        // behavior is exercised; a finite verb elsewhere in the segment keeps the new
+        // match followed by a neutral word ("sometimes" - an adverb ending in "s", deliberately
+        // excluded from both the FollowedByFiniteVerb and NounCompoundModifier signals per
+        // PartOfSpeechGuesser's own documented exclusions) so only the sentence-start/mode
+        // behavior is exercised; a finite verb elsewhere in the segment keeps the
         // verbless-segment noun signal from firing.
-        const string text = "Function occurs regularly. The system operates continuously.";
+        const string text = "Function sometimes fails. The system operates continuously.";
         var index = text.IndexOf("Function", StringComparison.Ordinal);
 
         // Act: execute the operation being tested
@@ -382,15 +430,16 @@ public class PartOfSpeechGuesserTests
     }
 
     /// <summary>
-    ///     Test that a term followed by a finite verb form ("moves") is guessed as a noun,
+    ///     Test that a term followed by a finite verb form ("operates") is guessed as a noun,
     ///     because the match is the subject of the clause.
     /// </summary>
     [Fact]
     public void Guess_FollowedByFiniteVerb_ReturnsNoun()
     {
-        // Arrange: "impact moves" - the match is the subject, preceded by a neutral word so only
-        // the following-finite-verb signal is exercised.
-        const string text = "Consider impact moves quickly.";
+        // Arrange: "impact operates" - the match is the subject, preceded by a neutral word so
+        // only the following-finite-verb signal is exercised. "operates" (rather than "moves") is
+        // used because it has no common plural-noun reading, unlike "moves" ("chess moves").
+        const string text = "Consider impact operates quickly.";
         var index = text.IndexOf("impact", StringComparison.Ordinal);
 
         // Act: execute the operation being tested

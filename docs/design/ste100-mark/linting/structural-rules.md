@@ -29,6 +29,12 @@ modal-perfect tense (a modal verb plus `have` plus a past-participle-like word).
 **IngFormRegex**: compiled heuristic regex matching a word of at least five letters ending in
 `ing`.
 
+**IngFormExclusions**: `HashSet<string>` of common words ending in `-ing` that are never a
+present-participle verb form (prepositions, pronouns, or plain nouns with no corresponding
+base verb, e.g. `during`, `morning`, `something`), excluded from `EvaluateIngForm`
+unconditionally rather than relying on the project-supplied allow list to cover every one of
+them.
+
 **Rule codes**:
 
 - `STE100-4.1` - sentence word-count limit.
@@ -45,9 +51,13 @@ modal-perfect tense (a modal verb plus `have` plus a past-participle-like word).
 
 - *Parameters*: `string file` - file path for diagnostics; `IReadOnlyList<ProseSegment> segments`
   - extracted prose; `LintMode mode` - resolved writing mode; `RulesConfig rules` - effective
-  rule tuning.
+  rule tuning; `IReadOnlyCollection<string>? allowedTerms` - the file's resolved
+  `LintConfig.ResolveAllowedTerms` vocabulary, forwarded to `EvaluateIngForm` so a term a
+  project has approved via the dictionary allow/ignore lists is also excluded from the
+  `-ing`-form advisory, not only from `DictionaryChecker`.
 - *Returns*: `IReadOnlyList<Diagnostic>` - diagnostics produced in segment order.
-- *Preconditions*: All arguments are non-null.
+- *Preconditions*: `file`, `segments`, and `rules` are non-null. `allowedTerms` may be
+  `null` or empty when no per-file allowance applies.
 - *Postconditions*: Word-limit, semicolon, contraction, complex-verb, passive-voice,
   `-ing` form, and paragraph-length findings are appended in deterministic per-segment order.
   `EvaluateComplexVerb` runs before `EvaluatePassiveVoice` for each segment to prevent double
@@ -107,10 +117,12 @@ severity.
 once per matched `-ing` word.
 
 - *Parameters*: `string file`; `ProseSegment segment`; `RulesConfig rules`;
+  `IReadOnlyCollection<string>? allowedTerms` - the file's resolved allow-list vocabulary;
   `List<Diagnostic> diagnostics`.
 - *Returns*: `void`.
-- *Postconditions*: Skips matches inside inline code spans and skips matches touching a
-  sentence-ending period immediately before or after the word.
+- *Postconditions*: Skips matches inside inline code spans, skips matches touching a
+  sentence-ending period immediately before or after the word, and skips any match whose exact
+  word is either in `IngFormExclusions` or in `allowedTerms`.
 
 **EvaluateParagraphLength**: Private advisory evaluator that runs only for paragraph
 segments and is disabled when `rules.MaxSentencesParagraph` is `0`.
