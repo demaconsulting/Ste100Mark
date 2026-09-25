@@ -688,8 +688,8 @@ public class StructuralRulesTests
 
     /// <summary>
     ///     Test that an <c>-ing</c> word approved via the file's resolved dictionary allow list is
-    ///     excluded from the ing-form heuristic, so approving a term once suppresses it from every
-    ///     check, not only <see cref="DictionaryChecker"/>.
+    ///     excluded from the ing-form heuristic, so approving a term also suppresses it from this
+    ///     advisory, not only <see cref="DictionaryChecker"/>.
     /// </summary>
     [Fact]
     public void Evaluate_IngWordOnAllowedTermsList_NotFlagged()
@@ -725,5 +725,26 @@ public class StructuralRulesTests
 
         // Assert: the genuine verb use of "evening" is still flagged
         Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("evening"));
+    }
+
+    /// <summary>
+    ///     Test that "string" - a base-form noun/verb whose spelling happens to end in the letters
+    ///     "ing" but which is never a present-participle verb form (there is no verb "str") - is
+    ///     excluded from the ing-form heuristic, matching the existing "king"/"ring"/"thing"/
+    ///     "spring" exclusions. Regression test for a reported bug where "string" was missing from
+    ///     the exclusion list.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordStringInExclusionList_NotFlagged()
+    {
+        // Arrange: "string" ends in "-ing" but is a base-form noun/verb, not a verb form
+        var segments = Paragraph("String the cable before closing the panel.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: "string" is not flagged, but "closing" still is
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("string", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("closing"));
     }
 }

@@ -122,7 +122,7 @@ internal static class StructuralRules
     private static readonly HashSet<string> IngFormExclusions = new(StringComparer.OrdinalIgnoreCase)
     {
         "during", "morning", "something", "anything", "nothing", "everything",
-        "spring", "king", "ring", "thing",
+        "spring", "king", "ring", "thing", "string",
     };
 
     /// <summary>
