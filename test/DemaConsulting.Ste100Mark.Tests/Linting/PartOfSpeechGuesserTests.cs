@@ -29,6 +29,30 @@ namespace DemaConsulting.Ste100Mark.Tests.Linting;
 public class PartOfSpeechGuesserTests
 {
     /// <summary>
+    ///     Test that a plural-noun object following an imperative verb does not falsely resolve
+    ///     the verb as a noun. Regression test for a reported bug where common technical-writing
+    ///     plural nouns (e.g. "results", "checks", "tests") were included in
+    ///     <c>FiniteVerbForms</c>, so the "FollowedByFiniteVerb" noun signal fired on the object of
+    ///     an imperative sentence and produced a conflicting/incorrect guess.
+    /// </summary>
+    [Fact]
+    public void Guess_ImperativeFollowedByAmbiguousPluralNoun_ReturnsVerb()
+    {
+        // Arrange: "Test results daily." - "test" is the imperative verb; "results" is its plural-
+        // noun object, not a finite verb form. A trailing finite verb ("operates") elsewhere in the
+        // segment keeps the unrelated verbless-segment noun signal from firing, isolating the
+        // FollowedByFiniteVerb/ambiguous-plural-exclusion behavior under test.
+        const string text = "Test results daily. The system operates continuously.";
+        var index = text.IndexOf("Test", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Test".Length, LintMode.Procedure);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
     ///     Test that a term preceded by the infinitive marker "to" is guessed as a verb.
     /// </summary>
     [Fact]

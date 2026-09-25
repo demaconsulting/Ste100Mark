@@ -113,12 +113,16 @@ internal static class StructuralRules
     ///     Common words that end in <c>-ing</c> but are never a present-participle verb form (they
     ///     are prepositions, pronouns, or plain nouns with no corresponding base verb), so
     ///     <see cref="EvaluateIngForm"/> excludes them unconditionally rather than relying on the
-    ///     project-supplied allow list to cover every one of them.
+    ///     project-supplied allow list to cover every one of them. Deliberately excludes words
+    ///     that have a genuine, if uncommon, present-participle verb use in technical writing
+    ///     (for example "evening" in "evening out the load", or "ceiling" in "ceiling the price")
+    ///     - those must instead rely on the project-supplied allow list, since unconditionally
+    ///     excluding them here would cause the advisory to miss real occurrences.
     /// </summary>
     private static readonly HashSet<string> IngFormExclusions = new(StringComparer.OrdinalIgnoreCase)
     {
-        "during", "morning", "evening", "something", "anything", "nothing", "everything",
-        "ceiling", "spring", "king", "ring", "thing",
+        "during", "morning", "something", "anything", "nothing", "everything",
+        "spring", "king", "ring", "thing",
     };
 
     /// <summary>

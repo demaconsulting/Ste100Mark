@@ -100,21 +100,25 @@ internal static class PartOfSpeechGuesser
     /// <summary>
     ///     Closed-class, third-person-singular-present finite verb forms that signal the
     ///     preceding match is the subject of a clause (for example "probe moves", "probe has").
-    ///     Deliberately excludes any "-s" content word, which would be indistinguishable from the
-    ///     plural noun suffix; see <see cref="HasNounSignal"/>'s separate <c>PluralNounSuffix</c>
-    ///     signal for that case.
+    ///     Every entry necessarily ends in "-s" (that is how this verb form is spelled), but the
+    ///     list deliberately omits any such word that is also a common technical-writing plural
+    ///     noun (for example "results", "checks", "tests", "supports", "measures", "monitors",
+    ///     "returns", "changes", "turns", "sets", "reports", "triggers", "causes", "means",
+    ///     "remains", "increases", "decreases") - including one of those would let a following
+    ///     plural-noun object make the guesser misread the preceding match as a noun subject
+    ///     instead of, for example, the imperative verb of a procedure step (see
+    ///     <see cref="HasNounSignal"/>'s separate <c>PluralNounSuffix</c> signal, which already
+    ///     covers plural nouns on their own terms).
     /// </summary>
     private static readonly HashSet<string> FiniteVerbForms =
         new(StringComparer.OrdinalIgnoreCase)
         {
             "moves", "has", "does", "goes", "runs", "opens", "closes", "starts", "stops",
             "operates", "requires", "indicates", "shows", "displays", "connects", "controls",
-            "means", "results", "occurs", "applies", "remains", "appears", "increases",
-            "decreases", "provides", "allows", "causes", "produces", "supports", "contains",
-            "includes", "represents", "reduces", "affects", "measures", "monitors", "detects",
-            "enables", "disables", "activates", "reads", "writes", "sends", "receives",
-            "returns", "changes", "turns", "sets", "resets", "verifies", "confirms", "checks",
-            "tests", "adjusts", "prevents", "reports", "triggers", "generates"
+            "occurs", "applies", "appears", "provides", "allows", "produces", "contains",
+            "includes", "represents", "reduces", "affects", "detects", "enables", "disables",
+            "activates", "reads", "writes", "sends", "receives", "verifies", "confirms",
+            "adjusts", "prevents", "generates"
         };
 
     /// <summary>Words that end a determiner's reach through modifiers (conjunctions, clause markers).</summary>

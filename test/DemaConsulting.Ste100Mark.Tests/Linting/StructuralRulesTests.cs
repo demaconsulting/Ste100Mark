@@ -705,4 +705,25 @@ public class StructuralRulesTests
         Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("metering"));
         Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("closing"));
     }
+
+    /// <summary>
+    ///     Test that a genuine present-participle verb use of a word that could otherwise be
+    ///     mistaken for an always-non-verb "-ing" word is still flagged. Regression test for a
+    ///     reported bug where "evening" and "ceiling" were unconditionally excluded even though
+    ///     both have a genuine, if uncommon, verb use in technical writing ("evening out the
+    ///     load", "ceiling the price").
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordWithGenuineVerbUse_StillFlagged()
+    {
+        // Arrange: "evening" is used here as a genuine present-participle verb, not the "morning/
+        // evening" time-of-day noun.
+        var segments = Paragraph("The technician is evening out the load across both circuits.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: the genuine verb use of "evening" is still flagged
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("evening"));
+    }
 }
