@@ -1024,6 +1024,76 @@ public class DictionaryCheckerTests
     }
 
     /// <summary>
+    ///     Test that a purely self-referential entry (its only alternative is its own headword,
+    ///     for example <c>test (v) -&gt; TEST</c>) is reported with role-restriction wording rather
+    ///     than a nonsensical "avoid 'test'; use 'test' instead" word-swap message, when the
+    ///     guesser confidently resolves the disallowed grammatical role.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage()
+    {
+        // Arrange: "test" is verb-only, with its only alternative being its own headword.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["test"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["TEST"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Test the pump before installation.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Procedure);
+
+        // Assert: the message explains the role restriction instead of suggesting the same word
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Contains("different grammatical role", diagnostic.Message);
+        Assert.DoesNotContain("use 'TEST' instead", diagnostic.Message);
+    }
+
+    /// <summary>
+    ///     Test that a purely self-referential candidate within an ambiguous multi-sense result
+    ///     is phrased as a role restriction, not a word-swap suggestion, while a genuinely
+    ///     actionable candidate in the same message is unaffected.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PureSelfReferentialCandidate_WithinAmbiguousResult_UsesRoleRestrictionClause()
+    {
+        // Arrange: "test" has a purely self-referential verb sense and a genuinely actionable
+        // noun sense; a mid-sentence usage with no local signal resolves as ambiguous.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["test"] =
+                    [
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["TEST"] },
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["TRIAL", "EXAMINATION"] }
+                    ]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Reports test findings daily readers. The system operates continuously.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: the verb clause explains the role restriction; the noun clause still offers
+        // its real alternatives.
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Contains("only a different grammatical role is approved", diagnostic.Message);
+        Assert.Contains("use 'TRIAL' or 'EXAMINATION'", diagnostic.Message);
+    }
+
+    /// <summary>
     ///     Test that a match immediately followed by a number is treated as a confident verb usage
     ///     and, against a noun-only self-referential entry (disallowing the noun sense only), is
     ///     not flagged - the verb role is the approved grammatical role for this word.

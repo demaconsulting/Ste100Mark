@@ -667,4 +667,42 @@ public class StructuralRulesTests
         Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("checking"));
         Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("closing"));
     }
+
+    /// <summary>
+    ///     Test that a word ending in "-ing" that is never a present-participle verb form (a
+    ///     preposition, in this case) is excluded from the ing-form heuristic unconditionally.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordInExclusionList_NotFlagged()
+    {
+        // Arrange: "during" ends in "-ing" but is a preposition, not a verb form
+        var segments = Paragraph("Record the reading during the test.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: "during" is not flagged, but "reading" still is
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("during"));
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("reading"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word approved via the file's resolved dictionary allow list is
+    ///     excluded from the ing-form heuristic, so approving a term once suppresses it from every
+    ///     check, not only <see cref="DictionaryChecker"/>.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordOnAllowedTermsList_NotFlagged()
+    {
+        // Arrange: "metering" is approved via the file's resolved allow list
+        var segments = Paragraph("Check the metering system before closing the panel.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate(
+            "file.md", segments, LintMode.Descriptive, new RulesConfig(), ["metering"]);
+
+        // Assert: "metering" is not flagged, but "closing" still is
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("metering"));
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("closing"));
+    }
 }

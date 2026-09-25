@@ -108,7 +108,13 @@ internal static class PartOfSpeechGuesser
         new(StringComparer.OrdinalIgnoreCase)
         {
             "moves", "has", "does", "goes", "runs", "opens", "closes", "starts", "stops",
-            "operates", "requires", "indicates", "shows", "displays", "connects", "controls"
+            "operates", "requires", "indicates", "shows", "displays", "connects", "controls",
+            "means", "results", "occurs", "applies", "remains", "appears", "increases",
+            "decreases", "provides", "allows", "causes", "produces", "supports", "contains",
+            "includes", "represents", "reduces", "affects", "measures", "monitors", "detects",
+            "enables", "disables", "activates", "reads", "writes", "sends", "receives",
+            "returns", "changes", "turns", "sets", "resets", "verifies", "confirms", "checks",
+            "tests", "adjusts", "prevents", "reports", "triggers", "generates"
         };
 
     /// <summary>Words that end a determiner's reach through modifiers (conjunctions, clause markers).</summary>
@@ -128,7 +134,11 @@ internal static class PartOfSpeechGuesser
         new(StringComparer.OrdinalIgnoreCase)
         {
             "custom", "manual", "automatic", "primary", "secondary", "standard", "digital",
-            "analog", "external", "internal", "optional", "additional", "main", "backup"
+            "analog", "external", "internal", "optional", "additional", "main", "backup",
+            "electrical", "mechanical", "electronic", "hydraulic", "pneumatic", "thermal",
+            "structural", "operational", "functional", "physical", "remote", "local",
+            "upper", "lower", "front", "rear", "single", "dual", "final", "initial",
+            "current", "previous", "required", "recommended"
         };
 
     /// <summary>Negation/adverbial words that cannot be the head noun of a compound.</summary>

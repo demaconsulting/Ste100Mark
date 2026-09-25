@@ -125,12 +125,12 @@ internal static class Linter
             var mode = config.ResolveMode(relativePath);
             var rules = config.ResolveRules(relativePath);
             var segments = MarkdownProseExtractor.Extract(content);
+            var allowedTerms = config.ResolveAllowedTerms(relativePath);
 
-            diagnostics.AddRange(StructuralRules.Evaluate(relativePath, segments, mode, rules));
+            diagnostics.AddRange(StructuralRules.Evaluate(relativePath, segments, mode, rules, allowedTerms));
 
             if (dictionary is not null)
             {
-                var allowedTerms = config.ResolveAllowedTerms(relativePath);
                 var allowedPhrases = config.ResolveAllowedPhrases(relativePath);
                 diagnostics.AddRange(DictionaryChecker.Evaluate(relativePath, segments, dictionary, mode, allowedTerms, allowedPhrases));
             }

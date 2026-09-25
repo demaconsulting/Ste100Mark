@@ -84,21 +84,38 @@ against.
 or returns `null` when a confident POS guess rules out every sense (the term is not
 disallowed in the grammatical role it is being used in here).
 
+**IsPureSelfReferentialSense**: Determines whether a sense's *only* alternative is the entry's
+own headword (for example `test (v) -> TEST`), as distinct from a sense whose alternatives
+include the headword *alongside* other genuine replacement words (for example
+`check (v) -> MAKE SURE, MEASURE, EXAMINE, CHECK`). Used by `ConfidentDiagnostic` and
+`CorrectionClause` to avoid a nonsensical "avoid 'test'; use 'test' instead" word-swap message
+when there is no actual word to swap - the real correction is a change of grammatical role.
+
 **ConfidentDiagnostic**: Builds a diagnostic for a single resolved sense (single-sense term, or
 the sole surviving candidate of a multi-sense term), optionally labeling the sense's `Pos` in
-the message. When the sense has one or more alternatives, they are folded into the message
-itself via `JoinAlternatives` (for example `"use 'effect' instead"` or `"use 'cause', 'give',
-'make', or 'supply' instead"`); a sense with no alternatives falls back to the generic
-"it is not an approved ASD-STE100-style term" wording. The separate `Suggestion` field is
-unaffected and remains a plain, comma-separated list of alternatives.
+the message. When the sense is purely self-referential (see `IsPureSelfReferentialSense`), the
+message is phrased as a role restriction instead - `"Avoid using '{term}' as a {pos}; ASD-STE100
+approves '{term}' only in a different grammatical role."` - with a matching `Suggestion` telling
+the user to rewrite the sentence rather than swap words. Otherwise, when the sense has one or
+more alternatives, they are folded into the message itself via `JoinAlternatives` (for example
+`"use 'effect' instead"` or `"use 'cause', 'give', 'make', or 'supply' instead"`); a sense with
+no alternatives falls back to the generic "it is not an approved ASD-STE100-style term" wording.
+The separate `Suggestion` field for the non-self-referential path is unaffected and remains a
+plain, comma-separated list of alternatives.
 
 **AmbiguousDiagnostic**: Builds a diagnostic listing every candidate sense, labeled as
 ambiguous, when the heuristic could not confidently resolve one sense. The message has the
 shape `"Ambiguous part of speech for '{term}' — possible corrections: {clauses}."`, where each
-candidate sense contributes a clause `"as a {pos}, use {alternatives}"` (via
-`JoinAlternatives`), or just `"as a {pos}"` when a sense has no alternatives, joined across
-senses with `"; "`. The separate `Suggestion` field is unaffected and remains
-`"{alternatives} ({pos}); ..."`.
+candidate sense's clause is produced by `CorrectionClause` (see below), joined across senses
+with `"; "`. The `Suggestion` field lists only the non-self-referential candidates' plain,
+comma-separated alternatives, `"{alternatives} ({pos}); ..."`, since a purely self-referential
+candidate has no real alternative word to suggest.
+
+**CorrectionClause**: Renders one candidate sense's clause for `AmbiguousDiagnostic`'s message.
+A purely self-referential sense (see `IsPureSelfReferentialSense`) renders as
+`"as a {pos}, only a different grammatical role is approved"`; otherwise it renders as
+`"as a {pos}, use {alternatives}"` (via `JoinAlternatives`), or just `"as a {pos}"` when the
+sense has no alternatives.
 
 **JoinAlternatives**: Renders a sense's alternatives as natural "or" phrasing for embedding in
 a `Message`: a single alternative is quoted alone (`'a'`); two alternatives are joined with

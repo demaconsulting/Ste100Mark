@@ -153,10 +153,12 @@ public class PartOfSpeechGuesserTests
     public void Guess_SentenceStartInDescriptiveMode_ReturnsNull()
     {
         // Arrange: identical structure as the Procedure-mode test, but Descriptive mode, with the
-        // match followed by a neutral word (not an article) so only the sentence-start/mode
-        // behavior is exercised; a finite verb elsewhere in the segment keeps the new
+        // match followed by a neutral word ("sometimes" - an adverb ending in "s", deliberately
+        // excluded from both the FollowedByFiniteVerb and NounCompoundModifier signals per
+        // PartOfSpeechGuesser's own documented exclusions) so only the sentence-start/mode
+        // behavior is exercised; a finite verb elsewhere in the segment keeps the
         // verbless-segment noun signal from firing.
-        const string text = "Function occurs regularly. The system operates continuously.";
+        const string text = "Function sometimes fails. The system operates continuously.";
         var index = text.IndexOf("Function", StringComparison.Ordinal);
 
         // Act: execute the operation being tested
