@@ -121,6 +121,16 @@ internal sealed class Context : IDisposable
     public bool AllowEmpty { get; private init; }
 
     /// <summary>
+    ///     Gets a value indicating whether the <c>--list-rules</c> flag was specified.
+    /// </summary>
+    /// <remarks>
+    ///     When <see langword="true"/>, the program dispatches to an alternate path that emits
+    ///     the machine-readable rule catalog as JSON and exits, without requiring any Markdown
+    ///     file selection to exist.
+    /// </remarks>
+    public bool ListRules { get; private init; }
+
+    /// <summary>
     ///     Exit code returned by <see cref="ExitCode"/> when the file selection matched zero files
     ///     and <see cref="AllowEmpty"/> was not specified.
     /// </summary>
@@ -190,7 +200,8 @@ internal sealed class Context : IDisposable
             ConfigFile = parser.ConfigFile,
             Format = parser.Format,
             Strict = parser.Strict,
-            AllowEmpty = parser.AllowEmpty
+            AllowEmpty = parser.AllowEmpty,
+            ListRules = parser.ListRules
         };
 
         // Open log file if specified
@@ -289,6 +300,11 @@ internal sealed class Context : IDisposable
         public bool AllowEmpty { get; private set; }
 
         /// <summary>
+        ///     Gets a value indicating whether the <c>--list-rules</c> flag was specified.
+        /// </summary>
+        public bool ListRules { get; private set; }
+
+        /// <summary>
         ///     Parses command-line arguments
         /// </summary>
         /// <param name="args">Command-line arguments.</param>
@@ -362,6 +378,10 @@ internal sealed class Context : IDisposable
 
                 case "--allow-empty":
                     AllowEmpty = true;
+                    return index;
+
+                case "--list-rules":
+                    ListRules = true;
                     return index;
 
                 default:

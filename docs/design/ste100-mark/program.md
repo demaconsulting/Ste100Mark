@@ -37,10 +37,14 @@ Creates a `Context` using `Context.Create(args)`, calls `Run(context)`, and retu
 - *Postconditions*: Exactly one handler has been called.
 
 Inspects flags in priority order. First, if `context.Version` is true, it writes only the
-version string and returns without printing the banner. Otherwise it determines banner behavior
-before dispatch: the banner is suppressed only when `context.Format == OutputFormat.Json` and both
-`context.Help` and `context.Validate` are false, because the main lint path must keep stdout to a
-single JSON document. For all other paths, including `--help --format json` and
+version string and returns without printing the banner. Next, if `context.ListRules` is true, it
+writes `RuleCatalog.ToJson()` and returns, also without printing the banner - dispatched at this
+priority (immediately after `--version`, ahead of the banner decision) specifically so that
+`--list-rules` output remains a single parseable JSON document regardless of any other flags
+supplied alongside it, mirroring `--version`'s no-banner behavior. Otherwise it determines banner
+behavior before dispatch: the banner is suppressed only when `context.Format == OutputFormat.Json`
+and both `context.Help` and `context.Validate` are false, because the main lint path must keep
+stdout to a single JSON document. For all other paths, including `--help --format json` and
 `--validate --format json`, `Run` prints the banner first. After that it dispatches in order:
 (1) help via `PrintHelp`; (2) self-validation via `Validation.Run(context)`; (3) main lint tool
 logic via `RunToolLogic(context)`. Exactly one path runs per invocation.
@@ -51,7 +55,8 @@ logic via `RunToolLogic(context)`. Exactly one path runs per invocation.
 - *Returns*: `void`.
 
 **PrintHelp**: Writes the usage synopsis and the umbrella CLI options table to `context`,
-including the lint-related options `--config`, `--format`, `--strict`, `--allow-empty`, and the
+including the lint-related options `--config`, `--format`, `--strict`, `--allow-empty`,
+`--list-rules`, and the
 optional input glob arguments used by the main lint workflow, plus a summary of the three exit
 codes (0/1/2) and when `--allow-empty` changes that outcome.
 
@@ -79,6 +84,7 @@ propagate to `Main`.
 
 - **Context** — `Program` reads parsed flags from `Context` and calls `Context.WriteLine` and
   `Context.WriteError` for all output.
+- **RuleCatalog** — `Program.Run` calls `RuleCatalog.ToJson()` when `context.ListRules` is set.
 - **Validation** — `Program.Run` calls `Validation.Run(context)` when the `--validate` flag is
   set.
 - **Linter** — `Program.RunToolLogic` calls `Linter.Run(context)` for the main lint execution path.

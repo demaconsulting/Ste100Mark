@@ -18,8 +18,9 @@ flags and write output. The `Cli` subsystem contains one unit: `Context`.
 - *Contract*: Parses `string[] args` into flag properties and opens the log file if `--log` is
   present. Returns a fully initialized `Context`. Accepts `--result` as a legacy alias for
   `--results`, stores an explicit lint configuration path from `--config`, stores `text` or
-  `json` output-format selection from `--format`, records whether `--strict` was requested, and
-  records whether `--allow-empty` was requested.
+  `json` output-format selection from `--format`, records whether `--strict` was requested,
+  records whether `--allow-empty` was requested, and records whether `--list-rules` was
+  requested.
 - *Constraints*: Throws `ArgumentException` for unknown or malformed arguments; throws
   `InvalidOperationException` when the log file cannot be opened.
 
@@ -89,13 +90,17 @@ of each invocation and passes it to all other units that produce output.
 The subsystem has no dependencies on other tool subsystems; it uses only .NET BCL types
 (`Console`, `StreamWriter`).
 
-`Program.Run` dispatches in priority order: `--version`, then help, then self-validation, then the
-main lint flow. During main lint flow, `--format json` suppresses the normal banner so stdout can
+`Program.Run` dispatches in priority order: `--version`, then `--list-rules`, then help, then
+self-validation, then the
+main lint flow. `--list-rules` is dispatched immediately after `--version` and before the banner
+decision so its JSON output remains a single parseable document. During main lint flow,
+`--format json` suppresses the normal banner so stdout can
 remain a single parseable JSON document; help and self-validation still emit the banner even if a
 JSON format argument is present.
 
 The lint path uses `Context.ConfigFile`, `Context.Format`, `Context.Strict`, and
-`Context.AllowEmpty` exactly as parsed.
+`Context.AllowEmpty` exactly as parsed. `Context.ListRules` is consumed only by `Program.Run`'s
+dispatch decision, not by the lint path itself.
 `Linter` passes an explicit `--config` path through to configuration loading, defaults to
 `.ste100mark.yaml` only when no explicit path was supplied, reports diagnostics in the selected
 text or JSON format, treats `--strict` as an exit-code policy that promotes warn-severity

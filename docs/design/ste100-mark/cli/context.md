@@ -38,6 +38,9 @@ supplied via `--depth`.
 zero-matched file selection back into a success exit code instead of the distinct
 `NoFilesMatchedExitCode`.
 
+**ListRules**: `bool` — `true` when `--list-rules` was present in the argument list; requests
+that `Program.Run` dispatch to the rule-catalog JSON output path instead of the main lint flow.
+
 **NoFilesMatchedExitCode**: `int` (const, `2`) — The distinct exit code returned by `ExitCode`
 when the file selection matched zero files and `AllowEmpty` was not specified. Kept as a single
 named constant so `Program`'s help text and the derivation logic below share one source of
@@ -54,7 +57,8 @@ takes precedence so a genuine reported error is never masked by the zero-files e
 - *Parameters*: `string[] args` — raw command-line argument array.
 - *Returns*: `Context` — a new instance with all flags set.
 - *Preconditions*: `args` is not null.
-- *Postconditions*: All flag properties reflect the parsed argument state; the log file is open
+- *Postconditions*: All flag properties reflect the parsed argument state, including
+  `ListRules`; the log file is open
   if `--log` was supplied.
 
 Delegates to the private `ArgumentParser` helper to parse flags, then opens the log file by

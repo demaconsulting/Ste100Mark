@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Text.Json;
 using DemaConsulting.Ste100Mark.Cli;
 
 namespace DemaConsulting.Ste100Mark.Tests;
@@ -48,6 +49,42 @@ public class ProgramTests
             // Assert: verify expected behavior
             var output = outWriter.ToString();
             Assert.Contains(Program.Version, output);
+            Assert.DoesNotContain("Copyright", output);
+            Assert.DoesNotContain("Ste100Mark version", output);
+            Assert.Equal(0, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that Run with list-rules flag displays the rule catalog only.
+    /// </summary>
+    [Fact]
+    public void Program_Run_WithListRulesFlag_DisplaysRuleCatalogOnly()
+    {
+        // Arrange: setup test conditions
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["--list-rules"]);
+
+            // Act: execute the operation being tested
+            Program.Run(context);
+
+            // Assert: verify expected behavior
+            var output = outWriter.ToString();
+            using var document = JsonDocument.Parse(output);
+            Assert.Equal(JsonValueKind.Array, document.RootElement.ValueKind);
+            var codes = document.RootElement.EnumerateArray()
+                .Select(e => e.GetProperty("code").GetString())
+                .ToList();
+            Assert.Contains("STE100-4.1", codes);
+            Assert.Contains("STE100-DICT", codes);
             Assert.DoesNotContain("Copyright", output);
             Assert.DoesNotContain("Ste100Mark version", output);
             Assert.Equal(0, context.ExitCode);

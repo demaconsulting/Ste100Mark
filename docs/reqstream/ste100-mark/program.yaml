@@ -77,3 +77,15 @@ sections:
           covered by the existing Program unit-test suite.
         tests:
           - Program_Main_WithInvalidArgs_ReturnsNonZeroExitCode
+
+      - id: Ste100Mark-Program-ListRules
+        title: >-
+          The Program class shall support the --list-rules flag to display the rule catalog as
+          JSON and exit successfully, dispatched before the main lint path and without printing
+          the banner.
+        justification: |
+          Discovering rule codes must not require a Markdown file selection to exist, and the
+          output must remain a single parseable JSON document, matching the no-banner precedent
+          already established for --version.
+        tests:
+          - Program_Run_WithListRulesFlag_DisplaysRuleCatalogOnly

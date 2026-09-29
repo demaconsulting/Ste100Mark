@@ -62,6 +62,9 @@ ste100mark --help
 
 # Run self-validation
 ste100mark --validate
+
+# Display the machine-readable rule catalog
+ste100mark --list-rules
 ```
 
 ## ASD-STE100 Linting
@@ -119,6 +122,27 @@ Mechanical rules reported by the linter are `STE100-4.1` (sentence length), `STE
 Advisory heuristics are `STE100-ADV-PARA` (paragraph length), `STE100-ADV-PASSIVE`
 (passive voice), `STE100-ADV-COMPLEXVERB` (perfect/modal-perfect tense), and
 `STE100-ADV-INGFORM` (`-ing` form).
+
+### Discovering Rule Codes
+
+Run `ste100mark --list-rules` to display the full, machine-readable rule catalog as a JSON
+array on stdout, without requiring any Markdown files to exist:
+
+```bash
+ste100mark --list-rules
+```
+
+Each entry has the shape:
+
+```json
+{
+  "code": "STE100-4.1",
+  "title": "Sentence word-count limit (Rules 4.1, 8.4-8.7).",
+  "official": true,
+  "suggestionKind": "advice",
+  "modes": ["procedure", "descriptive"]
+}
+```
 
 ### Profiles
 
@@ -234,6 +258,7 @@ reported severity.
 | `--format <text\|json>` | Diagnostic output format for linting (default: `text`) |
 | `--strict` | Promote warn-severity lint findings to a failing exit code |
 | `--allow-empty` | Treat a file selection that matches zero files as success (default: exit code 2) |
+| `--list-rules` | Display the rule catalog as a JSON array and exit |
 
 ## Error Handling
 

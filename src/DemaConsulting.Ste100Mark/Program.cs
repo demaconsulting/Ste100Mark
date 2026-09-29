@@ -114,6 +114,14 @@ internal static class Program
             return;
         }
 
+        // Priority 1b: Rule catalog query. Dispatched before the banner (like --version) so stdout
+        // remains a single parseable JSON document and does not require any Markdown file selection.
+        if (context.ListRules)
+        {
+            context.WriteLine(RuleCatalog.ToJson());
+            return;
+        }
+
         // Suppress the banner only when main lint execution is emitting JSON so stdout remains a
         // single parseable document; help and validation still print the banner even with --format json.
         var suppressBanner = context.Format == OutputFormat.Json && !context.Help && !context.Validate;
@@ -173,6 +181,7 @@ internal static class Program
               --format <text|json>       Diagnostic output format (default: text)
               --strict                   Promote warn-severity findings to errors for exit code
               --allow-empty              Treat zero matched files as success (default: exit code {Context.NoFilesMatchedExitCode})
+              --list-rules               Display the rule catalog as JSON and exit
 
             [globs...] are optional Markdown glob patterns to lint (e.g. "docs/**/*.md"); a
             literal file path is simply a pattern with no wildcard characters, so plain paths

@@ -17,6 +17,8 @@ N/A - standard test environment.
 - Exit code 0 is returned for all valid flag combinations.
 - Exit code 1 is returned when invalid arguments are supplied to `Program.Main`.
 - `Program.Version` returns a non-empty, non-null string.
+- `--list-rules` displays the rule catalog as a single parseable JSON document with no banner
+  text, and exits with code 0.
 
 ### Test Scenarios
 
@@ -25,10 +27,18 @@ created from `["--version"]`; the output contains the version string, "Copyright
 appear, the banner prefix does not appear, and exit code is 0, confirming version-only output
 with no banner. This scenario is tested by `Program_Run_WithVersionFlag_DisplaysVersionOnly`.
 
+**Program_Run_WithListRulesFlag_DisplaysRuleCatalogOnly**: `Program.Run` is called with a context
+created from `["--list-rules"]`; the output parses as a JSON array containing every expected
+rule code (including `STE100-4.1` and `STE100-DICT`), "Copyright" does not appear, the banner
+prefix does not appear, and exit code is 0, confirming rule-catalog-only output with no banner,
+dispatched at the same priority position as `--version` and before the main lint path. This
+scenario is tested by `Program_Run_WithListRulesFlag_DisplaysRuleCatalogOnly`.
+
 **Program_Run_WithHelpFlag_DisplaysUsageInformation**: `Program.Run` is called with a context
 from `["--help"]`; because version dispatch did not trigger, the banner is printed before help
 text, and the output contains "Usage:", "Options:", `--version`, `--help`, `--config`,
-`--format`, `--strict`, `--allow-empty`, and `globs`. Exit code is 0. This scenario is tested by
+`--format`, `--strict`, `--allow-empty`, `--list-rules`, and `globs`. Exit code is 0. This
+scenario is tested by
 `Program_Run_WithHelpFlag_DisplaysUsageInformation`.
 
 **Program_Run_WithValidateFlag_RunsValidation**: `Program.Run` is called with a context from
@@ -69,10 +79,13 @@ lint path runs with `context.Format == OutputFormat.Json` and neither help nor v
 selected, so stdout stays a single parseable JSON document. No existing `ProgramTests.cs` test
 currently covers this precedence rule directly.
 
-**Dispatch Precedence Between Version, Help, Validate, and Lint**: `Program.Run` evaluates version
-first, then banner suppression/printing, then help, then validation, and finally main lint logic.
+**Dispatch Precedence Between Version, ListRules, Help, Validate, and Lint**: `Program.Run`
+evaluates version
+first, then `--list-rules`, then banner suppression/printing, then help, then validation, and
+finally main lint logic.
 Existing tests cover the version path (`Program_Run_WithVersionFlag_DisplaysVersionOnly`,
-`Program_Run_WithShortVersionFlag_DisplaysVersion`), help paths
+`Program_Run_WithShortVersionFlag_DisplaysVersion`), the list-rules path
+(`Program_Run_WithListRulesFlag_DisplaysRuleCatalogOnly`), help paths
 (`Program_Run_WithHelpFlag_DisplaysUsageInformation`, `Program_Run_WithShortHelpFlag_DisplaysUsage`,
 `Program_Run_WithQuestionMarkFlag_DisplaysUsage`), validation path
 (`Program_Run_WithValidateFlag_RunsValidation`), and default lint-path entry

@@ -595,5 +595,42 @@ public class IntegrationTests
             Directory.Delete(workingDirectory, true);
         }
     }
+
+    /// <summary>
+    ///     Test that <c>--list-rules</c> outputs the rule catalog as JSON and exits successfully,
+    ///     without requiring any Markdown files to exist in the working directory.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_ListRulesFlag_Provided_OutputsRuleCatalogJson()
+    {
+        // Arrange: an isolated, empty working directory with no Markdown files
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            // Act: run the linter with --list-rules and no other arguments
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "--list-rules");
+
+            // Assert: the entire output parses as a single JSON array containing every expected rule code
+            Assert.Equal(0, exitCode);
+            using var document = System.Text.Json.JsonDocument.Parse(output);
+            Assert.Equal(System.Text.Json.JsonValueKind.Array, document.RootElement.ValueKind);
+            var codes = document.RootElement.EnumerateArray()
+                .Select(e => e.GetProperty("code").GetString())
+                .ToHashSet();
+            var expectedCodes = new[]
+            {
+                "STE100-4.1", "STE100-8.1", "STE100-4.2", "STE100-DICT",
+                "STE100-ADV-PARA", "STE100-ADV-PASSIVE", "STE100-ADV-COMPLEXVERB", "STE100-ADV-INGFORM"
+            };
+            foreach (var expectedCode in expectedCodes)
+            {
+                Assert.Contains(expectedCode, codes);
+            }
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
 }
 

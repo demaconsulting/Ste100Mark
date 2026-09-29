@@ -283,3 +283,22 @@ sections:
         tests:
           - Ste100Mark_LintWithNoMatchingFiles_ReturnsNoFilesMatchedExitCode
           - Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode
+
+      - id: Ste100Mark-System-ListRules
+        title: >-
+          The tool shall display the machine-readable rule catalog as a JSON array and exit
+          successfully when `--list-rules` is provided, without requiring any Markdown file
+          selection to exist.
+        justification: |
+          Callers building tooling or documentation around the linter's rule codes need a
+          reliable, machine-readable way to discover every rule code the tool can emit, along
+          with its official/advisory classification, suggestion kind, and applicable mode(s),
+          without needing a Markdown file to lint or reading the tool's source code.
+        tags: [system]
+        children:
+          - Ste100Mark-Program-ListRules
+          - Ste100Mark-Cli-ListRules
+          - Ste100Mark-Context-ListRulesArgumentParsing
+          - Ste100Mark-Linting-RuleCatalog
+        tests:
+          - Ste100Mark_ListRulesFlag_Provided_OutputsRuleCatalogJson
