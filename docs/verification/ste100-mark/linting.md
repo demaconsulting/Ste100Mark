@@ -124,6 +124,20 @@ same segment. This scenario is tested by `Extract_InlineCodeSpan_KeptVerbatimInP
 `Evaluate_DisallowedTermOnlyInsideInlineCode_NotFlagged`, and
 `Evaluate_DisallowedTermInsideAndOutsideInlineCode_FlagsOnlyProseOccurrence`.
 
+**Ste100Mark-Linting-FrontMatter**: A leading YAML front matter block, delimited by `---` as
+the document's literal first line and closed by a later `---` or `...`, is verified to be
+excluded entirely from prose extraction (so metadata such as names, titles, and keywords is
+never checked as prose), while a document line after the front matter reports its true source
+line number. A `---` first line with no closing delimiter, and a `---` line appearing anywhere
+other than the document's first line, are both verified to fall back to ordinary paragraph
+content rather than being misidentified as front matter or silently discarded. This scenario
+is tested by `Extract_LeadingFrontMatter_ExcludedFromProse`,
+`Extract_LeadingFrontMatterClosedWithEllipsis_ExcludedFromProse`,
+`Extract_LeadingFrontMatter_SubsequentSegmentReportsTrueLineNumber`,
+`Extract_LeadingHyphenLineWithoutClosingDelimiter_NotTreatedAsFrontMatter`,
+`Extract_HyphenLineNotOnFirstLine_NotTreatedAsFrontMatterStart`, and
+`Run_FrontMatter_ExcludedFromDictionaryCheck`.
+
 **Ste100Mark-Linting-DictionaryPos**: Part-of-speech sense selection is verified for every
 heuristic signal in isolation (infinitive marker, modal auxiliary, progressive auxiliary,
 verb-inflection suffix, imperative sentence start in both Procedure and Descriptive mode,

@@ -206,6 +206,7 @@ sections:
           - Ste100Mark-Linting-DictionaryPos
           - Ste100Mark-Linting-AccurateLineNumbers
           - Ste100Mark-Linting-WrappedListItemPhraseMatching
+          - Ste100Mark-Linting-FrontMatter
           - Ste100Mark-Linting-ExitCode
           - Ste100Mark-Linting-CliIntegration
         tests:

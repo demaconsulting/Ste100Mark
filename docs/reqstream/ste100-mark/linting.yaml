@@ -200,6 +200,29 @@ sections:
           - Evaluate_DisallowedTermOnlyInsideInlineCode_NotFlagged
           - Evaluate_DisallowedTermInsideAndOutsideInlineCode_FlagsOnlyProseOccurrence
 
+      - id: Ste100Mark-Linting-FrontMatter
+        title: >-
+          The Linting subsystem shall recognize a leading YAML front matter block, delimited
+          by `---` as the document's literal first line and closed by a later `---` or `...`,
+          and exclude it entirely from prose checks.
+        justification: |
+          Front matter (the convention used by Jekyll, Hugo, and Pandoc) holds document
+          metadata such as titles, author names, and keywords, not technical prose. Checking
+          it as prose produces false-positive findings against placeholder names, keywords,
+          and other non-sentence content, and can suggest nonsensical "corrections" to
+          metadata values. The opening delimiter must be the document's literal first line, so
+          a `---` line elsewhere in the document (for example, a horizontal rule) is never
+          misidentified as front matter; a `---` first line with no closing delimiter falls
+          back to being treated as ordinary content rather than silently discarding the rest
+          of the document.
+        tests:
+          - Extract_LeadingFrontMatter_ExcludedFromProse
+          - Extract_LeadingFrontMatterClosedWithEllipsis_ExcludedFromProse
+          - Extract_LeadingFrontMatter_SubsequentSegmentReportsTrueLineNumber
+          - Extract_LeadingHyphenLineWithoutClosingDelimiter_NotTreatedAsFrontMatter
+          - Extract_HyphenLineNotOnFirstLine_NotTreatedAsFrontMatterStart
+          - Run_FrontMatter_ExcludedFromDictionaryCheck
+
       - id: Ste100Mark-Linting-DictionaryPos
         title: >-
           The Linting subsystem shall select the applicable part-of-speech-tagged sense(s) of a

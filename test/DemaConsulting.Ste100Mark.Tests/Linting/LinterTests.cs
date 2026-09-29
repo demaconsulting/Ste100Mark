@@ -753,6 +753,42 @@ public sealed class LinterTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a leading YAML front matter block is excluded from linting, so a disallowed
+    ///     dictionary term appearing only in front matter metadata (for example an <c>author</c>
+    ///     field) is never flagged, while the same term appearing in the document body still is.
+    /// </summary>
+    [Fact]
+    public void Run_FrontMatter_ExcludedFromDictionaryCheck()
+    {
+        // Arrange: front matter metadata containing "utilize", and a body sentence also using it
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, "doc.md"),
+            "---\ntitle: How to utilize the tool\n---\n\n# Title\n\nPlease utilize the tool.\n");
+
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["doc.md"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: exactly one STE100-DICT finding is reported, for the body occurrence only
+            var output = outWriter.ToString();
+            var occurrences = System.Text.RegularExpressions.Regex.Matches(output, "STE100-DICT").Count;
+            Assert.Equal(1, occurrences);
+            Assert.Contains(":7:", output, StringComparison.Ordinal);
+            Assert.Equal(1, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
     ///     Test that the dictionary check runs by default (<c>dictionary.enabled</c> defaults to
     ///     <see langword="true"/>) when no <c>dictionary:</c> section is present at all.
     /// </summary>

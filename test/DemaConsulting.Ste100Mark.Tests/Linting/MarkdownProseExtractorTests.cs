@@ -385,6 +385,105 @@ public class MarkdownProseExtractorTests
     }
 
     /// <summary>
+    ///     Test that a leading YAML front matter block, delimited by <c>---</c> on both the first
+    ///     line and a later closing line, is excluded entirely from prose segments, so metadata like
+    ///     names, titles, and keywords is never treated as prose.
+    /// </summary>
+    [Fact]
+    public void Extract_LeadingFrontMatter_ExcludedFromProse()
+    {
+        // Arrange: a Pandoc-style front matter block followed by a prose paragraph
+        const string markdown = "---\ntitle: Place, Holder\nauthor: Place Holder\n---\n\nOpen the panel.";
+
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: only the prose paragraph after the front matter is extracted
+        var segment = Assert.Single(segments);
+        Assert.Equal("Open the panel.", segment.Text);
+        Assert.DoesNotContain(segments, s => s.Text.Contains("Place", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    ///     Test that a front matter block closed with the YAML document-end marker <c>...</c>,
+    ///     rather than a second <c>---</c>, is also recognized and excluded, matching Pandoc's
+    ///     accepted closing delimiters.
+    /// </summary>
+    [Fact]
+    public void Extract_LeadingFrontMatterClosedWithEllipsis_ExcludedFromProse()
+    {
+        // Arrange: front matter closed with the YAML "..." document-end marker
+        const string markdown = "---\ntitle: Sample\n...\n\nOpen the panel.";
+
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: only the prose paragraph after the front matter is extracted
+        var segment = Assert.Single(segments);
+        Assert.Equal("Open the panel.", segment.Text);
+    }
+
+    /// <summary>
+    ///     Test that a reported source line number of a segment after front matter reflects its true
+    ///     position in the original file, not a position recomputed as if front matter were absent.
+    /// </summary>
+    [Fact]
+    public void Extract_LeadingFrontMatter_SubsequentSegmentReportsTrueLineNumber()
+    {
+        // Arrange: a three-line front matter block (lines 1-3), then a paragraph on line 5
+        const string markdown = "---\ntitle: Sample\n---\n\nOpen the panel.";
+
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: the paragraph is reported at its true line number, 5
+        var segment = Assert.Single(segments);
+        Assert.Equal(5, segment.LineNumber);
+    }
+
+    /// <summary>
+    ///     Test that a leading <c>---</c> line with no closing delimiter anywhere in the document is
+    ///     not treated as front matter (matching Jekyll/Hugo/Pandoc behavior) and is processed as
+    ///     ordinary paragraph content instead of being silently discarded.
+    /// </summary>
+    [Fact]
+    public void Extract_LeadingHyphenLineWithoutClosingDelimiter_NotTreatedAsFrontMatter()
+    {
+        // Arrange: a document whose first line is "---" but which never closes the block
+        const string markdown = "---\n\nOpen the panel.";
+
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: the "---" line and the following paragraph are both extracted as ordinary
+        // paragraphs; nothing was silently swallowed as front matter
+        Assert.Equal(2, segments.Count);
+        Assert.Equal("---", segments[0].Text);
+        Assert.Equal("Open the panel.", segments[1].Text);
+    }
+
+    /// <summary>
+    ///     Test that a <c>---</c> delimiter appearing after the first line (not at the very start of
+    ///     the document) is never treated as the opening of a front matter block, since the
+    ///     convention requires the opening delimiter to be the document's literal first line.
+    /// </summary>
+    [Fact]
+    public void Extract_HyphenLineNotOnFirstLine_NotTreatedAsFrontMatterStart()
+    {
+        // Arrange: a paragraph, then a horizontal-rule-like line, then more prose
+        const string markdown = "Before text.\n\n---\n\nAfter text.";
+
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: all three paragraphs are present; the "---" line was not consumed as front matter
+        Assert.Equal(3, segments.Count);
+        Assert.Equal("Before text.", segments[0].Text);
+        Assert.Equal("---", segments[1].Text);
+        Assert.Equal("After text.", segments[2].Text);
+    }
+
+    /// <summary>
     ///     Test that an inline code span is retained verbatim in prose, alongside surrounding text.
     /// </summary>
     [Fact]
