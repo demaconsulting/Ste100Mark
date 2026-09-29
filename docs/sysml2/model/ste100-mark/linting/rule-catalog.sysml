@@ -1,6 +1,6 @@
 package Ste100Mark {
     part def RuleCatalog {
-        doc /* Static, hand-authored source of truth for every rule code the Linting subsystem can emit, exposed as machine-readable metadata (title, official/advisory classification, suggestion kind, applicable mode(s)) and serialized as JSON for the --list-rules CLI dispatch path. */
+        doc /* Static, hand-authored source of truth for every rule code the Linting subsystem can emit, exposed as machine-readable metadata (title, official/mechanical/advisory classification, suggestion kind, applicable mode(s)) and serialized as JSON for the --list-rules CLI dispatch path. */
 
         comment sourceRef /* Source: src/DemaConsulting.Ste100Mark/Linting/RuleCatalog.cs */
         comment testRef /* Test: test/DemaConsulting.Ste100Mark.Tests/Linting/RuleCatalogTests.cs */

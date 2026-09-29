@@ -292,8 +292,9 @@ sections:
         justification: |
           Callers building tooling or documentation around the linter's rule codes need a
           reliable, machine-readable way to discover every rule code the tool can emit, along
-          with its official/advisory classification, suggestion kind, and applicable mode(s),
-          without needing a Markdown file to lint or reading the tool's source code.
+          with its classification (official, mechanical, or advisory), suggestion kind, and
+          applicable mode(s), without needing a Markdown file to lint or reading the tool's
+          source code.
         tags: [system]
         children:
           - Ste100Mark-Program-ListRules

@@ -109,11 +109,16 @@ Each entry has the shape:
 {
   "code": "STE100-4.1",
   "title": "Sentence word-count limit (Rules 4.1, 8.4-8.7).",
-  "official": true,
+  "classification": "official",
   "suggestionKind": "advice",
   "modes": ["procedure", "descriptive"]
 }
 ```
+
+`classification` is one of `"official"` (an actual ASD-STE100 numbered rule), `"mechanical"`
+(a tool-defined, deterministic check that is not itself a numbered rule, for example
+`STE100-DICT`), or `"advisory"` (a heuristic that may under- or over-detect and is not itself
+a numbered rule).
 
 ## Strict Mode
 

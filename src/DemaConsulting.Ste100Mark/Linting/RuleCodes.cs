@@ -29,8 +29,8 @@ namespace DemaConsulting.Ste100Mark.Linting;
 /// </summary>
 /// <remarks>
 ///     This registry only centralizes the code strings themselves; it is not a substitute for
-///     <see cref="RuleCatalog"/>, which additionally holds each code's title, official/advisory
-///     classification, suggestion kind, and applicable modes. Adding a constant here does not by
+///     <see cref="RuleCatalog"/>, which additionally holds each code's title, classification
+///     (official/mechanical/advisory), suggestion kind, and applicable modes. Adding a constant here does not by
 ///     itself add a <see cref="RuleCatalog"/> entry - that step remains a separate, deliberate edit -
 ///     but every code an emitter can produce is now guaranteed to be textually identical to the
 ///     code <see cref="RuleCatalog"/> uses, eliminating typo/copy drift between the two.
