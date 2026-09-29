@@ -274,6 +274,9 @@ public class DictionaryCheckerTests
         Assert.Equal("use", diagnostic.Suggestion);
         Assert.DoesNotContain("used as a", diagnostic.Message);
         Assert.DoesNotContain("ambiguous", diagnostic.Message);
+        var citation = Assert.Single(diagnostic.Citations!);
+        Assert.Equal("use", citation.Term);
+        Assert.Equal("verb", citation.Pos);
     }
 
     /// <summary>
@@ -349,6 +352,9 @@ public class DictionaryCheckerTests
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("effect", diagnostic.Suggestion);
         Assert.Contains("used as a noun", diagnostic.Message);
+        var citation = Assert.Single(diagnostic.Citations!);
+        Assert.Equal("effect", citation.Term);
+        Assert.Equal("noun", citation.Pos);
     }
 
     /// <summary>
@@ -369,6 +375,9 @@ public class DictionaryCheckerTests
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("affect", diagnostic.Suggestion);
         Assert.Contains("used as a verb", diagnostic.Message);
+        var citation = Assert.Single(diagnostic.Citations!);
+        Assert.Equal("affect", citation.Term);
+        Assert.Equal("verb", citation.Pos);
     }
 
     /// <summary>
@@ -393,6 +402,10 @@ public class DictionaryCheckerTests
             diagnostic.Message);
         Assert.Contains("effect", diagnostic.Suggestion);
         Assert.Contains("affect", diagnostic.Suggestion);
+        Assert.NotNull(diagnostic.Citations);
+        Assert.Equal(2, diagnostic.Citations.Count);
+        Assert.Contains(diagnostic.Citations, c => c is { Term: "effect", Pos: "noun" });
+        Assert.Contains(diagnostic.Citations, c => c is { Term: "affect", Pos: "verb" });
     }
 
     /// <summary>
@@ -438,6 +451,9 @@ public class DictionaryCheckerTests
         Assert.DoesNotContain(" (adjective)", diagnostic.Suggestion);
         Assert.DoesNotContain("; (adjective)", diagnostic.Suggestion);
         Assert.Equal("dial (noun)", diagnostic.Suggestion);
+        var citation = Assert.Single(diagnostic.Citations!);
+        Assert.Equal("dial", citation.Term);
+        Assert.Equal("noun", citation.Pos);
     }
 
     /// <summary>
@@ -1098,6 +1114,7 @@ public class DictionaryCheckerTests
         var diagnostic = Assert.Single(diagnostics);
         Assert.Contains("different grammatical role", diagnostic.Message);
         Assert.DoesNotContain("use 'TEST' instead", diagnostic.Message);
+        Assert.Null(diagnostic.Citations);
     }
 
     /// <summary>
@@ -1136,6 +1153,10 @@ public class DictionaryCheckerTests
         var diagnostic = Assert.Single(diagnostics);
         Assert.Contains("only a different grammatical role is approved", diagnostic.Message);
         Assert.Contains("use 'TRIAL' or 'EXAMINATION'", diagnostic.Message);
+        Assert.NotNull(diagnostic.Citations);
+        Assert.Equal(2, diagnostic.Citations.Count);
+        Assert.Contains(diagnostic.Citations, c => c is { Term: "TRIAL", Pos: "noun" });
+        Assert.Contains(diagnostic.Citations, c => c is { Term: "EXAMINATION", Pos: "noun" });
     }
 
     /// <summary>

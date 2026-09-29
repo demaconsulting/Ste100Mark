@@ -111,6 +111,62 @@ public class DiagnosticReporterTests
     }
 
     /// <summary>
+    ///     Test that JSON-format reporting includes a structured <c>citations</c> array for a
+    ///     dictionary diagnostic that has approved-term citations, and omits it (writes a JSON
+    ///     <c>null</c>) for a diagnostic with none - the field a consumer can use to recover
+    ///     term/part-of-speech data without parsing the <c>suggestion</c> prose string.
+    /// </summary>
+    [Fact]
+    public void Report_JsonFormat_WritesCitationsForDictionaryDiagnostic()
+    {
+        // Arrange: one dictionary diagnostic with structured citations, alongside a plain-advice
+        // diagnostic that has none
+        IReadOnlyList<Diagnostic> diagnostics =
+        [
+            new Diagnostic(
+                "docs/sample.md",
+                7,
+                null,
+                "STE100-DICT",
+                Severity.Error,
+                "Ambiguous part of speech for 'Impact' \u2014 possible corrections: as a noun, use 'effect'; as a verb, use 'affect'.",
+                "effect (noun); affect (verb)",
+                [new DictionaryCitation("effect", "noun"), new DictionaryCitation("affect", "verb")]),
+            new Diagnostic("docs/sample.md", 5, null, "STE100-ADV-PASSIVE", Severity.Warn, "Possible passive voice.", null)
+        ];
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["--format", "json"]);
+
+            // Act: execute the operation being tested
+            DiagnosticReporter.Report(context, diagnostics, ["docs/sample.md"], false);
+
+            // Assert: verify expected behavior
+            var output = outWriter.ToString();
+            using var document = System.Text.Json.JsonDocument.Parse(output);
+            var jsonDiagnostics = document.RootElement.GetProperty("diagnostics");
+
+            var dictionaryEntry = jsonDiagnostics[0];
+            var citations = dictionaryEntry.GetProperty("citations");
+            Assert.Equal(2, citations.GetArrayLength());
+            Assert.Equal("effect", citations[0].GetProperty("term").GetString());
+            Assert.Equal("noun", citations[0].GetProperty("pos").GetString());
+            Assert.Equal("affect", citations[1].GetProperty("term").GetString());
+            Assert.Equal("verb", citations[1].GetProperty("pos").GetString());
+
+            var adviceEntry = jsonDiagnostics[1];
+            Assert.Equal(System.Text.Json.JsonValueKind.Null, adviceEntry.GetProperty("citations").ValueKind);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
     ///     Test that reporting an empty diagnostic list still writes a valid zero-count summary.
     /// </summary>
     [Fact]

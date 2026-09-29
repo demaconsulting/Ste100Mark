@@ -49,6 +49,17 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     Optional suggested fix (for example, an alternative word from the dictionary), or
 ///     <see langword="null"/> when the rule has no specific suggestion to offer.
 /// </param>
+/// <param name="Citations">
+///     Structured approved-term citations backing <paramref name="Suggestion"/>, or
+///     <see langword="null"/> when the rule's suggestion is free-text advice rather than a
+///     dictionary citation, or when no approved alternative term exists to cite. Populated only
+///     by <see cref="DictionaryChecker"/>, whose <c>STE100-DICT</c> findings are declared
+///     <c>"citationForm"</c> in <see cref="RuleCatalog"/>; other rules always leave this
+///     <see langword="null"/>. Exists alongside the pre-formatted <paramref name="Suggestion"/>
+///     string (rather than replacing it) so a consumer can use structured term/part-of-speech
+///     data instead of parsing it back out of prose, without breaking existing text-mode/JSON
+///     consumers of <paramref name="Suggestion"/>.
+/// </param>
 internal sealed record Diagnostic(
     string File,
     int Line,
@@ -56,4 +67,17 @@ internal sealed record Diagnostic(
     string RuleCode,
     Severity Severity,
     string Message,
-    string? Suggestion);
+    string? Suggestion,
+    IReadOnlyList<DictionaryCitation>? Citations = null);
+
+/// <summary>
+///     One structured approved-term citation backing a <see cref="Diagnostic.Citations"/> list:
+///     an ASD-STE100-style approved term, paired with the grammatical role it is approved in.
+/// </summary>
+/// <param name="Term">The approved replacement term (for example <c>"GIVE"</c>).</param>
+/// <param name="Pos">
+///     The grammatical role the term is approved in, rendered the same way as
+///     <see cref="Diagnostic.Message"/>'s part-of-speech wording (for example <c>"noun"</c>,
+///     <c>"verb"</c>, or <c>"general"</c> for a role-independent term).
+/// </param>
+internal sealed record DictionaryCitation(string Term, string Pos);

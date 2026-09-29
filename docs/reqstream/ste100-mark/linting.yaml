@@ -413,6 +413,7 @@ sections:
           - Report_NoFilesMatchedTrue_WritesFailureSummaryLine
           - Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary
           - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
+          - Report_JsonFormat_WritesCitationsForDictionaryDiagnostic
           - Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument
 
       - id: Ste100Mark-Linting-ReportedFiles

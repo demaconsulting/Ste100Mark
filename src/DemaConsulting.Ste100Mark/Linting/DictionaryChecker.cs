@@ -351,7 +351,10 @@ internal static class DictionaryChecker
             RuleCodes.Dictionary,
             Severity.Error,
             message,
-            sense.Alternatives.Count > 0 ? string.Join(", ", sense.Alternatives) : null);
+            sense.Alternatives.Count > 0 ? string.Join(", ", sense.Alternatives) : null,
+            sense.Alternatives.Count > 0
+                ? sense.Alternatives.Select(a => new DictionaryCitation(a, PosLabel(sense.Pos))).ToList()
+                : null);
     }
 
     /// <summary>
@@ -374,9 +377,14 @@ internal static class DictionaryChecker
         // " (adjective)") in the combined string; its role restriction is still surfaced via
         // CorrectionClause in the message's "possible corrections" text.
         var corrections = string.Join("; ", candidates.Select(s => CorrectionClause(s, term)));
-        var suggestion = string.Join("; ", candidates
+        var citableCandidates = candidates
             .Where(s => !IsPureSelfReferentialSense(s, term) && s.Alternatives.Count > 0)
+            .ToList();
+        var suggestion = string.Join("; ", citableCandidates
             .Select(s => $"{string.Join(", ", s.Alternatives)} ({PosLabel(s.Pos)})"));
+        var citations = citableCandidates
+            .SelectMany(s => s.Alternatives.Select(a => new DictionaryCitation(a, PosLabel(s.Pos))))
+            .ToList();
 
         return new Diagnostic(
             file,
@@ -385,7 +393,8 @@ internal static class DictionaryChecker
             RuleCodes.Dictionary,
             Severity.Error,
             $"Ambiguous part of speech for '{match.Value}' \u2014 possible corrections: {corrections}.",
-            suggestion.Length > 0 ? suggestion : null);
+            suggestion.Length > 0 ? suggestion : null,
+            citations.Count > 0 ? citations : null);
     }
 
     /// <summary>
