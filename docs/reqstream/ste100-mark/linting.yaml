@@ -449,4 +449,5 @@ sections:
           - RuleCatalog_Entries_ContainsEveryEmittedRuleCode
           - RuleCatalog_Entries_ClassifiesOfficialAndAdvisoryRulesCorrectly
           - RuleCatalog_Entries_ClassifiesSuggestionKindCorrectly
+          - RuleCatalog_Entries_ModesIncludeBothWritingModes
           - RuleCatalog_ToJson_ProducesValidCamelCaseJsonArray

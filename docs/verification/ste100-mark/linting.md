@@ -318,5 +318,6 @@ code the linter can emit, to classify official/advisory status and suggestion ki
 to report both writing modes for every rule, and to serialize as a valid camelCase JSON array.
 This scenario is tested by `RuleCatalog_Entries_ContainsEveryEmittedRuleCode`,
 `RuleCatalog_Entries_ClassifiesOfficialAndAdvisoryRulesCorrectly`,
-`RuleCatalog_Entries_ClassifiesSuggestionKindCorrectly`, and
+`RuleCatalog_Entries_ClassifiesSuggestionKindCorrectly`,
+`RuleCatalog_Entries_ModesIncludeBothWritingModes`, and
 `RuleCatalog_ToJson_ProducesValidCamelCaseJsonArray`.

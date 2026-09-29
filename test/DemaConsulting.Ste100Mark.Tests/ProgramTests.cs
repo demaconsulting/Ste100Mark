@@ -122,6 +122,7 @@ public class ProgramTests
             Assert.Contains("--format", output);
             Assert.Contains("--strict", output);
             Assert.Contains("--allow-empty", output);
+            Assert.Contains("--list-rules", output);
             Assert.Contains("globs", output);
             Assert.Equal(0, context.ExitCode);
         }

@@ -102,8 +102,9 @@ internal static class Program
     /// </summary>
     /// <param name="context">The context containing command line arguments and program state.</param>
     /// <remarks>
-    ///     Dispatch is priority-ordered: version check first, then help, then self-validation,
-    ///     then main tool logic. Only the highest-priority matching action is executed per invocation.
+    ///     Dispatch is priority-ordered: version check first, then the rule catalog query, then help,
+    ///     then self-validation, then main tool logic. Only the highest-priority matching action is
+    ///     executed per invocation.
     /// </remarks>
     public static void Run(Context context)
     {
