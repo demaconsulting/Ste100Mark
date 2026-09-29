@@ -399,8 +399,9 @@ public class DictionaryCheckerTests
     ///     Test that an ambiguous multi-sense term, where one candidate sense has no alternatives
     ///     at all (a pure role restriction with no suggested replacement word), does not leave a
     ///     stray leading-space/bare-part-of-speech fragment (for example " (adjective)") in the
-    ///     combined suggestion string. Regression test for a reported defect where such a fragment
-    ///     leaked formatting into the suggestion data.
+    ///     combined suggestion string, while its role restriction remains visible in the
+    ///     diagnostic message. Regression test for a reported defect where such a fragment leaked
+    ///     formatting into the suggestion data.
     /// </summary>
     [Fact]
     public void Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment()
@@ -428,8 +429,11 @@ public class DictionaryCheckerTests
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
 
-        // Assert: the alternatives-less candidate contributes no leading-space/empty-term fragment
+        // Assert: the alternatives-less candidate contributes no leading-space/empty-term
+        // fragment to the suggestion, but its role restriction is still preserved in the message.
         var diagnostic = Assert.Single(diagnostics);
+        Assert.Contains("as a noun, use 'dial'", diagnostic.Message);
+        Assert.Contains("as a adjective", diagnostic.Message);
         Assert.NotNull(diagnostic.Suggestion);
         Assert.DoesNotContain(" (adjective)", diagnostic.Suggestion);
         Assert.DoesNotContain("; (adjective)", diagnostic.Suggestion);
