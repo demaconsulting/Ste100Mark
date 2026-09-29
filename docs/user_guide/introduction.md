@@ -396,9 +396,11 @@ Error: Unsupported argument '--unknown'
 This behavior enables automated scripts and CI/CD pipelines to detect and surface
 misconfiguration failures automatically.
 
-Exit codes are: `0` for a clean pass, `1` when lint findings or argument/configuration
-errors were reported, and `2` when the file selection (positional globs, or configured
-`include`/`exclude` patterns) matched zero files. The `2` exit code exists because
+Exit codes are: `0` for a clean pass (including a pass with only warn-severity findings when
+`--strict` is not active), `1` when an error-severity lint finding was reported, a warn-severity
+finding was reported with `--strict` active, or an argument/configuration error occurred, and
+`2` when the file selection (positional globs, or configured `include`/`exclude` patterns)
+matched zero files. The `2` exit code exists because
 `filesChecked: 0` alone is indistinguishable from a genuine clean pass to a caller that only
 inspects the exit code — a typo'd glob, a misconfigured include pattern, or a moved directory
 could otherwise silently "pass" a CI job that verified nothing. The JSON report also carries

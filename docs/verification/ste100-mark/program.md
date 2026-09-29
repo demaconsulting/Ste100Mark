@@ -37,13 +37,11 @@ output contains "Total Tests:" with exit code 0, confirming self-validation runs
 lint path. This scenario is tested by `Program_Run_WithValidateFlag_RunsValidation`.
 
 **Program_Run_NoArguments_DisplaysDefaultBehavior**: `Program.Run` is called with a context from
-`["--allow-empty"]`; the output contains the tool name and copyright notice and exit code is 0,
-confirming the default dispatch path reaches the main lint tool logic after banner printing.
-`--allow-empty` is supplied because this scenario asserts on the banner text, not on lint
-results, and the working directory used by the test runner may not contain any Markdown files
-matching the default `**/*.md` include pattern; without it, a zero-matched selection would now
-correctly produce exit code 2, which is unrelated to what this scenario verifies. This scenario
-is tested by `Program_Run_NoArguments_DisplaysDefaultBehavior`.
+`Context.Create([])` while the current directory is an isolated working directory containing one
+compliant Markdown file; the output contains the tool name and copyright notice and exit code is
+0, confirming the default dispatch path reaches the main lint tool logic after banner printing
+and that the default `**/*.md` file selection genuinely matches and cleanly lints that file. This
+scenario is tested by `Program_Run_NoArguments_DisplaysDefaultBehavior`.
 
 **Program_Version_ReturnsNonEmptyString**: The `Program.Version` static property is read; the
 returned string is non-empty and non-null, confirming the version is resolvable from the
