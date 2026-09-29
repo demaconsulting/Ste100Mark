@@ -40,16 +40,44 @@ public class RuleCatalogTests
     ];
 
     /// <summary>
-    ///     Test that the catalog contains exactly every rule code the linter can emit.
+    ///     Test that the catalog contains exactly every rule code actually emitted by
+    ///     <see cref="StructuralRules"/> and <see cref="DictionaryChecker"/>, exercised directly
+    ///     (rather than compared against a second hand-maintained code list) so a code added to an
+    ///     emitter without a matching catalog entry - or vice versa - fails this test.
     /// </summary>
     [Fact]
     public void RuleCatalog_Entries_ContainsEveryEmittedRuleCode()
     {
-        // Act: execute the operation being tested
-        var codes = RuleCatalog.Entries.Select(e => e.Code).ToHashSet();
+        // Arrange: prose engineered to trip every structural/advisory rule in one pass
+        var longSentence = string.Join(' ', Enumerable.Repeat("word", 26)) + ".";
+        var paragraphCapSentences = string.Concat(Enumerable.Range(1, 7).Select(_ => "Word. ")).Trim();
+        IReadOnlyList<ProseSegment> segments =
+        [
+            new ProseSegment(longSentence, 1, SegmentRole.Paragraph),
+            new ProseSegment("Open the panel; then close it.", 2, SegmentRole.Paragraph),
+            new ProseSegment("We don't allow this.", 3, SegmentRole.Paragraph),
+            new ProseSegment(paragraphCapSentences, 4, SegmentRole.Paragraph),
+            new ProseSegment("The report was written by the team.", 5, SegmentRole.Paragraph),
+            new ProseSegment("The technician has opened the panel.", 6, SegmentRole.Paragraph),
+            new ProseSegment("The technician is checking the panel before closing it fully.", 7, SegmentRole.Paragraph)
+        ];
+        var structuralCodes = StructuralRules
+            .Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig())
+            .Select(d => d.RuleCode);
 
-        // Assert: verify expected behavior
-        Assert.Equal(ExpectedCodes.ToHashSet(), codes);
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> dictionarySegments =
+            [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
+        var dictionaryCodes = DictionaryChecker
+            .Evaluate("file.md", dictionarySegments, dictionary, LintMode.Descriptive)
+            .Select(d => d.RuleCode);
+
+        // Act: the set of codes actually emitted by the two rule-evaluating units
+        var emittedCodes = structuralCodes.Concat(dictionaryCodes).ToHashSet();
+
+        // Assert: the catalog contains exactly the codes actually emitted, no more and no fewer
+        Assert.Equal(ExpectedCodes.ToHashSet(), emittedCodes);
+        Assert.Equal(emittedCodes, RuleCatalog.Entries.Select(e => e.Code).ToHashSet());
     }
 
     /// <summary>
@@ -58,10 +86,15 @@ public class RuleCatalogTests
     [Fact]
     public void RuleCatalog_Entries_ClassifiesOfficialAndAdvisoryRulesCorrectly()
     {
-        // Arrange: the codes expected to be official versus advisory
-        string[] officialCodes = ["STE100-4.1", "STE100-8.1", "STE100-4.2", "STE100-DICT"];
+        // Arrange: the codes expected to be official versus advisory. STE100-DICT is a
+        // tool-defined mechanical check, not an actual ASD-STE100 numbered rule, so it is
+        // classified alongside the advisory heuristics for this field.
+        string[] officialCodes = ["STE100-4.1", "STE100-8.1", "STE100-4.2"];
         string[] advisoryCodes =
-            ["STE100-ADV-PARA", "STE100-ADV-PASSIVE", "STE100-ADV-COMPLEXVERB", "STE100-ADV-INGFORM"];
+        [
+            "STE100-DICT", "STE100-ADV-PARA", "STE100-ADV-PASSIVE", "STE100-ADV-COMPLEXVERB",
+            "STE100-ADV-INGFORM"
+        ];
 
         // Act & Assert: verify expected behavior
         foreach (var code in officialCodes)

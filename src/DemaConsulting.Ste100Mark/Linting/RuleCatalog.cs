@@ -60,8 +60,8 @@ internal static partial class RuleCatalog
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
             "STE100-DICT",
-            "Dictionary/vocabulary enforcement against the approved ASD-STE100 word list.",
-            Official: true,
+            "Dictionary/vocabulary enforcement against the effective (default or configured) dictionary.",
+            Official: false,
             SuggestionKind: "citationForm",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
@@ -115,7 +115,8 @@ internal static partial class RuleCatalog
 /// <param name="Title">Short human-readable description of what the rule checks.</param>
 /// <param name="Official">
 ///     <see langword="true"/> for an actual ASD-STE100 numbered rule; <see langword="false"/> for
-///     an advisory/heuristic rule that is not an official STE100 rule.
+///     any rule that is not itself a numbered ASD-STE100 rule, whether an advisory heuristic or a
+///     tool-defined mechanical check (for example <c>STE100-DICT</c>).
 /// </param>
 /// <param name="SuggestionKind">
 ///     <c>"advice"</c> when the rule's suggestion is free prose advice, or <c>"citationForm"</c>

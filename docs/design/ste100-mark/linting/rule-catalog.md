@@ -17,8 +17,9 @@ data consumed externally by `Program`'s `--list-rules` dispatch path.
 
 - `Code`: `string` - the stable rule identifier, for example `STE100-4.1`.
 - `Title`: `string` - short human-readable description of what the rule checks.
-- `Official`: `bool` - `true` for an actual ASD-STE100 numbered rule; `false` for an
-  advisory/heuristic rule that is not an official STE100 rule.
+- `Official`: `bool` - `true` for an actual ASD-STE100 numbered rule; `false` for any rule that
+  is not itself a numbered ASD-STE100 rule, whether an advisory heuristic or a tool-defined
+  mechanical check (for example `STE100-DICT`).
 - `SuggestionKind`: `string` - `"advice"` when the rule's suggestion is free prose advice, or
   `"citationForm"` when the rule's suggestion is an ASD-STE100 dictionary citation-form
   replacement.
@@ -33,16 +34,19 @@ entries, one per rule code emitted by `StructuralRules` or `DictionaryChecker`:
 | `STE100-4.1` | `true` | `advice` | procedure, descriptive |
 | `STE100-8.1` | `true` | `advice` | procedure, descriptive |
 | `STE100-4.2` | `true` | `advice` | procedure, descriptive |
-| `STE100-DICT` | `true` | `citationForm` | procedure, descriptive |
+| `STE100-DICT` | `false` | `citationForm` | procedure, descriptive |
 | `STE100-ADV-PARA` | `false` | `advice` | procedure, descriptive |
 | `STE100-ADV-PASSIVE` | `false` | `advice` | procedure, descriptive |
 | `STE100-ADV-COMPLEXVERB` | `false` | `advice` | procedure, descriptive |
 | `STE100-ADV-INGFORM` | `false` | `advice` | procedure, descriptive |
 
-`STE100-DICT` is classified `Official: true` because it is grouped alongside `STE100-4.1`,
-`STE100-8.1`, and `STE100-4.2` as a "mechanical rule" in the tool's user-facing documentation,
-and `DictionaryChecker`'s own remarks describe it as "a mechanical, non-advisory rule",
-distinct from the `STE100-ADV-*` advisory heuristics. Every rule applies in both linting
+`STE100-DICT` is classified `Official: false` because the `Official` field's contract is
+specifically "an actual ASD-STE100 numbered rule": `STE100-DICT` has no corresponding numbered
+rule and is instead a tool-defined dictionary/vocabulary check whose word list may be the
+embedded illustrative default or a project-supplied configured dictionary, per
+`DictionaryChecker`'s own remarks and `docs/design/ste100-mark/linting.md`. It is therefore
+grouped alongside the `STE100-ADV-*` advisory heuristics for this field even though, unlike
+them, it is a mechanical (non-heuristic) check reported at error severity. Every rule applies in both linting
 modes: `StructuralRules.Evaluate` and `DictionaryChecker.Evaluate` run unconditionally for
 every file regardless of the resolved `LintMode`; only `STE100-4.1`'s numeric word-count
 threshold (not its applicability) varies between `LintMode.Procedure` and
