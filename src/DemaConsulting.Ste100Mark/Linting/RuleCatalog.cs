@@ -28,10 +28,12 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     <see cref="Program"/>'s <c>--list-rules</c> dispatch path.
 /// </summary>
 /// <remarks>
-///     This is the single source of truth for the rule codes documented in
-///     <see cref="StructuralRules"/> and <see cref="DictionaryChecker"/>. Every rule code emitted
-///     by either of those units must have a corresponding <see cref="Entries"/> entry, or the
-///     <c>--list-rules</c> output silently drifts out of sync with the actual linter behavior.
+///     This is the single source of truth for rule <em>metadata</em> (title, official/advisory
+///     classification, suggestion kind, applicable modes) documented in <see cref="StructuralRules"/>
+///     and <see cref="DictionaryChecker"/>; <see cref="RuleCodes"/> is the single source of truth for
+///     the code <em>strings</em> themselves, shared by this catalog and both emitters. Every rule
+///     code emitted by either of those units must have a corresponding <see cref="Entries"/> entry,
+///     or the <c>--list-rules</c> output silently drifts out of sync with the actual linter behavior.
 /// </remarks>
 internal static partial class RuleCatalog
 {
@@ -41,49 +43,49 @@ internal static partial class RuleCatalog
     public static IReadOnlyList<RuleCatalogEntry> Entries { get; } =
     [
         new RuleCatalogEntry(
-            "STE100-4.1",
+            RuleCodes.SentenceWordLimit,
             "Sentence word-count limit (Rules 4.1, 8.4-8.7).",
             Official: true,
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
-            "STE100-8.1",
+            RuleCodes.NoSemicolons,
             "No semicolons (Rule 8.1).",
             Official: true,
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
-            "STE100-4.2",
+            RuleCodes.NoContractions,
             "No contractions (Rule 4.2).",
             Official: true,
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
-            "STE100-DICT",
+            RuleCodes.Dictionary,
             "Dictionary/vocabulary enforcement against the effective (default or configured) dictionary.",
             Official: false,
             SuggestionKind: "citationForm",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
-            "STE100-ADV-PARA",
+            RuleCodes.AdvisoryParagraphLength,
             "Paragraph sentence-count cap (advisory heuristic, not an official STE100 rule).",
             Official: false,
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
-            "STE100-ADV-PASSIVE",
+            RuleCodes.AdvisoryPassiveVoice,
             "Passive-voice detection (advisory heuristic, not an official STE100 rule).",
             Official: false,
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
-            "STE100-ADV-COMPLEXVERB",
+            RuleCodes.AdvisoryComplexVerb,
             "Perfect/modal-perfect tense detection (advisory heuristic, not an official STE100 rule).",
             Official: false,
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
-            "STE100-ADV-INGFORM",
+            RuleCodes.AdvisoryIngForm,
             "-ing form detection (advisory heuristic, not an official STE100 rule).",
             Official: false,
             SuggestionKind: "advice",

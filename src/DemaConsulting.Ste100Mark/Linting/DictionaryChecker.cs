@@ -323,7 +323,7 @@ internal static class DictionaryChecker
                 file,
                 segment.ResolveLine(match.Index),
                 null,
-                "STE100-DICT",
+                RuleCodes.Dictionary,
                 Severity.Error,
                 $"Avoid using '{match.Value}' as a {PosLabel(sense.Pos)}; ASD-STE100 approves " +
                 $"'{term}' only in a different grammatical role.",
@@ -348,7 +348,7 @@ internal static class DictionaryChecker
             file,
             segment.ResolveLine(match.Index),
             null,
-            "STE100-DICT",
+            RuleCodes.Dictionary,
             Severity.Error,
             message,
             sense.Alternatives.Count > 0 ? string.Join(", ", sense.Alternatives) : null);
@@ -378,7 +378,7 @@ internal static class DictionaryChecker
             file,
             segment.ResolveLine(match.Index),
             null,
-            "STE100-DICT",
+            RuleCodes.Dictionary,
             Severity.Error,
             $"Ambiguous part of speech for '{match.Value}' \u2014 possible corrections: {corrections}.",
             suggestion.Length > 0 ? suggestion : null);

@@ -159,7 +159,11 @@ configured cap. `STE100-ADV-PASSIVE` emits at the severity configured by
 project provides its own licensed dictionary file, that file becomes the authoritative
 vocabulary source for the subsystem.
 
-`RuleCatalog` is now the single source of truth for the rule-code list above (code, title,
+`RuleCatalog` is now the single source of truth for the rule-code metadata above (title,
 official/advisory classification, suggestion kind, and applicable modes), consumed by
-`Program`'s `--list-rules` dispatch. Every rule code emitted by `StructuralRules` or
-`DictionaryChecker` has a corresponding `RuleCatalog.Entries` row.
+`Program`'s `--list-rules` dispatch. `RuleCodes` is the single source of truth for the code
+strings themselves: `RuleCatalog`, `StructuralRules`, and `DictionaryChecker` all reference
+the same `RuleCodes` constants rather than duplicating rule-code literals, so a code cannot
+be added to an emitter without a compile-time-visible corresponding constant. Every rule code
+emitted by `StructuralRules` or `DictionaryChecker` has a corresponding `RuleCatalog.Entries`
+row.
