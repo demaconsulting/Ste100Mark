@@ -407,6 +407,7 @@ sections:
           - Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema
           - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
           - Run_JsonFormat_FilesArrayListsCheckedFilesAndOmitsExcludedFiles
+          - Ste100Mark_LintWithJsonFormat_ReportsCheckedFilesArray
 
       - id: Ste100Mark-Linting-ExitCode
         title: >-
