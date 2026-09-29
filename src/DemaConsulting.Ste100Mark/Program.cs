@@ -102,8 +102,9 @@ internal static class Program
     /// </summary>
     /// <param name="context">The context containing command line arguments and program state.</param>
     /// <remarks>
-    ///     Dispatch is priority-ordered: version check first, then help, then self-validation,
-    ///     then main tool logic. Only the highest-priority matching action is executed per invocation.
+    ///     Dispatch is priority-ordered: version check first, then the rule catalog query, then help,
+    ///     then self-validation, then main tool logic. Only the highest-priority matching action is
+    ///     executed per invocation.
     /// </remarks>
     public static void Run(Context context)
     {
@@ -111,6 +112,14 @@ internal static class Program
         if (context.Version)
         {
             context.WriteLine(Version);
+            return;
+        }
+
+        // Priority 1b: Rule catalog query. Dispatched before the banner (like --version) so stdout
+        // remains a single parseable JSON document and does not require any Markdown file selection.
+        if (context.ListRules)
+        {
+            context.WriteLine(RuleCatalog.ToJson());
             return;
         }
 
@@ -173,6 +182,7 @@ internal static class Program
               --format <text|json>       Diagnostic output format (default: text)
               --strict                   Promote warn-severity findings to errors for exit code
               --allow-empty              Treat zero matched files as success (default: exit code {Context.NoFilesMatchedExitCode})
+              --list-rules               Display the rule catalog as JSON and exit
 
             [globs...] are optional Markdown glob patterns to lint (e.g. "docs/**/*.md"); a
             literal file path is simply a pattern with no wildcard characters, so plain paths

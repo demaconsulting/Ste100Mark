@@ -16,12 +16,13 @@ through `Linter.Run`.
 The subsystem contains one orchestration unit (`Linter`), one reporting unit
 (`DiagnosticReporter`), four analysis units (`MarkdownProseExtractor`, `SentenceAnalyzer`,
 `StructuralRules`, and `DictionaryChecker`), two configuration/data units (`LintConfig` and
-`LintDictionary`), one heuristic helper (`PartOfSpeechGuesser`), and two supporting value
+`LintDictionary`), one heuristic helper (`PartOfSpeechGuesser`), two rule metadata units
+(`RuleCodes` and `RuleCatalog`), and two supporting value
 types (`Diagnostic` and `Severity`). Together they convert raw Markdown input into
 deterministic lint findings aligned with the tool's official STE100 rule checks and
 advisory heuristics.
 
-The source folder contains nine primary behavioral units plus two supporting value types:
+The source folder contains eleven primary behavioral units plus two supporting value types:
 
 - `Severity` - closed severity set (`Off`, `Warn`, `Error`) shared by configuration and
   diagnostics.
@@ -48,12 +49,18 @@ The source folder contains nine primary behavioral units plus two supporting val
 - `DiagnosticReporter` - formatter for text and JSON diagnostic output.
 - `Linter` - orchestration entry point that ties the subsystem together and drives the exit
   code.
+- `RuleCodes` - single shared registry of rule-code string constants, referenced by
+  `StructuralRules`, `DictionaryChecker`, and `RuleCatalog` so every emitted code has exactly
+  one authoritative spelling.
+- `RuleCatalog` - static, hand-authored catalog of every rule code the subsystem can emit,
+  with title, classification (official/mechanical/advisory), suggestion kind, and applicable
+  mode(s), serializable as JSON for `Program`'s `--list-rules` dispatch path.
 
 The unit design details for the subsystem are documented in the companion unit files in
 this folder: *Diagnostic Design*, *DiagnosticReporter Design*, *DictionaryChecker Design*,
 *LintConfig Design*, *LintDictionary Design*, *Linter Design*, *MarkdownProseExtractor
-Design*, *PartOfSpeechGuesser Design*, *SentenceAnalyzer Design*, *Severity Design*, and
-*StructuralRules Design*.
+Design*, *PartOfSpeechGuesser Design*, *RuleCatalog Design*, *RuleCodes Design*,
+*SentenceAnalyzer Design*, *Severity Design*, and *StructuralRules Design*.
 
 > **Dictionary notice:** The embedded default dictionary in
 > `src/DemaConsulting.Ste100Mark/Linting/DefaultDictionary.yaml` is a small,
@@ -82,6 +89,9 @@ flowchart TD
     DictionaryChecker --> DiagnosticReporter
     Severity --> Diagnostic
     Diagnostic --> DiagnosticReporter
+    RuleCodes --> RuleCatalog
+    RuleCodes --> StructuralRules
+    RuleCodes --> DictionaryChecker
 ```
 
 ### Interfaces
@@ -153,3 +163,12 @@ configured cap. `STE100-ADV-PASSIVE` emits at the severity configured by
 `rules.ing-form`. `STE100-DICT` depends on the effective dictionary content; when a
 project provides its own licensed dictionary file, that file becomes the authoritative
 vocabulary source for the subsystem.
+
+`RuleCatalog` is now the single source of truth for the rule-code metadata above (title,
+classification, suggestion kind, and applicable modes), consumed by
+`Program`'s `--list-rules` dispatch. `RuleCodes` is the single source of truth for the code
+strings themselves: `RuleCatalog`, `StructuralRules`, and `DictionaryChecker` all reference
+the same `RuleCodes` constants rather than duplicating rule-code literals, so a code cannot
+be added to an emitter without a compile-time-visible corresponding constant. Every rule code
+emitted by `StructuralRules` or `DictionaryChecker` has a corresponding `RuleCatalog.Entries`
+row.

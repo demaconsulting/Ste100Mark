@@ -28,6 +28,7 @@ sections:
           - Context_Create_DepthFlag_SetsHeadingDepth
           - Context_Create_NoDepthFlag_ReturnsDefaultHeadingDepth
           - Context_Create_NoArguments_ReturnsLintingDefaults
+          - Context_Create_ListRulesFlag_SetsListRulesTrue
 
       - id: Ste100Mark-Context-ConfigArgumentParsing
         title: The Context class shall parse the --config option and expose the supplied lint configuration file path.
@@ -70,6 +71,18 @@ sections:
         tests:
           - Context_Create_NoArguments_ReturnsLintingDefaults
           - Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue
+
+      - id: Ste100Mark-Context-ListRulesArgumentParsing
+        title: >-
+          The Context class shall parse the --list-rules option and expose whether the
+          rule-catalog dispatch path was requested.
+        justification: |
+          Callers must be able to request the rule-catalog JSON output path on a per-invocation
+          basis, so that `Program.Run` can dispatch to it before the main lint path without
+          requiring any Markdown file selection to exist.
+        tests:
+          - Context_Create_NoArguments_ReturnsLintingDefaults
+          - Context_Create_ListRulesFlag_SetsListRulesTrue
 
       - id: Ste100Mark-Context-GlobArgumentParsing
         title: The Context class shall collect positional non-flag arguments as glob patterns in the order supplied.

@@ -25,6 +25,7 @@ flowchart TD
         DictionaryChecker
         DiagnosticReporter
         Linter
+        RuleCatalog
     end
     subgraph SelfTest
         Validation
@@ -35,6 +36,7 @@ flowchart TD
     Program --> Context
     Program --> Linter
     Program --> Validation
+    Program --> RuleCatalog
     Validation --> Program
     Validation --> PathHelpers
     Linter --> LintConfig
@@ -49,7 +51,8 @@ flowchart TD
 ```
 
 `Program` is the entry point. It creates a `Context` from the `Cli` subsystem,
-dispatches to `Validation.Run` when `--validate` is passed, dispatches to `Linter.Run`
+dispatches to `RuleCatalog.ToJson` when `--list-rules` is passed, dispatches to
+`Validation.Run` when `--validate` is passed, dispatches to `Linter.Run`
 otherwise, and returns the exit code from `Context`. `Validation` is therefore a distinct
 Program dispatch mode, not a recursive call path back into `Program`; within its own workflow
 it may create additional `Context` instances and invoke `Program.Run` to exercise specific
@@ -68,7 +71,8 @@ diagnostics and summaries through `DiagnosticReporter` into that context's outpu
 - *Contract*: Accepts positional Markdown glob arguments `[globs...]` plus
   `-v`/`--version`, `-?`/`-h`/`--help`, `--silent`, `--validate`, `--results <file>`,
   `--result <file>` (legacy alias for `--results`), `--depth <n>`, `--log <file>`,
-  `--config <file>`, `--format <text|json>`, `--strict`, and `--allow-empty`. Returns exit
+  `--config <file>`, `--format <text|json>`, `--strict`, `--allow-empty`, and
+  `--list-rules`. Returns exit
   code 0 when no failure condition is detected, exit code 1 for invalid arguments,
   configuration or dictionary load failures, any error-severity lint finding, or
   warn-severity findings when `--strict` is active, and exit code 2 when the resolved file
@@ -167,6 +171,8 @@ N/A - not a safety-classified software item.
    this point is caught, written to stderr, and causes exit code 1.
 3. `Program.Run(context)` inspects the parsed flags and dispatches to one handler:
    - `--version` flag → `context.WriteLine(Version)`, then return.
+   - `--list-rules` flag → `context.WriteLine(RuleCatalog.ToJson())`, then return (dispatched
+     before the banner, like `--version`, so stdout remains a single parseable JSON document).
    - Otherwise, `PrintBanner` is called first unless linting JSON output was requested; then:
      - `--help` flag → `PrintHelp(context)`, then return.
      - `--validate` flag → `Validation.Run(context)`.

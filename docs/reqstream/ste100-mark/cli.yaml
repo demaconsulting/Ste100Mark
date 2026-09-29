@@ -28,6 +28,7 @@ sections:
           - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
           - CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag
           - CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag
+          - CliSubsystem_ListRulesFlow_ContextAndProgram_ParsesListRulesFlag
 
       - id: Ste100Mark-Cli-OutputChannels
         title: >-
@@ -159,6 +160,18 @@ sections:
           - CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag
           - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode
           - Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode
+
+      - id: Ste100Mark-Cli-ListRules
+        title: >-
+          The Cli subsystem shall support --list-rules flag to display the machine-readable rule
+          catalog and exit successfully without requiring any file selection.
+        justification: |
+          Callers building tooling or documentation around the linter's rule codes need a
+          reliable, machine-readable way to discover every rule code the tool can emit,
+          without needing a Markdown file to lint.
+        tests:
+          - CliSubsystem_ListRulesFlow_ContextAndProgram_ParsesListRulesFlag
+          - Ste100Mark_ListRulesFlag_Provided_OutputsRuleCatalogJson
 
       - id: Ste100Mark-Cli-ErrorOutput
         title: The Cli subsystem shall write error messages to stderr.

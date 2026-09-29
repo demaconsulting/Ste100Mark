@@ -521,6 +521,7 @@ public class ContextTests
         Assert.Equal(OutputFormat.Text, context.Format);
         Assert.False(context.Strict);
         Assert.False(context.AllowEmpty);
+        Assert.False(context.ListRules);
     }
 
     /// <summary>
@@ -648,6 +649,20 @@ public class ContextTests
 
         // Assert: verify expected behavior
         Assert.True(context.AllowEmpty);
+        Assert.Equal(0, context.ExitCode);
+    }
+
+    /// <summary>
+    ///     Test creating a context with the <c>--list-rules</c> flag.
+    /// </summary>
+    [Fact]
+    public void Context_Create_ListRulesFlag_SetsListRulesTrue()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create(["--list-rules"]);
+
+        // Assert: verify expected behavior
+        Assert.True(context.ListRules);
         Assert.Equal(0, context.ExitCode);
     }
 

@@ -131,3 +131,12 @@ zero-match glob plus `--allow-empty`; `ExitCode` becomes 0. This scenario verifi
 **Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode**: The published CLI is run
 against a zero-match glob with `--allow-empty`; exit code is 0. This scenario verifies
 `Ste100Mark-Cli-AllowEmpty`.
+
+**CliSubsystem_ListRulesFlow_ContextAndProgram_ParsesListRulesFlag**: Arguments
+`[`"`--list-rules`"`]` are parsed through `Context.Create`; `Context.ListRules` is true. This
+scenario verifies `Ste100Mark-Cli-ArgumentParsing` and `Ste100Mark-Cli-ListRules`.
+
+**Ste100Mark_ListRulesFlag_Provided_OutputsRuleCatalogJson**: The published CLI is run with
+`--list-rules` and no other arguments in an empty working directory containing no Markdown
+files; exit code is 0 and stdout parses as a JSON array containing every expected rule code.
+This scenario verifies `Ste100Mark-Cli-ListRules`.

@@ -143,6 +143,10 @@ scenario is tested by `Context_Create_LogFlag_InvalidPath_ThrowsInvalidOperation
 `["--allow-empty"]`; the `AllowEmpty` property is true and `ExitCode` is 0. This scenario is
 tested by `Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue`.
 
+**Context_Create_ListRulesFlag_SetsListRulesTrue**: `Context.Create` is called with
+`["--list-rules"]`; the `ListRules` property is true and `ExitCode` is 0. This scenario is
+tested by `Context_Create_ListRulesFlag_SetsListRulesTrue`.
+
 **Context_WriteNoFilesMatchedError_SetsNoFilesMatchedExitCode**: A `Context` calls
 `WriteNoFilesMatchedError` with a test message; `ExitCode` becomes `NoFilesMatchedExitCode` (2)
 rather than 1, and the message appears on standard error. This scenario is tested by

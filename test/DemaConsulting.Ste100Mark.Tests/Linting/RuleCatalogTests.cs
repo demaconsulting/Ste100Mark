@@ -1,0 +1,171 @@
+// Copyright (c) DEMA Consulting
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using System.Text.Json;
+using DemaConsulting.Ste100Mark.Linting;
+
+namespace DemaConsulting.Ste100Mark.Tests.Linting;
+
+/// <summary>
+///     Unit tests for the RuleCatalog class.
+/// </summary>
+[Collection("Sequential")]
+public class RuleCatalogTests
+{
+    /// <summary>
+    ///     The complete, exhaustive set of rule codes the linter can emit (cross-checked against
+    ///     the "STE100-..." literals in StructuralRules.cs and DictionaryChecker.cs).
+    /// </summary>
+    private static readonly string[] ExpectedCodes =
+    [
+        "STE100-4.1", "STE100-8.1", "STE100-4.2", "STE100-DICT",
+        "STE100-ADV-PARA", "STE100-ADV-PASSIVE", "STE100-ADV-COMPLEXVERB", "STE100-ADV-INGFORM"
+    ];
+
+    /// <summary>
+    ///     Test that the catalog contains exactly every rule code actually emitted by
+    ///     <see cref="StructuralRules"/> and <see cref="DictionaryChecker"/>, exercised directly
+    ///     (rather than compared against a second hand-maintained code list) so a code added to an
+    ///     emitter without a matching catalog entry - or vice versa - fails this test.
+    /// </summary>
+    [Fact]
+    public void RuleCatalog_Entries_ContainsEveryEmittedRuleCode()
+    {
+        // Arrange: prose engineered to trip every structural/advisory rule in one pass
+        var longSentence = string.Join(' ', Enumerable.Repeat("word", 26)) + ".";
+        var paragraphCapSentences = string.Concat(Enumerable.Range(1, 7).Select(_ => "Word. ")).Trim();
+        IReadOnlyList<ProseSegment> segments =
+        [
+            new ProseSegment(longSentence, 1, SegmentRole.Paragraph),
+            new ProseSegment("Open the panel; then close it.", 2, SegmentRole.Paragraph),
+            new ProseSegment("We don't allow this.", 3, SegmentRole.Paragraph),
+            new ProseSegment(paragraphCapSentences, 4, SegmentRole.Paragraph),
+            new ProseSegment("The report was written by the team.", 5, SegmentRole.Paragraph),
+            new ProseSegment("The technician has opened the panel.", 6, SegmentRole.Paragraph),
+            new ProseSegment("The technician is checking the panel before closing it fully.", 7, SegmentRole.Paragraph)
+        ];
+        var structuralCodes = StructuralRules
+            .Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig())
+            .Select(d => d.RuleCode);
+
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> dictionarySegments =
+            [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
+        var dictionaryCodes = DictionaryChecker
+            .Evaluate("file.md", dictionarySegments, dictionary, LintMode.Descriptive)
+            .Select(d => d.RuleCode);
+
+        // Act: the set of codes actually emitted by the two rule-evaluating units
+        var emittedCodes = structuralCodes.Concat(dictionaryCodes).ToHashSet();
+
+        // Assert: the catalog contains exactly the codes actually emitted, no more and no fewer
+        Assert.Equal(ExpectedCodes.ToHashSet(), emittedCodes);
+        Assert.Equal(emittedCodes, RuleCatalog.Entries.Select(e => e.Code).ToHashSet());
+    }
+
+    /// <summary>
+    ///     Test that official numbered rules, the mechanical dictionary check, and the advisory
+    ///     heuristics are each classified distinctly.
+    /// </summary>
+    [Fact]
+    public void RuleCatalog_Entries_ClassifiesOfficialMechanicalAndAdvisoryRulesCorrectly()
+    {
+        // Arrange: the codes expected in each classification. STE100-DICT is a tool-defined,
+        // deterministic check, not an actual ASD-STE100 numbered rule, but unlike the
+        // STE100-ADV-* heuristics it is not fallible, so it gets its own "mechanical" bucket
+        // rather than being folded into either "official" or "advisory".
+        string[] officialCodes = ["STE100-4.1", "STE100-8.1", "STE100-4.2"];
+        string[] mechanicalCodes = ["STE100-DICT"];
+        string[] advisoryCodes =
+        [
+            "STE100-ADV-PARA", "STE100-ADV-PASSIVE", "STE100-ADV-COMPLEXVERB", "STE100-ADV-INGFORM"
+        ];
+
+        // Act & Assert: verify expected behavior
+        foreach (var code in officialCodes)
+        {
+            var entry = RuleCatalog.Entries.Single(e => e.Code == code);
+            Assert.Equal("official", entry.Classification);
+        }
+
+        foreach (var code in mechanicalCodes)
+        {
+            var entry = RuleCatalog.Entries.Single(e => e.Code == code);
+            Assert.Equal("mechanical", entry.Classification);
+        }
+
+        foreach (var code in advisoryCodes)
+        {
+            var entry = RuleCatalog.Entries.Single(e => e.Code == code);
+            Assert.Equal("advisory", entry.Classification);
+        }
+    }
+
+    /// <summary>
+    ///     Test that STE100-DICT is classified as a citation-form suggestion and every other rule
+    ///     is classified as prose advice.
+    /// </summary>
+    [Fact]
+    public void RuleCatalog_Entries_ClassifiesSuggestionKindCorrectly()
+    {
+        // Act & Assert: verify expected behavior
+        foreach (var entry in RuleCatalog.Entries)
+        {
+            var expectedKind = entry.Code == "STE100-DICT" ? "citationForm" : "advice";
+            Assert.Equal(expectedKind, entry.SuggestionKind);
+        }
+    }
+
+    /// <summary>
+    ///     Test that every rule's modes include both procedure and descriptive.
+    /// </summary>
+    [Fact]
+    public void RuleCatalog_Entries_ModesIncludeBothWritingModes()
+    {
+        // Act & Assert: verify expected behavior
+        foreach (var entry in RuleCatalog.Entries)
+        {
+            Assert.Contains("procedure", entry.Modes);
+            Assert.Contains("descriptive", entry.Modes);
+        }
+    }
+
+    /// <summary>
+    ///     Test that ToJson produces a valid, camelCase JSON array with one entry per rule code.
+    /// </summary>
+    [Fact]
+    public void RuleCatalog_ToJson_ProducesValidCamelCaseJsonArray()
+    {
+        // Act: execute the operation being tested
+        var json = RuleCatalog.ToJson();
+        using var document = JsonDocument.Parse(json);
+
+        // Assert: verify expected behavior
+        Assert.Equal(JsonValueKind.Array, document.RootElement.ValueKind);
+        Assert.Equal(ExpectedCodes.Length, document.RootElement.GetArrayLength());
+
+        var first = document.RootElement[0];
+        Assert.True(first.TryGetProperty("code", out _));
+        Assert.True(first.TryGetProperty("title", out _));
+        Assert.True(first.TryGetProperty("classification", out _));
+        Assert.True(first.TryGetProperty("suggestionKind", out _));
+        Assert.True(first.TryGetProperty("modes", out _));
+    }
+}

@@ -495,6 +495,22 @@ public class CliSubsystemTests
     }
 
     /// <summary>
+    ///     Test that Context parses the --list-rules flag.
+    /// </summary>
+    [Fact]
+    public void CliSubsystem_ListRulesFlow_ContextAndProgram_ParsesListRulesFlag()
+    {
+        // Arrange: command line arguments with the list-rules flag
+        var args = new[] { "--list-rules" };
+
+        // Act: create context from the provided arguments
+        using var context = Context.Create(args);
+
+        // Assert: list-rules mode is preserved for the CLI dispatch flow
+        Assert.True(context.ListRules, "Context should parse list-rules flag");
+    }
+
+    /// <summary>
     ///     Test that Context and Program work together to parse the --format json option and suppress the banner for lint output.
     /// </summary>
     [Fact]

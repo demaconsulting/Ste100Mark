@@ -21,6 +21,8 @@ N/A - standard test environment.
   `--strict` or explicit error configuration.
 - Configuration and dictionary files are parsed correctly and produce clear errors when invalid.
 - Text and JSON output formats remain stable and machine-consumable.
+- The rule catalog contains every emitted rule code with correct official/mechanical/advisory
+  and suggestion-kind classification.
 
 ### Test Scenarios
 
@@ -310,3 +312,12 @@ through the published CLI. This scenario is tested by
 `Ste100Mark_LintWithNoMatchingFiles_ReturnsNoFilesMatchedExitCode`,
 `Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode`, and
 `Ste100Mark_LintWithNoMatchingFilesJsonFormat_ReportsNoFilesMatchedTrue`.
+
+**Ste100Mark-Linting-RuleCatalog**: The rule catalog is verified to contain exactly every rule
+code the linter can emit, to classify official/mechanical/advisory status and suggestion kind
+correctly, to report both writing modes for every rule, and to serialize as a valid camelCase
+JSON array. This scenario is tested by `RuleCatalog_Entries_ContainsEveryEmittedRuleCode`,
+`RuleCatalog_Entries_ClassifiesOfficialMechanicalAndAdvisoryRulesCorrectly`,
+`RuleCatalog_Entries_ClassifiesSuggestionKindCorrectly`,
+`RuleCatalog_Entries_ModesIncludeBothWritingModes`, and
+`RuleCatalog_ToJson_ProducesValidCamelCaseJsonArray`.

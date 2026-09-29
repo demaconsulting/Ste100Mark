@@ -200,7 +200,7 @@ internal static class StructuralRules
                 file,
                 segment.ResolveLine(sentence.StartOffset),
                 null,
-                "STE100-4.1",
+                RuleCodes.SentenceWordLimit,
                 Severity.Error,
                 $"Sentence has {sentence.WordCount} words, exceeding the {maxWords}-word limit for " +
                 $"{mode.ToString().ToLowerInvariant()} mode: \"{Truncate(sentence.Text)}\"",
@@ -233,7 +233,7 @@ internal static class StructuralRules
                 file,
                 segment.ResolveLine(i),
                 null,
-                "STE100-8.1",
+                RuleCodes.NoSemicolons,
                 Severity.Error,
                 "Semicolons are not permitted in ASD-STE100 prose.",
                 "Split into two separate sentences."));
@@ -271,7 +271,7 @@ internal static class StructuralRules
                 file,
                 segment.ResolveLine(match.Index),
                 null,
-                "STE100-4.2",
+                RuleCodes.NoContractions,
                 Severity.Error,
                 $"Contraction '{match.Value}' is not permitted in ASD-STE100 prose.",
                 "Write the words in full."));
@@ -321,7 +321,7 @@ internal static class StructuralRules
                 file,
                 segment.ResolveLine(sentence.StartOffset),
                 null,
-                "STE100-ADV-PASSIVE",
+                RuleCodes.AdvisoryPassiveVoice,
                 rules.PassiveVoice,
                 $"Possible passive voice (advisory heuristic, not an official STE100 rule): \"{Truncate(sentence.Text)}\"",
                 "Consider rewriting in active voice."));
@@ -356,7 +356,7 @@ internal static class StructuralRules
                 file,
                 segment.ResolveLine(sentence.StartOffset),
                 null,
-                "STE100-ADV-COMPLEXVERB",
+                RuleCodes.AdvisoryComplexVerb,
                 rules.ComplexVerb,
                 "Possible complex verb construction (perfect/modal-perfect tense) — ASD-STE100 prefers simple " +
                 $"present, past, or future tense verbs: \"{Truncate(sentence.Text)}\"",
@@ -416,7 +416,7 @@ internal static class StructuralRules
                 file,
                 segment.ResolveLine(match.Index),
                 null,
-                "STE100-ADV-INGFORM",
+                RuleCodes.AdvisoryIngForm,
                 rules.IngForm,
                 $"The '-ing' form '{match.Value}' may need review — ASD-STE100 restricts '-ing' forms to " +
                 "technical nouns/adjectives, not verb forms.",
@@ -446,7 +446,7 @@ internal static class StructuralRules
             file,
             segment.LineNumber,
             null,
-            "STE100-ADV-PARA",
+            RuleCodes.AdvisoryParagraphLength,
             Severity.Warn,
             $"Paragraph has {sentences.Count} sentences, exceeding the advisory limit of " +
             $"{rules.MaxSentencesParagraph} (not an official STE100 rule).",
