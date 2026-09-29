@@ -16,7 +16,9 @@ N/A - standard test environment.
 - All unit tests pass with zero failures.
 - All flag properties are correctly set for each recognized argument.
 - `ArgumentException` is thrown for all unknown or malformed arguments.
-- `ExitCode` is 1 after `WriteError` is called and 0 otherwise.
+- `ExitCode` is 1 after `WriteError` is called and 0 otherwise. `ExitCode` is
+  `NoFilesMatchedExitCode` (2) after `WriteNoFilesMatchedError` or `MarkNoFilesMatched` is
+  called (unless an error was also reported, which always takes precedence).
 - Silent mode suppresses console output but does not affect the log file.
 
 #### Test Scenarios
@@ -135,3 +137,23 @@ scenario is tested by `Context_WriteError_WritesToLogFile`.
 `Context.Create` is called with `["--log", "/invalid/\x00path.log"]`; an
 `InvalidOperationException` is thrown because the log file cannot be opened. This
 scenario is tested by `Context_Create_LogFlag_InvalidPath_ThrowsInvalidOperationException`.
+
+**Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue**: `Context.Create` is called with
+`["--allow-empty"]`; the `AllowEmpty` property is true and `ExitCode` is 0. This scenario is
+tested by `Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue`.
+
+**Context_WriteNoFilesMatchedError_SetsNoFilesMatchedExitCode**: A `Context` calls
+`WriteNoFilesMatchedError` with a test message; `ExitCode` becomes `NoFilesMatchedExitCode` (2)
+rather than 1, and the message appears on standard error. This scenario is tested by
+`Context_WriteNoFilesMatchedError_SetsNoFilesMatchedExitCode`.
+
+**Context_MarkNoFilesMatched_SetsExitCodeWithoutConsoleOutput**: A `Context` calls
+`MarkNoFilesMatched` with both console streams redirected; `ExitCode` becomes 2 and no console
+output is produced, mirroring `Context_MarkFailure_SetsExitCodeWithoutConsoleOutput` for the
+zero-files-matched JSON-mode path. This scenario is tested by
+`Context_MarkNoFilesMatched_SetsExitCodeWithoutConsoleOutput`.
+
+**Context_WriteErrorThenMarkNoFilesMatched_ExitCodeRemainsOne**: A `Context` calls `WriteError`
+followed by `MarkNoFilesMatched`; `ExitCode` remains 1, confirming a genuine reported error is
+never masked by the zero-files-matched exit code. This scenario is tested by
+`Context_WriteErrorThenMarkNoFilesMatched_ExitCodeRemainsOne`.

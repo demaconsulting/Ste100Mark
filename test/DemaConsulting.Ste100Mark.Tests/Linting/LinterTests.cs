@@ -197,6 +197,88 @@ public sealed class LinterTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a positional glob matching zero files produces the distinct
+    ///     <see cref="Context.NoFilesMatchedExitCode"/> (2) rather than a silent clean pass.
+    /// </summary>
+    [Fact]
+    public void Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode()
+    {
+        // Arrange: a positional glob that matches nothing in the empty temp directory
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["no-such-file-*.md", "--silent"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: verify expected behavior
+            Assert.Equal(Context.NoFilesMatchedExitCode, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that a configured <c>include</c> pattern matching zero files (with no positional
+    ///     globs supplied) produces the same distinct exit code as the CLI-glob case above.
+    /// </summary>
+    [Fact]
+    public void Run_NoFilesMatchViaConfigIncludeExclude_ProducesNoFilesMatchedExitCode()
+    {
+        // Arrange: a config include pattern that matches no files on disk
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"), "include: [\"no-such-file.md\"]\n");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["--silent"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: verify expected behavior
+            Assert.Equal(Context.NoFilesMatchedExitCode, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that <c>--allow-empty</c> opts a zero-matched glob selection back into the ordinary
+    ///     success exit code (0), for legitimate scenarios where an empty selection is expected.
+    /// </summary>
+    [Fact]
+    public void Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode()
+    {
+        // Arrange: the same zero-match glob as above, plus --allow-empty
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["no-such-file-*.md", "--allow-empty", "--silent"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: verify expected behavior
+            Assert.Equal(0, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
     ///     Test that a relative glob pattern (e.g. <c>docs/**/*.md</c>) matches files nested under a
     ///     subdirectory, as a regression baseline for the absolute-glob equivalent below.
     /// </summary>

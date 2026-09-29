@@ -91,16 +91,24 @@ public class IntegrationTests
     /// <summary>
     ///     Test that no arguments displays the tool banner and runs default logic.
     /// </summary>
+    /// <remarks>
+    ///     <c>--allow-empty</c> is supplied because this test asserts on the banner text, not on
+    ///     lint results, and the process working directory used by <see cref="Runner.Run"/> may not
+    ///     contain any Markdown files matching the default <c>**/*.md</c> include pattern; without
+    ///     it, a zero-matched selection would now correctly produce exit code 2 (see the
+    ///     zero-files-matched exit code feature), which is unrelated to what this test verifies.
+    /// </remarks>
     [Fact]
     public void Ste100Mark_NoArguments_Invoked_DisplaysBanner()
     {
         // Arrange: (none — constructor initializes _dllPath)
 
-        // Act: run the tool with no arguments
+        // Act: run the tool with no arguments, accepting an empty file selection
         var exitCode = Runner.Run(
             out var output,
             "dotnet",
-            _dllPath);
+            _dllPath,
+            "--allow-empty");
 
         // Assert: banner is displayed with tool name and copyright; exit code is success
         Assert.Equal(0, exitCode);
@@ -256,6 +264,13 @@ public class IntegrationTests
     /// <summary>
     ///     Test that log flag writes output to a file.
     /// </summary>
+    /// <remarks>
+    ///     <c>--allow-empty</c> is supplied because this test asserts on the log-file/console
+    ///     behavior, not on lint results, and the process working directory used by
+    ///     <see cref="Runner.Run"/> may not contain any Markdown files matching the default
+    ///     <c>**/*.md</c> include pattern; without it, a zero-matched selection would now correctly
+    ///     produce exit code 2, which is unrelated to what this test verifies.
+    /// </remarks>
     [Fact]
     public void Ste100Mark_LogFlag_Provided_WritesOutputToFile()
     {
@@ -264,13 +279,14 @@ public class IntegrationTests
 
         try
         {
-            // Act: run the tool with log flag
+            // Act: run the tool with log flag, accepting an empty file selection
             var exitCode = Runner.Run(
                 out var output,
                 "dotnet",
                 _dllPath,
                 "--log",
-                logFile);
+                logFile,
+                "--allow-empty");
 
             // Assert: log file is created and contains tool output; console output matches
             Assert.Equal(0, exitCode);
@@ -490,6 +506,82 @@ public class IntegrationTests
             // Assert: verify expected behavior
             Assert.NotEqual(0, exitCode);
             Assert.Contains("missing.yaml", output);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that running the published CLI with a glob matching zero files returns the distinct
+    ///     exit code 2 and text output that plainly states nothing was checked, rather than the
+    ///     ambiguous zero-count "clean pass" wording.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithNoMatchingFiles_ReturnsNoFilesMatchedExitCode()
+    {
+        // Arrange: an isolated, empty working directory with no Markdown files
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            // Act: run the linter against a glob that matches nothing on disk
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "no-such-file-*.md");
+
+            // Assert: verify expected behavior
+            Assert.Equal(2, exitCode);
+            Assert.Contains("No files matched the configured file selection", output);
+            Assert.DoesNotContain("Checked 0 file(s): 0 error(s), 0 warning(s).", output);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that <c>--allow-empty</c> opts a zero-matched glob selection back into the ordinary
+    ///     success exit code (0) for the published CLI.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode()
+    {
+        // Arrange: the same empty working directory and zero-match glob as above
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            // Act: run the linter with --allow-empty against a glob that matches nothing
+            var exitCode = Runner.RunInDirectory(out _, workingDirectory, "dotnet", _dllPath, "no-such-file-*.md", "--allow-empty");
+
+            // Assert: verify expected behavior
+            Assert.Equal(0, exitCode);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that JSON-format output reports <c>noFilesMatched: true</c> and exit code 2 when the
+    ///     file selection matches zero files, disambiguating <c>filesChecked: 0</c> for JSON
+    ///     consumers of the published CLI.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithNoMatchingFilesJsonFormat_ReportsNoFilesMatchedTrue()
+    {
+        // Arrange: an isolated, empty working directory with no Markdown files
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            // Act: run the linter with --format json against a glob that matches nothing
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "no-such-file-*.md", "--format", "json");
+
+            // Assert: the entire output parses as a single JSON document with noFilesMatched true
+            Assert.Equal(2, exitCode);
+            using var document = System.Text.Json.JsonDocument.Parse(output);
+            Assert.True(document.RootElement.GetProperty("noFilesMatched").GetBoolean());
+            Assert.Equal(0, document.RootElement.GetProperty("filesChecked").GetInt32());
         }
         finally
         {

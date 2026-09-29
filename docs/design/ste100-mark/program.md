@@ -51,8 +51,9 @@ logic via `RunToolLogic(context)`. Exactly one path runs per invocation.
 - *Returns*: `void`.
 
 **PrintHelp**: Writes the usage synopsis and the umbrella CLI options table to `context`,
-including the lint-related options `--config`, `--format`, `--strict`, and the optional input
-glob arguments used by the main lint workflow.
+including the lint-related options `--config`, `--format`, `--strict`, `--allow-empty`, and the
+optional input glob arguments used by the main lint workflow, plus a summary of the three exit
+codes (0/1/2) and when `--allow-empty` changes that outcome.
 
 - *Parameters*: `Context context` — output target.
 - *Returns*: `void`.

@@ -84,6 +84,7 @@ public class ProgramTests
             Assert.Contains("--config", output);
             Assert.Contains("--format", output);
             Assert.Contains("--strict", output);
+            Assert.Contains("--allow-empty", output);
             Assert.Contains("globs", output);
             Assert.Equal(0, context.ExitCode);
         }
@@ -124,6 +125,14 @@ public class ProgramTests
     /// <summary>
     ///     Test that Run with no arguments displays default behavior.
     /// </summary>
+    /// <remarks>
+    ///     <c>--allow-empty</c> is supplied because this test asserts on the banner text, not on
+    ///     lint results, and the working directory used by the test runner may not contain any
+    ///     Markdown files matching the default <c>**/*.md</c> include pattern; without it, a
+    ///     zero-matched selection would now correctly produce exit code 2 (see
+    ///     <see cref="Context.NoFilesMatchedExitCode"/>), which is unrelated to what this test
+    ///     verifies.
+    /// </remarks>
     [Fact]
     public void Program_Run_NoArguments_DisplaysDefaultBehavior()
     {
@@ -133,7 +142,7 @@ public class ProgramTests
         {
             using var outWriter = new StringWriter();
             Console.SetOut(outWriter);
-            using var context = Context.Create([]);
+            using var context = Context.Create(["--allow-empty"]);
 
             // Act: execute the operation being tested
             Program.Run(context);

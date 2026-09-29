@@ -28,7 +28,7 @@ with no banner. This scenario is tested by `Program_Run_WithVersionFlag_Displays
 **Program_Run_WithHelpFlag_DisplaysUsageInformation**: `Program.Run` is called with a context
 from `["--help"]`; because version dispatch did not trigger, the banner is printed before help
 text, and the output contains "Usage:", "Options:", `--version`, `--help`, `--config`,
-`--format`, `--strict`, and `globs`. Exit code is 0. This scenario is tested by
+`--format`, `--strict`, `--allow-empty`, and `globs`. Exit code is 0. This scenario is tested by
 `Program_Run_WithHelpFlag_DisplaysUsageInformation`.
 
 **Program_Run_WithValidateFlag_RunsValidation**: `Program.Run` is called with a context from
@@ -36,10 +36,14 @@ text, and the output contains "Usage:", "Options:", `--version`, `--help`, `--co
 output contains "Total Tests:" with exit code 0, confirming self-validation runs before the main
 lint path. This scenario is tested by `Program_Run_WithValidateFlag_RunsValidation`.
 
-**Program_Run_NoArguments_DisplaysDefaultBehavior**: `Program.Run` is called with an empty
-argument array; the output contains the tool name and copyright notice and exit code is 0,
-confirming the default dispatch path reaches the main lint tool logic after banner printing. This
-scenario is tested by `Program_Run_NoArguments_DisplaysDefaultBehavior`.
+**Program_Run_NoArguments_DisplaysDefaultBehavior**: `Program.Run` is called with a context from
+`["--allow-empty"]`; the output contains the tool name and copyright notice and exit code is 0,
+confirming the default dispatch path reaches the main lint tool logic after banner printing.
+`--allow-empty` is supplied because this scenario asserts on the banner text, not on lint
+results, and the working directory used by the test runner may not contain any Markdown files
+matching the default `**/*.md` include pattern; without it, a zero-matched selection would now
+correctly produce exit code 2, which is unrelated to what this scenario verifies. This scenario
+is tested by `Program_Run_NoArguments_DisplaysDefaultBehavior`.
 
 **Program_Version_ReturnsNonEmptyString**: The `Program.Version` static property is read; the
 returned string is non-empty and non-null, confirming the version is resolvable from the

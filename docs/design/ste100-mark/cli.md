@@ -18,7 +18,8 @@ flags and write output. The `Cli` subsystem contains one unit: `Context`.
 - *Contract*: Parses `string[] args` into flag properties and opens the log file if `--log` is
   present. Returns a fully initialized `Context`. Accepts `--result` as a legacy alias for
   `--results`, stores an explicit lint configuration path from `--config`, stores `text` or
-  `json` output-format selection from `--format`, and records whether `--strict` was requested.
+  `json` output-format selection from `--format`, records whether `--strict` was requested, and
+  records whether `--allow-empty` was requested.
 - *Constraints*: Throws `ArgumentException` for unknown or malformed arguments; throws
   `InvalidOperationException` when the log file cannot be opened.
 
@@ -42,12 +43,34 @@ flags and write output. The `Cli` subsystem contains one unit: `Context`.
   to 1 regardless.
 - *Constraints*: Once set, `ExitCode` cannot return to 0 within the same invocation.
 
-**Context.ExitCode**: Derived property returning 0 or 1.
+**Context.WriteNoFilesMatchedError**: Writes the zero-files-matched failure message and sets the
+distinct exit-code state.
+
+- *Type*: In-process .NET instance method.
+- *Role*: Provider.
+- *Contract*: Sets `_noFilesMatched` to true and shares `WriteError`'s console/log-writing body,
+  so the message reaches stderr (unless `Silent`) and the log file (if open) the same way.
+- *Constraints*: Does not set `_hasErrors`; used instead of `WriteError` so `ExitCode` returns the
+  distinct `NoFilesMatchedExitCode` (2) rather than 1.
+
+**Context.MarkNoFilesMatched**: Sets the zero-files-matched exit-code state without console/log
+output.
+
+- *Type*: In-process .NET method (`internal`).
+- *Role*: Provider.
+- *Contract*: Sets `_noFilesMatched` to true with no output, mirroring `MarkFailure`, for callers
+  that already reported the condition through a self-contained JSON document.
+- *Constraints*: None.
+
+**Context.ExitCode**: Derived property returning 0, 1, or 2.
 
 - *Type*: In-process .NET property.
 - *Role*: Provider.
-- *Contract*: Returns 1 if `WriteError` has been called at least once; returns 0 otherwise.
-- *Constraints*: Read-only.
+- *Contract*: Returns 1 if `WriteError` (or `MarkFailure`) has been called at least once;
+  otherwise returns `NoFilesMatchedExitCode` (2) if the file selection matched zero files and
+  `AllowEmpty` was not specified; otherwise returns 0.
+- *Constraints*: Read-only. `_hasErrors` takes precedence over the zero-files condition so a
+  reported error is never masked.
 
 **Context.Dispose**: Releases the log file `StreamWriter`.
 
@@ -71,11 +94,14 @@ main lint flow. During main lint flow, `--format json` suppresses the normal ban
 remain a single parseable JSON document; help and self-validation still emit the banner even if a
 JSON format argument is present.
 
-The lint path uses `Context.ConfigFile`, `Context.Format`, and `Context.Strict` exactly as parsed.
+The lint path uses `Context.ConfigFile`, `Context.Format`, `Context.Strict`, and
+`Context.AllowEmpty` exactly as parsed.
 `Linter` passes an explicit `--config` path through to configuration loading, defaults to
 `.ste100mark.yaml` only when no explicit path was supplied, reports diagnostics in the selected
-text or JSON format, and treats `--strict` as an exit-code policy that promotes warn-severity
-findings to failure without changing the severities reported in diagnostic output.
+text or JSON format, treats `--strict` as an exit-code policy that promotes warn-severity
+findings to failure without changing the severities reported in diagnostic output, and treats a
+zero-matched file selection as a distinct failure (exit code 2) unless `--allow-empty` was
+specified.
 
 Error handling flows from `Context.Create` to `Program.Main`: argument parsing errors propagate
 as `ArgumentException`; log-file errors propagate as `InvalidOperationException`. Both are

@@ -53,7 +53,7 @@ public class DiagnosticReporterTests
             using var context = Context.Create([]);
 
             // Act: execute the operation being tested
-            DiagnosticReporter.Report(context, SampleDiagnostics, 1);
+            DiagnosticReporter.Report(context, SampleDiagnostics, 1, false);
 
             // Assert: verify expected behavior
             var output = outWriter.ToString();
@@ -86,11 +86,12 @@ public class DiagnosticReporterTests
             using var context = Context.Create(["--format", "json"]);
 
             // Act: execute the operation being tested
-            DiagnosticReporter.Report(context, SampleDiagnostics, 1);
+            DiagnosticReporter.Report(context, SampleDiagnostics, 1, false);
 
             // Assert: verify expected behavior
             var output = outWriter.ToString();
             Assert.Contains("\"filesChecked\": 1", output);
+            Assert.Contains("\"noFilesMatched\": false", output);
             Assert.Contains("\"errorCount\": 1", output);
             Assert.Contains("\"warningCount\": 1", output);
             Assert.Contains("\"ruleCode\": \"STE100-8.1\"", output);
@@ -118,11 +119,102 @@ public class DiagnosticReporterTests
             using var context = Context.Create([]);
 
             // Act: execute the operation being tested
-            DiagnosticReporter.Report(context, [], 2);
+            DiagnosticReporter.Report(context, [], 2, false);
 
             // Assert: verify expected behavior
             var output = outWriter.ToString();
             Assert.Contains("Checked 2 file(s): 0 error(s), 0 warning(s).", output);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that reporting with <c>noFilesMatched: true</c> writes the distinct failure summary
+    ///     wording instead of the ambiguous zero-count summary line, so a caller scanning only the
+    ///     text output cannot mistake this for a clean pass.
+    /// </summary>
+    [Fact]
+    public void Report_NoFilesMatchedTrue_WritesFailureSummaryLine()
+    {
+        // Arrange: capture console output for a text-format context with zero files checked
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create([]);
+
+            // Act: execute the operation being tested with noFilesMatched true
+            DiagnosticReporter.Report(context, [], 0, true);
+
+            // Assert: verify the distinct failure wording is used and the ambiguous summary is not
+            var output = outWriter.ToString();
+            Assert.Contains("No files matched the configured file selection", output);
+            Assert.Contains("--allow-empty", output);
+            Assert.DoesNotContain("Checked 0 file(s): 0 error(s), 0 warning(s).", output);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that reporting with <c>noFilesMatched: false</c> and zero files checked (the
+    ///     <c>--allow-empty</c> accepted case) preserves the existing zero-count summary wording, so
+    ///     the accepted-empty scenario still reads as a normal, unambiguous clean pass.
+    /// </summary>
+    [Fact]
+    public void Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary()
+    {
+        // Arrange: capture console output for a text-format context with zero files checked and
+        // an accepted (allow-empty) result
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create([]);
+
+            // Act: execute the operation being tested with noFilesMatched false
+            DiagnosticReporter.Report(context, [], 0, false);
+
+            // Assert: verify the existing summary wording is preserved
+            var output = outWriter.ToString();
+            Assert.Contains("Checked 0 file(s): 0 error(s), 0 warning(s).", output);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that JSON-format reporting includes an explicit <c>noFilesMatched: true</c> field
+    ///     when the file selection matched zero files and was not accepted via
+    ///     <c>--allow-empty</c>, disambiguating a bare <c>filesChecked: 0</c> for JSON consumers.
+    /// </summary>
+    [Fact]
+    public void Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField()
+    {
+        // Arrange: capture console output for a JSON-format context with zero files checked
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["--format", "json"]);
+
+            // Act: execute the operation being tested with noFilesMatched true
+            DiagnosticReporter.Report(context, [], 0, true);
+
+            // Assert: verify expected behavior
+            var output = outWriter.ToString();
+            Assert.Contains("\"filesChecked\": 0", output);
+            Assert.Contains("\"noFilesMatched\": true", output);
         }
         finally
         {
