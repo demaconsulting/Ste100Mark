@@ -118,9 +118,11 @@ internal static class Linter
         var files = ResolveFiles(context.Globs, config);
 
         var diagnostics = new List<Diagnostic>();
+        var relativePaths = new List<string>(files.Count);
         foreach (var file in files)
         {
             var relativePath = Path.GetRelativePath(Directory.GetCurrentDirectory(), file).Replace('\\', '/');
+            relativePaths.Add(relativePath);
             var content = File.ReadAllText(file);
             var mode = config.ResolveMode(relativePath);
             var rules = config.ResolveRules(relativePath);
@@ -142,7 +144,7 @@ internal static class Linter
         // the caller has explicitly opted in to accepting an empty selection via --allow-empty.
         var noFilesMatched = files.Count == 0 && !context.AllowEmpty;
 
-        DiagnosticReporter.Report(context, diagnostics, files.Count, noFilesMatched);
+        DiagnosticReporter.Report(context, diagnostics, relativePaths, noFilesMatched);
 
         if (noFilesMatched)
         {

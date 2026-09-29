@@ -286,6 +286,14 @@ and through the published CLI JSON path. This scenario is tested by
 `Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField`, and
 `Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument`.
 
+**Ste100Mark-Linting-ReportedFiles**: The JSON report's `files` array is verified to list every
+file the effective selection resolved to, with its relative path and `"checked"` status, and to
+omit files removed by a configured exclude pattern. This scenario is tested by
+`Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema`,
+`Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField`,
+`Run_JsonFormat_FilesArrayListsCheckedFilesAndOmitsExcludedFiles`, and
+`Ste100Mark_LintWithJsonFormat_ReportsCheckedFilesArray`.
+
 **Ste100Mark-Linting-ExitCode**: Exit-code behavior is verified for clean files, build-breaking
 errors, strict-mode warning promotion, configuration failures, and JSON-mode failure signaling.
 This scenario is tested by `Run_CleanMarkdownFile_ProducesSuccessExitCode`,

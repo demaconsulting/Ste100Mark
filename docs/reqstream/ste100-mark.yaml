@@ -248,6 +248,22 @@ sections:
         tests:
           - Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument
 
+      - id: Ste100Mark-System-LintReportedFiles
+        title: >-
+          The JSON diagnostic report shall list every file the effective file selection resolved
+          to, alongside the existing summary counts.
+        justification: |
+          A caller (for example, one attributing findings to document sections) previously had
+          only `filesChecked: N` to determine scope, and had to independently reimplement the
+          tool's glob/include/exclude resolution just to recover which files that count
+          referred to. Reporting the resolved file list directly removes that duplicated,
+          drift-prone logic from callers.
+        tags: [system]
+        children:
+          - Ste100Mark-Linting-ReportedFiles
+        tests:
+          - Ste100Mark_LintWithJsonFormat_ReportsCheckedFilesArray
+
       - id: Ste100Mark-System-LintStrict
         title: >-
           The tool shall promote warn-severity lint findings to a failure exit code when
