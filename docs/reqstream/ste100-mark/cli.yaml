@@ -27,6 +27,7 @@ sections:
           - CliSubsystem_ConfigFlow_ContextAndProgram_AcceptsExplicitConfigPath
           - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
           - CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag
+          - CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag
 
       - id: Ste100Mark-Cli-OutputChannels
         title: >-
@@ -144,6 +145,21 @@ sections:
           - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
           - Run_WarnOnlyFinding_WithoutStrict_ProducesSuccessExitCode
 
+      - id: Ste100Mark-Cli-AllowEmpty
+        title: >-
+          The Cli subsystem shall support --allow-empty flag to accept a zero-matched file
+          selection as a successful run.
+        justification: |
+          A file selection matching zero files is otherwise indistinguishable from a genuine
+          clean pass to a caller inspecting only the exit code. Teams with legitimately empty
+          selections (for example, a glob scoped to an optional directory) need a way to opt a
+          specific invocation out of the resulting failure without changing the default,
+          safer-by-default behavior for everyone else.
+        tests:
+          - CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag
+          - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode
+          - Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode
+
       - id: Ste100Mark-Cli-ErrorOutput
         title: The Cli subsystem shall write error messages to stderr.
         justification: |
@@ -173,3 +189,5 @@ sections:
           - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
           - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
           - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
+          - Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode
+          - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode

@@ -36,6 +36,12 @@ internal sealed class Context : IDisposable
     private bool _hasErrors;
 
     /// <summary>
+    ///     Indicates whether the file selection matched zero files and this was not accepted via
+    ///     <see cref="AllowEmpty"/>.
+    /// </summary>
+    private bool _noFilesMatched;
+
+    /// <summary>
     ///     Gets a value indicating whether the version flag was specified.
     /// </summary>
     public bool Version { get; private init; }
@@ -101,9 +107,54 @@ internal sealed class Context : IDisposable
     public bool Strict { get; private init; }
 
     /// <summary>
-    ///     Gets the proposed exit code for the application (0 for success, 1 for errors).
+    ///     Gets a value indicating whether the <c>--allow-empty</c> flag was specified.
     /// </summary>
-    public int ExitCode => _hasErrors ? 1 : 0;
+    /// <remarks>
+    ///     A file selection (positional globs, or configured <c>include</c>/<c>exclude</c>
+    ///     patterns) that matches zero files is treated as a failure by default, because it is
+    ///     otherwise indistinguishable from a genuine clean pass to a caller that only inspects
+    ///     the exit code - a typo'd glob or a moved directory could silently "pass" a CI job that
+    ///     verified nothing. Setting this flag opts a specific invocation out of that failure for
+    ///     scenarios where an empty match is legitimately expected (for example, a glob scoped to
+    ///     an optional directory that does not always exist).
+    /// </remarks>
+    public bool AllowEmpty { get; private init; }
+
+    /// <summary>
+    ///     Exit code returned by <see cref="ExitCode"/> when the file selection matched zero files
+    ///     and <see cref="AllowEmpty"/> was not specified.
+    /// </summary>
+    /// <remarks>
+    ///     This is distinct from the normal failure exit code (<c>1</c>) so that automation can
+    ///     tell "checked N files, found lint violations" apart from "checked nothing" without
+    ///     inspecting the diagnostic report. Documented in <see cref="Program"/>'s help text.
+    /// </remarks>
+    internal const int NoFilesMatchedExitCode = 2;
+
+    /// <summary>
+    ///     Gets the proposed exit code for the application: 0 for success, 1 when lint/argument
+    ///     errors were reported, or <see cref="NoFilesMatchedExitCode"/> (2) when the file
+    ///     selection matched zero files and <see cref="AllowEmpty"/> was not specified.
+    /// </summary>
+    /// <remarks>
+    ///     <c>_hasErrors</c> takes precedence over <c>_noFilesMatched</c>. The two conditions are
+    ///     not expected to co-occur in practice - a zero-file run produces no diagnostics, and
+    ///     configuration/dictionary load failures short-circuit before file resolution runs - but
+    ///     the ordering is a defensive guarantee that a genuine reported error is never masked by
+    ///     the zero-files exit code.
+    /// </remarks>
+    public int ExitCode
+    {
+        get
+        {
+            if (_hasErrors)
+            {
+                return 1;
+            }
+
+            return _noFilesMatched ? NoFilesMatchedExitCode : 0;
+        }
+    }
 
     /// <summary>
     ///     Private constructor - use Create factory method instead.
@@ -138,7 +189,8 @@ internal sealed class Context : IDisposable
             Globs = parser.Globs,
             ConfigFile = parser.ConfigFile,
             Format = parser.Format,
-            Strict = parser.Strict
+            Strict = parser.Strict,
+            AllowEmpty = parser.AllowEmpty
         };
 
         // Open log file if specified
@@ -232,6 +284,11 @@ internal sealed class Context : IDisposable
         public bool Strict { get; private set; }
 
         /// <summary>
+        ///     Gets a value indicating whether the <c>--allow-empty</c> flag was specified.
+        /// </summary>
+        public bool AllowEmpty { get; private set; }
+
+        /// <summary>
         ///     Parses command-line arguments
         /// </summary>
         /// <param name="args">Command-line arguments.</param>
@@ -301,6 +358,10 @@ internal sealed class Context : IDisposable
 
                 case "--strict":
                     Strict = true;
+                    return index;
+
+                case "--allow-empty":
+                    AllowEmpty = true;
                     return index;
 
                 default:
@@ -412,6 +473,37 @@ internal sealed class Context : IDisposable
         // Mark that we have encountered errors
         _hasErrors = true;
 
+        WriteErrorLine(message);
+    }
+
+    /// <summary>
+    ///     Writes an error message to the error console and log file (if logging is enabled),
+    ///     without affecting the general <c>_hasErrors</c> flag.
+    /// </summary>
+    /// <param name="message">The error message to write.</param>
+    /// <remarks>
+    ///     <c>_noFilesMatched</c> is set to <c>true</c> so that <see cref="ExitCode"/> will return
+    ///     <see cref="NoFilesMatchedExitCode"/> (2) rather than the ambiguous "clean pass" code 0,
+    ///     regardless of whether <see cref="Silent"/> suppresses the console output. Use this instead
+    ///     of <see cref="WriteError"/> so callers/CI systems that only check the exit code can tell a
+    ///     "checked zero files" run apart from a genuine lint failure.
+    /// </remarks>
+    public void WriteNoFilesMatchedError(string message)
+    {
+        // Mark that the file selection matched zero files
+        _noFilesMatched = true;
+
+        WriteErrorLine(message);
+    }
+
+    /// <summary>
+    ///     Shared console/log-writing body for error-style output, extracted so
+    ///     <see cref="WriteError"/> and <see cref="WriteNoFilesMatchedError"/> do not duplicate the
+    ///     red-stderr/log-file writing logic while each sets its own distinct failure flag.
+    /// </summary>
+    /// <param name="message">The error message to write.</param>
+    private void WriteErrorLine(string message)
+    {
         // Write to error console unless silent mode is enabled
         if (!Silent)
         {
@@ -438,6 +530,21 @@ internal sealed class Context : IDisposable
     internal void MarkFailure()
     {
         _hasErrors = true;
+    }
+
+    /// <summary>
+    ///     Marks that the file selection matched zero files, without emitting any console or log
+    ///     output.
+    /// </summary>
+    /// <remarks>
+    ///     Callers in JSON output mode use this instead of <see cref="WriteNoFilesMatchedError"/>
+    ///     so that the single buffered JSON document written via <see cref="WriteLine"/> is not
+    ///     interleaved with a stderr line, exactly as <see cref="MarkFailure"/> does today for lint
+    ///     failures.
+    /// </remarks>
+    internal void MarkNoFilesMatched()
+    {
+        _noFilesMatched = true;
     }
 
     /// <summary>

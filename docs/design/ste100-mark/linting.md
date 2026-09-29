@@ -110,16 +110,22 @@ flowchart TD
    `allow`/`ignore` removal lists.
 3. `Linter.ResolveFiles` computes the Markdown file set. Positional globs from the command
    line replace configured include/exclude patterns; otherwise the configuration controls
-   the scope.
+   the scope. Immediately afterward, `Linter` determines whether the resolved set is empty
+   and `--allow-empty` was not specified; if so, it reports the zero-files-matched failure
+   (exit code 2, `noFilesMatched: true`) and returns without evaluating rules, since there is
+   nothing to lint.
 4. For each file, `MarkdownProseExtractor.Extract` emits prose segments in document order.
    `SentenceAnalyzer.Split` then interprets those segments for Rule 4.1 word-limit and
    advisory paragraph/passive checks. `DictionaryChecker.Evaluate` inspects the same
    segment text against the merged dictionary.
 5. `StructuralRules.Evaluate` and `DictionaryChecker.Evaluate` each return immutable
    `Diagnostic` values. `DiagnosticReporter.Report` formats the aggregated list either as
-   line-oriented text or as one JSON document.
+   line-oriented text or as one JSON document, threading through the zero-files-matched
+   indicator computed in step 3.
 6. `Linter` applies exit-code semantics: error-severity diagnostics always fail the run;
-   warn-severity diagnostics also fail when `--strict` is active.
+   warn-severity diagnostics also fail when `--strict` is active; a zero-matched file
+   selection fails the run with the distinct `NoFilesMatchedExitCode` (2) unless
+   `--allow-empty` was specified.
 
 The subsystem reports the following rule codes:
 

@@ -59,6 +59,18 @@ sections:
           - Context_Create_NoArguments_ReturnsLintingDefaults
           - Context_Create_StrictFlag_SetsStrictTrue
 
+      - id: Ste100Mark-Context-AllowEmptyArgumentParsing
+        title: >-
+          The Context class shall parse the --allow-empty option and expose whether a
+          zero-matched file selection should be accepted as a successful run.
+        justification: |
+          Callers must be able to opt a specific invocation out of the zero-files-matched
+          failure on a per-invocation basis, for scenarios where an empty selection is
+          legitimately expected.
+        tests:
+          - Context_Create_NoArguments_ReturnsLintingDefaults
+          - Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue
+
       - id: Ste100Mark-Context-GlobArgumentParsing
         title: The Context class shall collect positional non-flag arguments as glob patterns in the order supplied.
         justification: |
@@ -138,6 +150,21 @@ sections:
           programmatically via the process exit code.
         tests:
           - Context_WriteError_SetsErrorExitCode
+
+      - id: Ste100Mark-Context-NoFilesMatchedExitCode
+        title: >-
+          The Context class shall expose a distinct exit code (2) when the file selection
+          matched zero files and this was not accepted via --allow-empty, taking precedence
+          below any reported error (exit code 1).
+        justification: |
+          `filesChecked: 0` alone cannot distinguish a misconfigured glob/include pattern from
+          a genuine clean pass over zero files. A dedicated, non-reused exit code lets
+          automation that only inspects the exit code detect this condition, while a reported
+          error must never be silently masked by the zero-files exit code.
+        tests:
+          - Context_WriteNoFilesMatchedError_SetsNoFilesMatchedExitCode
+          - Context_MarkNoFilesMatched_SetsExitCodeWithoutConsoleOutput
+          - Context_WriteErrorThenMarkNoFilesMatched_ExitCodeRemainsOne
 
       - id: Ste100Mark-Context-LogFailure
         title: The Context class shall report an error when the specified log file cannot be opened.

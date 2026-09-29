@@ -68,10 +68,12 @@ diagnostics and summaries through `DiagnosticReporter` into that context's outpu
 - *Contract*: Accepts positional Markdown glob arguments `[globs...]` plus
   `-v`/`--version`, `-?`/`-h`/`--help`, `--silent`, `--validate`, `--results <file>`,
   `--result <file>` (legacy alias for `--results`), `--depth <n>`, `--log <file>`,
-  `--config <file>`, `--format <text|json>`, and `--strict`. Returns exit code 0 when no
-  failure condition is detected, and exit code 1 for invalid arguments, configuration or
-  dictionary load failures, any error-severity lint finding, or warn-severity findings when
-  `--strict` is active.
+  `--config <file>`, `--format <text|json>`, `--strict`, and `--allow-empty`. Returns exit
+  code 0 when no failure condition is detected, exit code 1 for invalid arguments,
+  configuration or dictionary load failures, any error-severity lint finding, or
+  warn-severity findings when `--strict` is active, and exit code 2 when the resolved file
+  selection matched zero files and `--allow-empty` was not specified (unless a genuine error
+  was also reported, which always takes precedence over the empty-selection code).
 - *Constraints*: Unknown flags are rejected. Positional globs replace the configured
   `include`/`exclude` file-selection patterns for that invocation.
 

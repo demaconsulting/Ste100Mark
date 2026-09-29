@@ -14,6 +14,9 @@ rule evaluation or exit-code decisions itself.
 **JsonReport**: private record representing the JSON root object.
 
 - `FilesChecked`: `int` - number of linted files.
+- `NoFilesMatched`: `bool` - `true` only when the file selection matched zero files and the run
+  was treated as a failure (that is, `--allow-empty` was not specified); disambiguates
+  `FilesChecked == 0` for JSON consumers.
 - `ErrorCount`: `int` - count of `Severity.Error` findings.
 - `WarningCount`: `int` - count of `Severity.Warn` findings.
 - `Diagnostics`: `IReadOnlyList<JsonDiagnostic>` - serialized diagnostic payload in produced
@@ -38,26 +41,30 @@ serialization.
 
 - *Parameters*: `Context context` - output target and format selector;
   `IReadOnlyList<Diagnostic> diagnostics` - aggregated findings; `int filesChecked` - number
-  of linted files.
+  of linted files; `bool noFilesMatched` - `true` when the file selection matched zero files
+  and the run is being treated as a failure.
 - *Returns*: `void`.
 - *Preconditions*: `context` and `diagnostics` are non-null.
 - *Postconditions*: Exactly one output path (`WriteText` or `WriteJson`) is executed.
 
 **WriteText**: Emits one human-readable line per diagnostic followed by a summary line.
 
-- *Parameters*: `Context context`; `IReadOnlyList<Diagnostic> diagnostics`; `int filesChecked`.
+- *Parameters*: `Context context`; `IReadOnlyList<Diagnostic> diagnostics`; `int filesChecked`;
+  `bool noFilesMatched`.
 - *Returns*: `void`.
 - *Postconditions*: Each diagnostic line contains location, uppercase severity, rule code,
-  message, and optional suggestion. A final summary line reports checked files plus error and
-  warning counts.
+  message, and optional suggestion. When `noFilesMatched` is `true`, the final line is a
+  distinct failure statement instead of the ordinary summary, so it cannot be misread as a
+  clean pass; otherwise the existing "Checked N file(s): ... " summary line is unchanged.
 
 **WriteJson**: Serializes the findings to one pretty-printed JSON document and writes it in a
 single `Context.WriteLine` call.
 
-- *Parameters*: `Context context`; `IReadOnlyList<Diagnostic> diagnostics`; `int filesChecked`.
+- *Parameters*: `Context context`; `IReadOnlyList<Diagnostic> diagnostics`; `int filesChecked`;
+  `bool noFilesMatched`.
 - *Returns*: `void`.
 - *Postconditions*: Standard output contains one parseable JSON document with camelCase
-  property names, summary counts, and every produced diagnostic.
+  property names, summary counts (including `noFilesMatched`), and every produced diagnostic.
 
 #### Error Handling
 

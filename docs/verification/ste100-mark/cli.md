@@ -93,6 +93,10 @@ suppressed, and exit code is 0. This scenario verifies `Ste100Mark-Cli-ArgumentP
 parsed through `Context.Create`; `Context.Strict` is true. This scenario verifies
 `Ste100Mark-Cli-ArgumentParsing` and `Ste100Mark-Cli-Strict`.
 
+**CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag**: Arguments
+`[`"`--allow-empty`"`]` are parsed through `Context.Create`; `Context.AllowEmpty` is true. This
+scenario verifies `Ste100Mark-Cli-ArgumentParsing` and `Ste100Mark-Cli-AllowEmpty`.
+
 **CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr**: A `Context` is created with no
 arguments and `WriteError` is called with a known message; standard error receives the message and
 `ExitCode` becomes 1. This scenario verifies `Ste100Mark-Cli-OutputChannels`,
@@ -115,3 +119,15 @@ warn-only Markdown file and no `--strict` flag; exit code remains 0. This scenar
 **Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode**: `Linter.Run` is invoked with the same
 warn-only Markdown file and `--strict`; exit code becomes 1 without requiring an error-severity
 finding. This scenario verifies `Ste100Mark-Cli-Strict` and `Ste100Mark-Cli-ExitCode`.
+
+**Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode**: `Linter.Run` is invoked with a
+positional glob matching zero files and no `--allow-empty` flag; `ExitCode` becomes
+`Context.NoFilesMatchedExitCode` (2). This scenario verifies `Ste100Mark-Cli-ExitCode`.
+
+**Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode**: `Linter.Run` is invoked with the same
+zero-match glob plus `--allow-empty`; `ExitCode` becomes 0. This scenario verifies
+`Ste100Mark-Cli-AllowEmpty` and `Ste100Mark-Cli-ExitCode`.
+
+**Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode**: The published CLI is run
+against a zero-match glob with `--allow-empty`; exit code is 0. This scenario verifies
+`Ste100Mark-Cli-AllowEmpty`.

@@ -261,7 +261,8 @@ scenario is tested by `Context_Create_NoArguments_ReturnsLintingDefaults`,
 `Context_Create_FormatFlagJson_SetsJsonFormat`, `Context_Create_FormatFlagText_SetsTextFormat`,
 `Context_Create_FormatFlag_UnsupportedValue_ThrowsArgumentException`,
 `Context_Create_FormatFlag_WithoutValue_ThrowsArgumentException`,
-`Context_Create_StrictFlag_SetsStrictTrue`, `Program_Run_NoArguments_DisplaysDefaultBehavior`,
+`Context_Create_StrictFlag_SetsStrictTrue`, `Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue`,
+`Program_Run_NoArguments_DisplaysDefaultBehavior`,
 and `Run_PositionalGlobs_OverrideConfigInclude`. Support for glob patterns and literal file
 paths that are absolute (a Windows drive letter, a UNC path, or a POSIX-style leading `/`), in
 addition to patterns relative to the current directory, is verified by
@@ -277,7 +278,10 @@ addition to patterns relative to the current directory, is verified by
 and through the published CLI JSON path. This scenario is tested by
 `Report_TextFormat_WritesDiagnosticLinesAndSummary`,
 `Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema`,
-`Report_NoDiagnostics_WritesZeroCountSummary`, and
+`Report_NoDiagnostics_WritesZeroCountSummary`,
+`Report_NoFilesMatchedTrue_WritesFailureSummaryLine`,
+`Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary`,
+`Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField`, and
 `Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument`.
 
 **Ste100Mark-Linting-ExitCode**: Exit-code behavior is verified for clean files, build-breaking
@@ -291,3 +295,18 @@ This scenario is tested by `Run_CleanMarkdownFile_ProducesSuccessExitCode`,
 `Ste100Mark_LintCleanFile_ReturnsZeroExitCode`,
 `Ste100Mark_LintWithStrictFlag_PromotesWarningsToFailure`, and
 `Ste100Mark_LintWithMissingConfigFile_ReturnsNonZeroWithErrorMessage`.
+
+**Ste100Mark-Linting-EmptyFileSet**: The distinct zero-files-matched exit code (2), the JSON
+`noFilesMatched` field, the distinct text wording, and the `--allow-empty` opt-out are verified
+for both the CLI-glob and configured-include/exclude routes to zero matched files, in-process and
+through the published CLI. This scenario is tested by
+`Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode`,
+`Run_NoFilesMatchViaConfigInclude_ProducesNoFilesMatchedExitCode`,
+`Run_NoFilesMatchViaConfigIncludeExcludeSubtraction_ProducesNoFilesMatchedExitCode`,
+`Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode`,
+`Report_NoFilesMatchedTrue_WritesFailureSummaryLine`,
+`Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary`,
+`Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField`,
+`Ste100Mark_LintWithNoMatchingFiles_ReturnsNoFilesMatchedExitCode`,
+`Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode`, and
+`Ste100Mark_LintWithNoMatchingFilesJsonFormat_ReportsNoFilesMatchedTrue`.

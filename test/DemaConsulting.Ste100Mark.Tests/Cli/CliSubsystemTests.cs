@@ -479,6 +479,22 @@ public class CliSubsystemTests
     }
 
     /// <summary>
+    ///     Test that Context parses the --allow-empty flag.
+    /// </summary>
+    [Fact]
+    public void CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag()
+    {
+        // Arrange: command line arguments with the allow-empty flag
+        var args = new[] { "--allow-empty" };
+
+        // Act: create context from the provided arguments
+        using var context = Context.Create(args);
+
+        // Assert: allow-empty mode is preserved for the lint flow
+        Assert.True(context.AllowEmpty, "Context should parse allow-empty flag");
+    }
+
+    /// <summary>
     ///     Test that Context and Program work together to parse the --format json option and suppress the banner for lint output.
     /// </summary>
     [Fact]

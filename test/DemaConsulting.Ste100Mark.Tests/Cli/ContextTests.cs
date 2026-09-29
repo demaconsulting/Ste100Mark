@@ -520,6 +520,7 @@ public class ContextTests
         Assert.Null(context.ConfigFile);
         Assert.Equal(OutputFormat.Text, context.Format);
         Assert.False(context.Strict);
+        Assert.False(context.AllowEmpty);
     }
 
     /// <summary>
@@ -637,6 +638,20 @@ public class ContextTests
     }
 
     /// <summary>
+    ///     Test creating a context with the <c>--allow-empty</c> flag.
+    /// </summary>
+    [Fact]
+    public void Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create(["--allow-empty"]);
+
+        // Assert: verify expected behavior
+        Assert.True(context.AllowEmpty);
+        Assert.Equal(0, context.ExitCode);
+    }
+
+    /// <summary>
     ///     Test that Dispose may be called multiple times without throwing.
     /// </summary>
     [Fact]
@@ -692,6 +707,98 @@ public class ContextTests
         finally
         {
             Console.SetOut(originalOut);
+            Console.SetError(originalError);
+        }
+    }
+
+    /// <summary>
+    ///     Test that WriteNoFilesMatchedError writes the message to the error console and sets the
+    ///     exit code to the distinct <see cref="Context.NoFilesMatchedExitCode"/> (2) rather than
+    ///     the ordinary failure exit code (1).
+    /// </summary>
+    [Fact]
+    public void Context_WriteNoFilesMatchedError_SetsNoFilesMatchedExitCode()
+    {
+        // Arrange: setup test conditions
+        var originalError = Console.Error;
+        try
+        {
+            using var errWriter = new StringWriter();
+            Console.SetError(errWriter);
+            using var context = Context.Create([]);
+
+            // Act: execute the operation being tested
+            context.WriteNoFilesMatchedError("No files matched");
+
+            // Assert: verify expected behavior
+            Assert.Equal(2, context.ExitCode);
+            Assert.Contains("No files matched", errWriter.ToString());
+        }
+        finally
+        {
+            Console.SetError(originalError);
+        }
+    }
+
+    /// <summary>
+    ///     Test that MarkNoFilesMatched sets the distinct exit code 2 without writing any console
+    ///     output, mirroring <see cref="Context_MarkFailure_SetsExitCodeWithoutConsoleOutput"/> for
+    ///     the JSON-mode zero-files-matched failure path.
+    /// </summary>
+    [Fact]
+    public void Context_MarkNoFilesMatched_SetsExitCodeWithoutConsoleOutput()
+    {
+        // Arrange: redirect both console streams to detect any unexpected output
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        try
+        {
+            using var outWriter = new StringWriter();
+            using var errWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            Console.SetError(errWriter);
+            using var context = Context.Create([]);
+
+            // Act: execute the operation being tested
+            context.MarkNoFilesMatched();
+
+            // Assert: exit code reflects the zero-files-matched failure, but no console output
+            Assert.Equal(2, context.ExitCode);
+            Assert.Equal(string.Empty, outWriter.ToString());
+            Assert.Equal(string.Empty, errWriter.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+        }
+    }
+
+    /// <summary>
+    ///     Regression guard: when both a reported error and a zero-files-matched condition occur on
+    ///     the same context, <see cref="Context.ExitCode"/> must return 1 (the reported-error code),
+    ///     never silently masking a genuine error behind the zero-files exit code.
+    /// </summary>
+    [Fact]
+    public void Context_WriteErrorThenMarkNoFilesMatched_ExitCodeRemainsOne()
+    {
+        // Arrange: redirect the error console so WriteError does not pollute test output
+        var originalError = Console.Error;
+        try
+        {
+            using var errWriter = new StringWriter();
+            Console.SetError(errWriter);
+            using var context = Context.Create([]);
+
+            // Act: report a genuine error first, then mark zero files matched
+            context.WriteError("Test error message");
+            context.MarkNoFilesMatched();
+
+            // Assert: the reported-error exit code takes precedence
+            Assert.Equal(1, context.ExitCode);
+        }
+        finally
+        {
             Console.SetError(originalError);
         }
     }

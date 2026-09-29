@@ -46,18 +46,24 @@ internal static partial class DiagnosticReporter
     /// <param name="context">Output target and format selector.</param>
     /// <param name="diagnostics">Diagnostics collected across all linted files.</param>
     /// <param name="filesChecked">Number of files that were linted.</param>
-    public static void Report(Context context, IReadOnlyList<Diagnostic> diagnostics, int filesChecked)
+    /// <param name="noFilesMatched">
+    ///     <see langword="true"/> when the file selection matched zero files and the run is being
+    ///     treated as a failure (that is, <c>--allow-empty</c> was not specified); <see langword="false"/>
+    ///     otherwise, including when the selection matched zero files but was accepted via
+    ///     <c>--allow-empty</c>.
+    /// </param>
+    public static void Report(Context context, IReadOnlyList<Diagnostic> diagnostics, int filesChecked, bool noFilesMatched)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(diagnostics);
 
         if (context.Format == OutputFormat.Json)
         {
-            WriteJson(context, diagnostics, filesChecked);
+            WriteJson(context, diagnostics, filesChecked, noFilesMatched);
         }
         else
         {
-            WriteText(context, diagnostics, filesChecked);
+            WriteText(context, diagnostics, filesChecked, noFilesMatched);
         }
     }
 
@@ -67,7 +73,12 @@ internal static partial class DiagnosticReporter
     /// <param name="context">Output target.</param>
     /// <param name="diagnostics">Diagnostics to report.</param>
     /// <param name="filesChecked">Number of files that were linted.</param>
-    private static void WriteText(Context context, IReadOnlyList<Diagnostic> diagnostics, int filesChecked)
+    /// <param name="noFilesMatched">
+    ///     <see langword="true"/> when the file selection matched zero files and the run is being
+    ///     treated as a failure; when <see langword="true"/>, the summary line is replaced with an
+    ///     unambiguous failure statement instead of the ordinary zero-count summary.
+    /// </param>
+    private static void WriteText(Context context, IReadOnlyList<Diagnostic> diagnostics, int filesChecked, bool noFilesMatched)
     {
         foreach (var diagnostic in diagnostics)
         {
@@ -81,6 +92,19 @@ internal static partial class DiagnosticReporter
             context.WriteLine($"{location}: [{severityText}] {diagnostic.RuleCode} \u2014 {diagnostic.Message}{suggestion}");
         }
 
+        if (noFilesMatched)
+        {
+            // Deliberately distinct wording from the ordinary summary line below: a bare
+            // "Checked 0 file(s): 0 error(s), 0 warning(s)." reads as a clean pass to anyone
+            // scanning the output, which is exactly the ambiguity this feature exists to remove.
+            context.WriteLine(
+                "No files matched the configured file selection; 0 file(s) checked. This run is " +
+                "treated as a failure to avoid silently passing on a misconfigured glob or " +
+                "include/exclude pattern. Use --allow-empty to accept an intentionally empty file " +
+                "selection.");
+            return;
+        }
+
         var errorCount = diagnostics.Count(d => d.Severity == Severity.Error);
         var warningCount = diagnostics.Count(d => d.Severity == Severity.Warn);
         context.WriteLine($"Checked {filesChecked} file(s): {errorCount} error(s), {warningCount} warning(s).");
@@ -92,10 +116,17 @@ internal static partial class DiagnosticReporter
     /// <param name="context">Output target.</param>
     /// <param name="diagnostics">Diagnostics to report.</param>
     /// <param name="filesChecked">Number of files that were linted.</param>
-    private static void WriteJson(Context context, IReadOnlyList<Diagnostic> diagnostics, int filesChecked)
+    /// <param name="noFilesMatched">
+    ///     <see langword="true"/> when the file selection matched zero files and the run is being
+    ///     treated as a failure; threaded through to the <see cref="JsonReport.NoFilesMatched"/>
+    ///     field so a JSON-consuming caller does not need to separately know whether
+    ///     <c>--allow-empty</c> was specified to disambiguate <c>filesChecked: 0</c>.
+    /// </param>
+    private static void WriteJson(Context context, IReadOnlyList<Diagnostic> diagnostics, int filesChecked, bool noFilesMatched)
     {
         var document = new JsonReport(
             filesChecked,
+            noFilesMatched,
             diagnostics.Count(d => d.Severity == Severity.Error),
             diagnostics.Count(d => d.Severity == Severity.Warn),
             diagnostics
@@ -117,11 +148,19 @@ internal static partial class DiagnosticReporter
     ///     Stable JSON schema root: overall summary counts plus the full diagnostic list.
     /// </summary>
     /// <param name="FilesChecked">Number of files that were linted.</param>
+    /// <param name="NoFilesMatched">
+    ///     <see langword="true"/> only when the file selection matched zero files and the run was
+    ///     treated as a failure (that is, <c>--allow-empty</c> was not specified). This
+    ///     disambiguates <paramref name="FilesChecked"/><c> == 0</c>, which by itself cannot
+    ///     distinguish a misconfigured glob/include pattern from a genuine clean pass over zero
+    ///     files.
+    /// </param>
     /// <param name="ErrorCount">Number of <see cref="Severity.Error"/>-severity diagnostics.</param>
     /// <param name="WarningCount">Number of <see cref="Severity.Warn"/>-severity diagnostics.</param>
     /// <param name="Diagnostics">All diagnostics, in the order they were produced.</param>
     private sealed record JsonReport(
         int FilesChecked,
+        bool NoFilesMatched,
         int ErrorCount,
         int WarningCount,
         IReadOnlyList<JsonDiagnostic> Diagnostics);

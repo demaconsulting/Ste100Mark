@@ -261,3 +261,25 @@ sections:
           - Ste100Mark-Context-StrictArgumentParsing
         tests:
           - Ste100Mark_LintWithStrictFlag_PromotesWarningsToFailure
+
+      - id: Ste100Mark-System-LintEmptySelection
+        title: >-
+          The tool shall return a distinct exit code when the resolved file selection matches
+          zero files, and shall support `--allow-empty` to accept that condition as a
+          successful run.
+        justification: |
+          `filesChecked: 0` alone is indistinguishable from a genuine clean pass to a caller
+          that only inspects the exit code; a typo'd glob, a misconfigured include pattern, or
+          a moved directory could otherwise silently "pass" a CI job that verified nothing.
+          Teams with legitimately empty selections (for example, a glob scoped to a directory
+          that does not always exist) need a way to opt a specific invocation out of that
+          failure without changing the safer default for everyone else.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-AllowEmpty
+          - Ste100Mark-Context-AllowEmptyArgumentParsing
+          - Ste100Mark-Context-NoFilesMatchedExitCode
+          - Ste100Mark-Linting-EmptyFileSet
+        tests:
+          - Ste100Mark_LintWithNoMatchingFiles_ReturnsNoFilesMatchedExitCode
+          - Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode

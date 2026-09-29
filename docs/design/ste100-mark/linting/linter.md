@@ -42,6 +42,16 @@ allowed-phrases via `LintConfig.ResolveMode`/`ResolveRules`/`ResolveAllowedTerms
 `ResolveAllowedPhrases` (applying any matching `Profile` deltas), evaluates structural and
 dictionary rules against that per-file configuration, and reports the aggregated diagnostics.
 
+Immediately after resolving files, `RunCore` computes
+`noFilesMatched = files.Count == 0 && !context.AllowEmpty` and passes it to
+`DiagnosticReporter.Report`. When `true`, it calls `context.MarkNoFilesMatched()` (JSON format)
+or `context.WriteNoFilesMatchedError(...)` (text format) and returns early, before reaching the
+diagnostics-derived `hasFailure` logic - which is a no-op in that branch anyway, since a
+zero-file run produces zero diagnostics, but the explicit early return keeps the two failure
+paths textually separate for reviewers. This distinguishes a misconfigured/empty file selection
+(exit code 2, `noFilesMatched: true`) from a genuine clean pass, unless `--allow-empty` opts the
+invocation out of that treatment.
+
 **ResolveConfigPath**: Chooses the configuration file path.
 
 - *Parameters*: `string? configFileArgument` - explicit `--config` value, or `null`.

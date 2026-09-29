@@ -136,7 +136,34 @@ internal static class Linter
             }
         }
 
-        DiagnosticReporter.Report(context, diagnostics, files.Count);
+        // A file selection that matches zero files is indistinguishable from a genuine clean pass
+        // to a caller that only inspects the exit code (a typo'd glob or moved directory could
+        // silently "pass" a CI job that verified nothing). Treat it as a distinct failure unless
+        // the caller has explicitly opted in to accepting an empty selection via --allow-empty.
+        var noFilesMatched = files.Count == 0 && !context.AllowEmpty;
+
+        DiagnosticReporter.Report(context, diagnostics, files.Count, noFilesMatched);
+
+        if (noFilesMatched)
+        {
+            if (context.Format == OutputFormat.Json)
+            {
+                // Avoid emitting any additional text so the JSON document remains the only content
+                // on the combined output stream (see DiagnosticReporter remarks).
+                context.MarkNoFilesMatched();
+            }
+            else
+            {
+                context.WriteNoFilesMatchedError(
+                    "Ste100Mark found no files to check; the file selection matched zero files.");
+            }
+
+            // Return early rather than falling through to the diagnostics-derived hasFailure logic
+            // below: diagnostics is provably empty here (nothing was linted), so hasFailure would
+            // always be false anyway, but an explicit early return keeps the two failure paths
+            // textually separate and unambiguous for reviewers.
+            return;
+        }
 
         // Exit-code semantics: any error-severity finding always fails the build; under --strict,
         // warn-severity findings are promoted to fail the build too, but their reported severity

@@ -16,6 +16,10 @@ whether any errors were reported.
 **_hasErrors**: `bool` — Set to `true` on the first `WriteError` call; once set, cannot return
 to `false` within the same invocation.
 
+**_noFilesMatched**: `bool` — Set to `true` by `WriteNoFilesMatchedError` or
+`MarkNoFilesMatched` when the file selection matched zero files and this was not accepted via
+`AllowEmpty`.
+
 **Version**: `bool` — `true` when `-v` or `--version` was present in the argument list.
 
 **Help**: `bool` — `true` when `-?`, `-h`, or `--help` was present in the argument list.
@@ -30,7 +34,18 @@ neither flag was present.
 **HeadingDepth**: `int` — Heading depth for markdown output; valid range 1–6, default 1;
 supplied via `--depth`.
 
-**ExitCode**: `int` (derived) — Returns 1 if `_hasErrors` is true; returns 0 otherwise.
+**AllowEmpty**: `bool` — `true` when `--allow-empty` was present in the argument list; opts a
+zero-matched file selection back into a success exit code instead of the distinct
+`NoFilesMatchedExitCode`.
+
+**NoFilesMatchedExitCode**: `int` (const, `2`) — The distinct exit code returned by `ExitCode`
+when the file selection matched zero files and `AllowEmpty` was not specified. Kept as a single
+named constant so `Program`'s help text and the derivation logic below share one source of
+truth.
+
+**ExitCode**: `int` (derived) — Returns 1 if `_hasErrors` is true; otherwise returns
+`NoFilesMatchedExitCode` (2) if `_noFilesMatched` is true; otherwise returns 0. `_hasErrors`
+takes precedence so a genuine reported error is never masked by the zero-files exit code.
 
 #### Key Methods
 
@@ -59,7 +74,27 @@ malformed arguments; throws `InvalidOperationException` if the log file cannot b
 - *Returns*: `void`.
 - *Preconditions*: None.
 - *Postconditions*: `_hasErrors` is true; message is on stderr in red (unless `Silent`) and in
-  the log file (if open).
+  the log file (if open). Shares its console/log-writing body with
+  `WriteNoFilesMatchedError` via the private `WriteErrorLine` helper.
+
+**WriteNoFilesMatchedError**: Writes the zero-files-matched failure message and sets the
+distinct exit-code state, without affecting `_hasErrors`.
+
+- *Parameters*: `string message` — the error message.
+- *Returns*: `void`.
+- *Preconditions*: None.
+- *Postconditions*: `_noFilesMatched` is true; message is on stderr in red (unless `Silent`)
+  and in the log file (if open); `ExitCode` returns `NoFilesMatchedExitCode` (2) unless a
+  separate error was also reported.
+
+**MarkNoFilesMatched**: Sets the zero-files-matched exit-code state without any console or log
+output, for JSON output mode where the single buffered JSON document must not be interleaved
+with a stderr line (mirrors `MarkFailure`).
+
+- *Parameters*: None.
+- *Returns*: `void`.
+- *Preconditions*: None.
+- *Postconditions*: `_noFilesMatched` is true; no output is produced.
 
 **Dispose**: Disposes the log file writer and is idempotent.
 

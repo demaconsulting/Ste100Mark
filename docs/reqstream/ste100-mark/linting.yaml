@@ -365,6 +365,7 @@ sections:
           - Context_Create_FormatFlag_UnsupportedValue_ThrowsArgumentException
           - Context_Create_FormatFlag_WithoutValue_ThrowsArgumentException
           - Context_Create_StrictFlag_SetsStrictTrue
+          - Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue
           - Program_Run_NoArguments_DisplaysDefaultBehavior
           - Run_PositionalGlobs_OverrideConfigInclude
           - Run_RelativeGlobPattern_MatchesConfiguredFiles
@@ -385,6 +386,9 @@ sections:
           - Report_TextFormat_WritesDiagnosticLinesAndSummary
           - Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema
           - Report_NoDiagnostics_WritesZeroCountSummary
+          - Report_NoFilesMatchedTrue_WritesFailureSummaryLine
+          - Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary
+          - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
           - Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument
 
       - id: Ste100Mark-Linting-ExitCode
@@ -405,3 +409,28 @@ sections:
           - Ste100Mark_LintCleanFile_ReturnsZeroExitCode
           - Ste100Mark_LintWithStrictFlag_PromotesWarningsToFailure
           - Ste100Mark_LintWithMissingConfigFile_ReturnsNonZeroWithErrorMessage
+
+      - id: Ste100Mark-Linting-EmptyFileSet
+        title: >-
+          The Linting subsystem shall treat a file selection that matches zero files as a
+          distinct failure condition, signaled through a dedicated exit code and JSON/text
+          indicators, unless `--allow-empty` is specified.
+        justification: |
+          A file selection (CLI globs, or configured include/exclude patterns) that matches
+          zero files is otherwise indistinguishable, via exit code alone, from a genuine clean
+          pass over zero files. A typo'd glob, a misconfigured include pattern, or a moved
+          directory could then silently "pass" a CI job that verified nothing. A dedicated
+          exit code, an explicit JSON field, and distinct text wording let automation detect
+          this condition, while `--allow-empty` provides an opt-out for legitimately empty
+          selections.
+        tests:
+          - Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode
+          - Run_NoFilesMatchViaConfigInclude_ProducesNoFilesMatchedExitCode
+          - Run_NoFilesMatchViaConfigIncludeExcludeSubtraction_ProducesNoFilesMatchedExitCode
+          - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode
+          - Report_NoFilesMatchedTrue_WritesFailureSummaryLine
+          - Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary
+          - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
+          - Ste100Mark_LintWithNoMatchingFiles_ReturnsNoFilesMatchedExitCode
+          - Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode
+          - Ste100Mark_LintWithNoMatchingFilesJsonFormat_ReportsNoFilesMatchedTrue

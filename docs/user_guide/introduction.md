@@ -396,6 +396,22 @@ Error: Unsupported argument '--unknown'
 This behavior enables automated scripts and CI/CD pipelines to detect and surface
 misconfiguration failures automatically.
 
+Exit codes are: `0` for a clean pass (including a pass with only warn-severity findings when
+`--strict` is not active), `1` when an error-severity lint finding was reported, a warn-severity
+finding was reported with `--strict` active, or an argument/configuration error occurred, and
+`2` when the file selection (positional globs, or configured `include`/`exclude` patterns)
+matched zero files. The `2` exit code exists because
+`filesChecked: 0` alone is indistinguishable from a genuine clean pass to a caller that only
+inspects the exit code — a typo'd glob, a misconfigured include pattern, or a moved directory
+could otherwise silently "pass" a CI job that verified nothing. The JSON report also carries
+an explicit `noFilesMatched: true` field for this case. When an empty selection is
+legitimately expected (for example, a glob scoped to a directory that does not always exist),
+pass `--allow-empty` to accept it as a normal success:
+
+```bash
+ste100mark docs/optional/**/*.md --allow-empty
+```
+
 # Command-Line Options
 
 The following command-line options are supported:
@@ -413,6 +429,7 @@ The following command-line options are supported:
 | `--config <file>` | Path to lint configuration file (default lookup: `.ste100mark.yaml`) |
 | `--format <text\|json>` | Diagnostic output format for linting (default: `text`) |
 | `--strict` | Promote warn-severity lint findings to a failing exit code |
+| `--allow-empty` | Treat a file selection that matches zero files as success (default: exit code 2) |
 
 # Examples
 
