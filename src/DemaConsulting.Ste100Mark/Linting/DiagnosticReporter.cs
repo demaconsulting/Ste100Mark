@@ -45,25 +45,31 @@ internal static partial class DiagnosticReporter
     /// </summary>
     /// <param name="context">Output target and format selector.</param>
     /// <param name="diagnostics">Diagnostics collected across all linted files.</param>
-    /// <param name="filesChecked">Number of files that were linted.</param>
+    /// <param name="files">
+    ///     Relative paths of every file that was actually linted, in the order they were
+    ///     evaluated. Reported in full in the JSON schema's <c>files</c> array (see
+    ///     <see cref="JsonFileEntry"/>) so a caller can learn exactly which files the effective
+    ///     file selection resolved to, instead of only their count.
+    /// </param>
     /// <param name="noFilesMatched">
     ///     <see langword="true"/> when the file selection matched zero files and the run is being
     ///     treated as a failure (that is, <c>--allow-empty</c> was not specified); <see langword="false"/>
     ///     otherwise, including when the selection matched zero files but was accepted via
     ///     <c>--allow-empty</c>.
     /// </param>
-    public static void Report(Context context, IReadOnlyList<Diagnostic> diagnostics, int filesChecked, bool noFilesMatched)
+    public static void Report(Context context, IReadOnlyList<Diagnostic> diagnostics, IReadOnlyList<string> files, bool noFilesMatched)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(diagnostics);
+        ArgumentNullException.ThrowIfNull(files);
 
         if (context.Format == OutputFormat.Json)
         {
-            WriteJson(context, diagnostics, filesChecked, noFilesMatched);
+            WriteJson(context, diagnostics, files, noFilesMatched);
         }
         else
         {
-            WriteText(context, diagnostics, filesChecked, noFilesMatched);
+            WriteText(context, diagnostics, files.Count, noFilesMatched);
         }
     }
 
@@ -115,20 +121,21 @@ internal static partial class DiagnosticReporter
     /// </summary>
     /// <param name="context">Output target.</param>
     /// <param name="diagnostics">Diagnostics to report.</param>
-    /// <param name="filesChecked">Number of files that were linted.</param>
+    /// <param name="files">Relative paths of every file that was linted, in evaluated order.</param>
     /// <param name="noFilesMatched">
     ///     <see langword="true"/> when the file selection matched zero files and the run is being
     ///     treated as a failure; threaded through to the <see cref="JsonReport.NoFilesMatched"/>
     ///     field so a JSON-consuming caller does not need to separately know whether
     ///     <c>--allow-empty</c> was specified to disambiguate <c>filesChecked: 0</c>.
     /// </param>
-    private static void WriteJson(Context context, IReadOnlyList<Diagnostic> diagnostics, int filesChecked, bool noFilesMatched)
+    private static void WriteJson(Context context, IReadOnlyList<Diagnostic> diagnostics, IReadOnlyList<string> files, bool noFilesMatched)
     {
         var document = new JsonReport(
-            filesChecked,
+            files.Count,
             noFilesMatched,
             diagnostics.Count(d => d.Severity == Severity.Error),
             diagnostics.Count(d => d.Severity == Severity.Warn),
+            files.Select(f => new JsonFileEntry(f, "checked")).ToList(),
             diagnostics
                 .Select(d => new JsonDiagnostic(
                     d.File,
@@ -145,7 +152,8 @@ internal static partial class DiagnosticReporter
     }
 
     /// <summary>
-    ///     Stable JSON schema root: overall summary counts plus the full diagnostic list.
+    ///     Stable JSON schema root: overall summary counts plus the checked-file and diagnostic
+    ///     lists.
     /// </summary>
     /// <param name="FilesChecked">Number of files that were linted.</param>
     /// <param name="NoFilesMatched">
@@ -157,13 +165,31 @@ internal static partial class DiagnosticReporter
     /// </param>
     /// <param name="ErrorCount">Number of <see cref="Severity.Error"/>-severity diagnostics.</param>
     /// <param name="WarningCount">Number of <see cref="Severity.Warn"/>-severity diagnostics.</param>
+    /// <param name="Files">
+    ///     Every file the effective file selection resolved to, in evaluated order. Lets a caller
+    ///     learn exactly which files were in scope without independently reimplementing the tool's
+    ///     glob/include/exclude resolution.
+    /// </param>
     /// <param name="Diagnostics">All diagnostics, in the order they were produced.</param>
     private sealed record JsonReport(
         int FilesChecked,
         bool NoFilesMatched,
         int ErrorCount,
         int WarningCount,
+        IReadOnlyList<JsonFileEntry> Files,
         IReadOnlyList<JsonDiagnostic> Diagnostics);
+
+    /// <summary>
+    ///     Stable JSON schema for a single entry in <see cref="JsonReport.Files"/>.
+    /// </summary>
+    /// <param name="Path">Relative path of the file, using forward slashes.</param>
+    /// <param name="Status">
+    ///     <c>"checked"</c> for every entry in the current schema. This field exists (rather than
+    ///     <see cref="JsonReport.Files"/> being a bare list of path strings) so a future release
+    ///     can add <c>"excluded"</c> entries - together with the exclusion reason - without a
+    ///     breaking schema change; see the <c>Ste100Mark-Linting-ReportedFiles</c> requirement.
+    /// </param>
+    private sealed record JsonFileEntry(string Path, string Status);
 
     /// <summary>
     ///     Stable JSON schema for a single diagnostic entry.

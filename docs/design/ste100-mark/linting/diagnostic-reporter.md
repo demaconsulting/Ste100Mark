@@ -19,8 +19,18 @@ rule evaluation or exit-code decisions itself.
   `FilesChecked == 0` for JSON consumers.
 - `ErrorCount`: `int` - count of `Severity.Error` findings.
 - `WarningCount`: `int` - count of `Severity.Warn` findings.
+- `Files`: `IReadOnlyList<JsonFileEntry>` - every file the effective file selection resolved to,
+  in evaluated order, so a caller can learn exactly which files were in scope without
+  independently reimplementing the tool's glob/include/exclude resolution.
 - `Diagnostics`: `IReadOnlyList<JsonDiagnostic>` - serialized diagnostic payload in produced
   order.
+
+**JsonFileEntry**: private record representing one entry in `JsonReport.Files`.
+
+- `Path`: `string` - relative path of the file, using forward slashes.
+- `Status`: `string` - `"checked"` for every entry in the current schema. This field exists
+  (rather than `Files` being a bare list of path strings) so a future release can add
+  `"excluded"` entries - together with the exclusion reason - without a breaking schema change.
 
 **JsonDiagnostic**: private record representing one serialized diagnostic.
 
@@ -40,11 +50,11 @@ serialization.
 **Report**: Chooses text or JSON output based on `context.Format`.
 
 - *Parameters*: `Context context` - output target and format selector;
-  `IReadOnlyList<Diagnostic> diagnostics` - aggregated findings; `int filesChecked` - number
-  of linted files; `bool noFilesMatched` - `true` when the file selection matched zero files
-  and the run is being treated as a failure.
+  `IReadOnlyList<Diagnostic> diagnostics` - aggregated findings; `IReadOnlyList<string> files` -
+  relative paths of every file that was linted, in evaluated order; `bool noFilesMatched` -
+  `true` when the file selection matched zero files and the run is being treated as a failure.
 - *Returns*: `void`.
-- *Preconditions*: `context` and `diagnostics` are non-null.
+- *Preconditions*: `context`, `diagnostics`, and `files` are non-null.
 - *Postconditions*: Exactly one output path (`WriteText` or `WriteJson`) is executed.
 
 **WriteText**: Emits one human-readable line per diagnostic followed by a summary line.
@@ -55,16 +65,19 @@ serialization.
 - *Postconditions*: Each diagnostic line contains location, uppercase severity, rule code,
   message, and optional suggestion. When `noFilesMatched` is `true`, the final line is a
   distinct failure statement instead of the ordinary summary, so it cannot be misread as a
-  clean pass; otherwise the existing "Checked N file(s): ... " summary line is unchanged.
+  clean pass; otherwise the existing "Checked N file(s): ... " summary line is unchanged. Text
+  mode does not enumerate individual checked files; only `WriteJson`'s `files` array does, to
+  avoid an unbounded per-file line count in console output for large repositories.
 
 **WriteJson**: Serializes the findings to one pretty-printed JSON document and writes it in a
 single `Context.WriteLine` call.
 
-- *Parameters*: `Context context`; `IReadOnlyList<Diagnostic> diagnostics`; `int filesChecked`;
-  `bool noFilesMatched`.
+- *Parameters*: `Context context`; `IReadOnlyList<Diagnostic> diagnostics`;
+  `IReadOnlyList<string> files`; `bool noFilesMatched`.
 - *Returns*: `void`.
 - *Postconditions*: Standard output contains one parseable JSON document with camelCase
-  property names, summary counts (including `noFilesMatched`), and every produced diagnostic.
+  property names, summary counts (including `noFilesMatched`), the full `files` array (each
+  entry `"checked"`), and every produced diagnostic.
 
 #### Error Handling
 

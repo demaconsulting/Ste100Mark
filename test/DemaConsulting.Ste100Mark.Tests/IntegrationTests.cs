@@ -471,6 +471,41 @@ public class IntegrationTests
     }
 
     /// <summary>
+    ///     Test that the published CLI's JSON output includes a <c>files</c> array listing every
+    ///     file the resolved selection checked, with its relative path and <c>"checked"</c>
+    ///     status, so a caller can learn the effective file scope without reimplementing the
+    ///     tool's glob resolution.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithJsonFormat_ReportsCheckedFilesArray()
+    {
+        // Arrange: an isolated working directory containing two compliant Markdown files
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(workingDirectory, "clean.md"), "# Title\n\nOpen the panel.\n");
+            File.WriteAllText(Path.Combine(workingDirectory, "other.md"), "# Title\n\nClose the panel.\n");
+
+            // Act: run the linter against both files requesting JSON output
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "*.md", "--format", "json");
+
+            // Assert: the files array lists both checked files as "checked"
+            Assert.Equal(0, exitCode);
+            using var document = System.Text.Json.JsonDocument.Parse(output);
+            var files = document.RootElement.GetProperty("files").EnumerateArray().ToList();
+            Assert.Equal(2, files.Count);
+            Assert.All(files, f => Assert.Equal("checked", f.GetProperty("status").GetString()));
+            var paths = files.Select(f => f.GetProperty("path").GetString()).ToList();
+            Assert.Contains("clean.md", paths);
+            Assert.Contains("other.md", paths);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
     ///     Test that --strict promotes an otherwise-passing advisory finding to a non-zero exit code.
     /// </summary>
     [Fact]

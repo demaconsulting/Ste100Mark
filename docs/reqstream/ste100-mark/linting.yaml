@@ -391,6 +391,23 @@ sections:
           - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
           - Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument
 
+      - id: Ste100Mark-Linting-ReportedFiles
+        title: >-
+          The JSON report shall list every file the effective file selection resolved to, so a
+          caller can learn exactly which files were checked without reimplementing the tool's
+          glob/include/exclude resolution.
+        justification: |
+          A caller that attributes findings to document sections, or otherwise needs to know
+          which files a run was scoped to, previously had only `filesChecked: N` to go on. That
+          count alone cannot answer "which files were these", forcing integrators to
+          independently reimplement the tool's glob and include/exclude semantics just to
+          recover the same information the tool already computed. Reporting the file list
+          removes that duplicated, drift-prone logic.
+        tests:
+          - Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema
+          - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
+          - Run_JsonFormat_FilesArrayListsCheckedFilesAndOmitsExcludedFiles
+
       - id: Ste100Mark-Linting-ExitCode
         title: >-
           The Linting subsystem shall return a non-zero exit code for error-severity findings,

@@ -556,6 +556,44 @@ public sealed class LinterTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that JSON-format output includes a <c>files</c> array listing every checked file's
+    ///     relative path and <c>"checked"</c> status, and that an excluded file does not appear in
+    ///     it, proving a JSON consumer can learn exactly which files the effective file selection
+    ///     resolved to without reimplementing the tool's glob/include/exclude resolution.
+    /// </summary>
+    [Fact]
+    public void Run_JsonFormat_FilesArrayListsCheckedFilesAndOmitsExcludedFiles()
+    {
+        // Arrange: two files matched by include, one subtracted by exclude
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "clean.md"), "# Title\n\nOpen the panel.\n");
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "excluded.md"), "# Title\n\nOpen the panel.\n");
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"),
+            "include: [\"*.md\"]\nexclude: [\"excluded.md\"]\n");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["--format", "json"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: the files array contains exactly the one non-excluded file, checked
+            using var document = System.Text.Json.JsonDocument.Parse(outWriter.ToString());
+            var files = document.RootElement.GetProperty("files");
+            Assert.Equal(1, files.GetArrayLength());
+            Assert.Equal("clean.md", files[0].GetProperty("path").GetString());
+            Assert.Equal("checked", files[0].GetProperty("status").GetString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
     ///     Test that an explicit --config pointing at a missing file reports an error rather than
     ///     throwing out of Run.
     /// </summary>

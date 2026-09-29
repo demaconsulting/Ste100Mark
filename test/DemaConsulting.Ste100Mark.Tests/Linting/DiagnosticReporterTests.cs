@@ -53,7 +53,7 @@ public class DiagnosticReporterTests
             using var context = Context.Create([]);
 
             // Act: execute the operation being tested
-            DiagnosticReporter.Report(context, SampleDiagnostics, 1, false);
+            DiagnosticReporter.Report(context, SampleDiagnostics, ["docs/sample.md"], false);
 
             // Assert: verify expected behavior
             var output = outWriter.ToString();
@@ -86,7 +86,7 @@ public class DiagnosticReporterTests
             using var context = Context.Create(["--format", "json"]);
 
             // Act: execute the operation being tested
-            DiagnosticReporter.Report(context, SampleDiagnostics, 1, false);
+            DiagnosticReporter.Report(context, SampleDiagnostics, ["docs/sample.md"], false);
 
             // Assert: verify expected behavior
             var output = outWriter.ToString();
@@ -97,6 +97,12 @@ public class DiagnosticReporterTests
             Assert.Contains("\"ruleCode\": \"STE100-8.1\"", output);
             Assert.Contains("\"severity\": \"error\"", output);
             Assert.Contains("\"severity\": \"warn\"", output);
+
+            using var document = System.Text.Json.JsonDocument.Parse(output);
+            var files = document.RootElement.GetProperty("files");
+            Assert.Equal(1, files.GetArrayLength());
+            Assert.Equal("docs/sample.md", files[0].GetProperty("path").GetString());
+            Assert.Equal("checked", files[0].GetProperty("status").GetString());
         }
         finally
         {
@@ -119,7 +125,7 @@ public class DiagnosticReporterTests
             using var context = Context.Create([]);
 
             // Act: execute the operation being tested
-            DiagnosticReporter.Report(context, [], 2, false);
+            DiagnosticReporter.Report(context, [], ["docs/a.md", "docs/b.md"], false);
 
             // Assert: verify expected behavior
             var output = outWriter.ToString();
@@ -148,7 +154,7 @@ public class DiagnosticReporterTests
             using var context = Context.Create([]);
 
             // Act: execute the operation being tested with noFilesMatched true
-            DiagnosticReporter.Report(context, [], 0, true);
+            DiagnosticReporter.Report(context, [], [], true);
 
             // Assert: verify the distinct failure wording is used and the ambiguous summary is not
             var output = outWriter.ToString();
@@ -180,7 +186,7 @@ public class DiagnosticReporterTests
             using var context = Context.Create([]);
 
             // Act: execute the operation being tested with noFilesMatched false
-            DiagnosticReporter.Report(context, [], 0, false);
+            DiagnosticReporter.Report(context, [], [], false);
 
             // Assert: verify the existing summary wording is preserved
             var output = outWriter.ToString();
@@ -209,12 +215,13 @@ public class DiagnosticReporterTests
             using var context = Context.Create(["--format", "json"]);
 
             // Act: execute the operation being tested with noFilesMatched true
-            DiagnosticReporter.Report(context, [], 0, true);
+            DiagnosticReporter.Report(context, [], [], true);
 
             // Assert: verify expected behavior
             var output = outWriter.ToString();
             Assert.Contains("\"filesChecked\": 0", output);
             Assert.Contains("\"noFilesMatched\": true", output);
+            Assert.Contains("\"files\": []", output);
         }
         finally
         {
