@@ -396,6 +396,47 @@ public class DictionaryCheckerTests
     }
 
     /// <summary>
+    ///     Test that an ambiguous multi-sense term, where one candidate sense has no alternatives
+    ///     at all (a pure role restriction with no suggested replacement word), does not leave a
+    ///     stray leading-space/bare-part-of-speech fragment (for example " (adjective)") in the
+    ///     combined suggestion string. Regression test for a reported defect where such a fragment
+    ///     leaked formatting into the suggestion data.
+    /// </summary>
+    [Fact]
+    public void Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment()
+    {
+        // Arrange: a project-supplied entry with a noun sense offering a real alternative, and an
+        // adjective sense that is simply disallowed with no suggested replacement word. Ambiguous
+        // context (no confident guess) reports both candidates together.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["gauge"] =
+                    [
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["dial"] },
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Adjective, Alternatives = [] }
+                    ]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("They discuss Gauge sometimes. The team operates daily.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: the alternatives-less candidate contributes no leading-space/empty-term fragment
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.NotNull(diagnostic.Suggestion);
+        Assert.DoesNotContain(" (adjective)", diagnostic.Suggestion);
+        Assert.DoesNotContain("; (adjective)", diagnostic.Suggestion);
+        Assert.Equal("dial (noun)", diagnostic.Suggestion);
+    }
+
+    /// <summary>
     ///     Test that a confidently-resolved sense with exactly one alternative embeds it plainly,
     ///     with no "or" joining word.
     /// </summary>
