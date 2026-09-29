@@ -17,6 +17,17 @@ finding.
 **Entry ordering**: the effective dictionary entries are sorted by descending term length
 before matching so multi-word phrases are preferred over shorter overlapping terms.
 
+**Citations**: alongside the human-readable `Suggestion` string, every `STE100-DICT` diagnostic
+with at least one real alternative term also carries a `Citations` list of
+`DictionaryCitation(Term, Pos)` records - one entry per alternative, each paired with the
+grammatical role (`Pos`, via `PosLabel`) it is approved in. This is additive: `Suggestion` is
+unchanged and still the plain-text form used by text-mode CLI output; `Citations` gives callers
+(for example an integrating tool that must not mistake a dictionary citation for replacement
+prose) the same information as structured data instead of a formatted string. A diagnostic with
+no real alternative to cite (a purely self-referential sense, or a sense with no alternatives at
+all) leaves `Citations` `null`, matching the cases where `Suggestion` is likewise empty or
+role-restriction prose rather than a word list.
+
 **Pattern shape**: each term is converted into a whole-word/whole-phrase regex using
 negative lookbehind/lookahead for `\w` and `-`, with spaces widened to `\s+`.
 
@@ -96,23 +107,29 @@ the sole surviving candidate of a multi-sense term), optionally labeling the sen
 the message. When the sense is purely self-referential (see `IsPureSelfReferentialSense`), the
 message is phrased as a role restriction instead - `"Avoid using '{term}' as a {pos}; ASD-STE100
 approves '{term}' only in a different grammatical role."` - with a matching `Suggestion` telling
-the user to rewrite the sentence rather than swap words. Otherwise, when the sense has one or
-more alternatives, they are folded into the message itself via `JoinAlternatives` (for example
-`"use 'effect' instead"` or `"use 'cause', 'give', 'make', or 'supply' instead"`); a sense with
-no alternatives falls back to the generic "it is not an approved ASD-STE100-style term" wording.
-The separate `Suggestion` field for the non-self-referential path is unaffected and remains a
-plain, comma-separated list of alternatives.
+the user to rewrite the sentence rather than swap words, and no `Citations` (there is no
+alternative term to cite). Otherwise, when the sense has one or more alternatives, they are
+folded into the message itself via `JoinAlternatives` (for example `"use 'effect' instead"` or
+`"use 'cause', 'give', 'make', or 'supply' instead"`), and `Citations` is populated with one
+entry per alternative, each paired with the sense's `Pos` (via `PosLabel`); a sense with no
+alternatives falls back to the generic "it is not an approved ASD-STE100-style term" wording and
+leaves `Citations` `null`. The separate `Suggestion` field for the non-self-referential path is
+unaffected and remains a plain, comma-separated list of alternatives.
 
 **AmbiguousDiagnostic**: Builds a diagnostic listing every candidate sense, labeled as
 ambiguous, when the heuristic could not confidently resolve one sense. The message has the
 shape `"Ambiguous part of speech for '{term}' — possible corrections: {clauses}."`, where each
 candidate sense's clause is produced by `CorrectionClause` (see below), joined across senses
-with `"; "`. The `Suggestion` field lists only the candidates that are both non-self-referential
-and have at least one alternative, `"{alternatives} ({pos}); ..."`; a purely self-referential
-candidate has no real alternative word to suggest, and a candidate with no alternatives at all
-(disallowed in that role with no suggested replacement) is likewise excluded rather than
-contributing a stray leading-space/bare-part-of-speech fragment (for example `" (adjective)"`) -
-its role restriction is still surfaced via `CorrectionClause` in the message text.
+with `"; "`. Both the `Suggestion` string and `Citations` list are built from the same filtered
+set of candidates - those that are both non-self-referential and have at least one alternative;
+a purely self-referential candidate has no real alternative word to suggest, and a candidate
+with no alternatives at all (disallowed in that role with no suggested replacement) is likewise
+excluded from both, rather than contributing a stray leading-space/bare-part-of-speech fragment
+(for example `" (adjective)"`) to `Suggestion` - its role restriction is still surfaced via
+`CorrectionClause` in the message text. `Suggestion` renders the filtered candidates as
+`"{alternatives} ({pos}); ..."`; `Citations` contains one entry per alternative term across the
+same candidates, each paired with its sense's `Pos`. When no candidate survives the filter,
+`Citations` is `null` (matching an empty `Suggestion`).
 
 **CorrectionClause**: Renders one candidate sense's clause for `AmbiguousDiagnostic`'s message.
 A purely self-referential sense (see `IsPureSelfReferentialSense`) renders as

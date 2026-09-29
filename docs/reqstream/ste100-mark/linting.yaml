@@ -277,6 +277,9 @@ sections:
           - Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr
           - Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin
           - Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment
+          - Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage
+          - Evaluate_PureSelfReferentialCandidate_WithinAmbiguousResult_UsesRoleRestrictionClause
+          - Evaluate_ConfidentSingleSenseTermWithNoAlternatives_SuggestionAndCitationsAreNull
 
       - id: Ste100Mark-Linting-AccurateLineNumbers
         title: >-
@@ -413,6 +416,7 @@ sections:
           - Report_NoFilesMatchedTrue_WritesFailureSummaryLine
           - Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary
           - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
+          - Report_JsonFormat_WritesCitationsForDictionaryDiagnostic
           - Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument
 
       - id: Ste100Mark-Linting-ReportedFiles

@@ -144,7 +144,8 @@ internal static partial class DiagnosticReporter
                     d.RuleCode,
                     d.Severity.ToString().ToLowerInvariant(),
                     d.Message,
-                    d.Suggestion))
+                    d.Suggestion,
+                    d.Citations?.Select(c => new JsonCitation(c.Term, c.Pos)).ToList()))
                 .ToList());
 
         var json = JsonSerializer.Serialize(document, JsonReportContext.Default.JsonReport);
@@ -201,6 +202,14 @@ internal static partial class DiagnosticReporter
     /// <param name="Severity">Lowercase severity string: <c>"error"</c>, <c>"warn"</c>, or <c>"off"</c>.</param>
     /// <param name="Message">Human-readable description of the violation.</param>
     /// <param name="Suggestion">Suggested fix, or <see langword="null"/>.</param>
+    /// <param name="Citations">
+    ///     Structured approved-term citations backing <paramref name="Suggestion"/>, or
+    ///     <see langword="null"/> when the rule's suggestion is free-text advice rather than a
+    ///     dictionary citation, or no approved alternative term exists to cite. Only
+    ///     <c>STE100-DICT</c> findings (declared <c>"citationForm"</c> via <c>--list-rules</c>)
+    ///     ever populate this; a consumer can use it instead of parsing <paramref name="Suggestion"/>
+    ///     prose to recover the term/part-of-speech data. See <see cref="JsonCitation"/>.
+    /// </param>
     private sealed record JsonDiagnostic(
         string File,
         int Line,
@@ -208,7 +217,20 @@ internal static partial class DiagnosticReporter
         string RuleCode,
         string Severity,
         string Message,
-        string? Suggestion);
+        string? Suggestion,
+        IReadOnlyList<JsonCitation>? Citations);
+
+    /// <summary>
+    ///     Stable JSON schema for a single entry in <see cref="JsonDiagnostic.Citations"/>: an
+    ///     ASD-STE100-style approved term, paired with the grammatical role it is approved in.
+    /// </summary>
+    /// <param name="Term">The approved replacement term (for example <c>"GIVE"</c>).</param>
+    /// <param name="Pos">
+    ///     The grammatical role the term is approved in (for example <c>"noun"</c>, <c>"verb"</c>,
+    ///     or <c>"general"</c> for a role-independent term), rendered the same way as the
+    ///     diagnostic's <c>message</c> part-of-speech wording.
+    /// </param>
+    private sealed record JsonCitation(string Term, string Pos);
 
     /// <summary>
     ///     Source-generated JSON serialization context, required for reflection-free, trimming- and

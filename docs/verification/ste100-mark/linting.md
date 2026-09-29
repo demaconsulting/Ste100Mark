@@ -175,6 +175,26 @@ candidate sense with no alternatives at all (a pure role restriction, disallowed
 suggested replacement word) is excluded from the combined suggestion string rather than
 contributing a stray leading-space/bare-part-of-speech fragment (for example " (adjective)"),
 verified by `Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment`.
+Structured `Citations` - one `(Term, Pos)` entry per real alternative, additive alongside
+`Suggestion` - are verified for the single-sense, confident multi-sense, and ambiguous
+multi-sense paths, confirmed absent (`null`) when a purely self-referential sense is the sole
+candidate or when a confidently-resolved sense has no alternatives at all, and confirmed to
+contain only the surviving candidates' entries (omitting an alternatives-less candidate rather
+than a stray/empty entry) when a diagnostic has a mix of citable and non-citable candidates, by
+the `Citations` assertions within
+`Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel`,
+`Evaluate_MultiSenseTerm_NounContext_ReportsNounSense`,
+`Evaluate_MultiSenseTerm_VerbContext_ReportsVerbSense`,
+`Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous`,
+`Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage` (`null`,
+sole candidate is self-referential),
+`Evaluate_ConfidentSingleSenseTermWithNoAlternatives_SuggestionAndCitationsAreNull` (`null`, sole
+candidate is confidently resolved but has no alternatives to cite),
+`Evaluate_PureSelfReferentialCandidate_WithinAmbiguousResult_UsesRoleRestrictionClause`
+(non-`null`, containing only the genuinely actionable candidate's entries, omitting the
+self-referential candidate), and
+`Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment` (non-`null`,
+containing only the candidate with real alternatives, omitting the alternatives-less candidate).
 Per-file dictionary allowances supplied via a matching `Profile`'s `dictionary.allow`/
 `dictionary.ignore` are verified by `Evaluate_TermInExtraAllowedTerms_NotFlagged`,
 `Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic`, and
@@ -301,7 +321,8 @@ and through the published CLI JSON path. This scenario is tested by
 `Report_NoDiagnostics_WritesZeroCountSummary`,
 `Report_NoFilesMatchedTrue_WritesFailureSummaryLine`,
 `Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary`,
-`Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField`, and
+`Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField`,
+`Report_JsonFormat_WritesCitationsForDictionaryDiagnostic`, and
 `Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument`.
 
 **Ste100Mark-Linting-ReportedFiles**: The JSON report's `files` array is verified to list every

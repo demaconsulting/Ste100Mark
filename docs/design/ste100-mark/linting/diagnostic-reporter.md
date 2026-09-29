@@ -41,6 +41,16 @@ rule evaluation or exit-code decisions itself.
 - `Severity`: `string` - lowercase text form of `Diagnostic.Severity`.
 - `Message`: `string` - diagnostic message text.
 - `Suggestion`: `string?` - optional suggested correction.
+- `Citations`: `IReadOnlyList<JsonCitation>?` - optional structured dictionary citations from
+  `Diagnostic.Citations`, `null` when the diagnostic has none. Present only for `STE100-DICT`
+  findings with at least one real alternative term; gives callers the same information as
+  `Suggestion` without needing to parse a formatted string.
+
+**JsonCitation**: private record representing one entry in `JsonDiagnostic.Citations`.
+
+- `Term`: `string` - the approved alternative term.
+- `Pos`: `string` - the grammatical role (part of speech) the term is approved in, matching the
+  wording used in `Suggestion`/`Message` (for example `"noun"`, `"verb"`, `"general"`).
 
 **JsonReportContext**: source-generated `JsonSerializerContext` for reflection-free JSON
 serialization.
