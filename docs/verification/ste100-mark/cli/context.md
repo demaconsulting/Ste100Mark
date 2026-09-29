@@ -16,7 +16,8 @@ N/A - standard test environment.
 - All unit tests pass with zero failures.
 - All flag properties are correctly set for each recognized argument.
 - `ArgumentException` is thrown for all unknown or malformed arguments.
-- `ExitCode` is 1 after `WriteError` is called and 0 otherwise. `ExitCode` is
+- `ExitCode` is 0 for a freshly created `Context` with no reported errors or empty-selection
+  outcome. `ExitCode` is 1 after `WriteError` is called. `ExitCode` is
   `NoFilesMatchedExitCode` (2) after `WriteNoFilesMatchedError` or `MarkNoFilesMatched` is
   called (unless an error was also reported, which always takes precedence).
 - Silent mode suppresses console output but does not affect the log file.

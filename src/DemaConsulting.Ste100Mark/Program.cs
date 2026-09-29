@@ -158,7 +158,7 @@ internal static class Program
     private static void PrintHelp(Context context)
     {
         context.WriteLine(
-            """
+            $"""
             Usage: ste100mark [globs...] [options]
 
             Options:
@@ -172,15 +172,16 @@ internal static class Program
               --config <file>            Path to lint configuration file (default: .ste100mark.yaml)
               --format <text|json>       Diagnostic output format (default: text)
               --strict                   Promote warn-severity findings to errors for exit code
-              --allow-empty              Treat zero matched files as success (default: exit code 2)
+              --allow-empty              Treat zero matched files as success (default: exit code {Context.NoFilesMatchedExitCode})
 
             [globs...] are optional Markdown glob patterns to lint (e.g. "docs/**/*.md"); a
             literal file path is simply a pattern with no wildcard characters, so plain paths
             work the same way, and either form may be relative to the current directory or
             absolute.
             When omitted, the include/exclude patterns from the resolved configuration are used.
-            Exit codes: 0 = success, 1 = lint or argument errors, 2 = the file selection matched
-            zero files (use --allow-empty to accept an intentionally empty selection).
+            Exit codes: 0 = success, 1 = lint or argument errors, {Context.NoFilesMatchedExitCode} = the file
+            selection matched zero files (use --allow-empty to accept an intentionally empty
+            selection).
             """);
     }
 

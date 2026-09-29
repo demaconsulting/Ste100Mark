@@ -92,28 +92,35 @@ public class IntegrationTests
     ///     Test that no arguments displays the tool banner and runs default logic.
     /// </summary>
     /// <remarks>
-    ///     <c>--allow-empty</c> is supplied because this test asserts on the banner text, not on
-    ///     lint results, and the process working directory used by <see cref="Runner.Run"/> may not
-    ///     contain any Markdown files matching the default <c>**/*.md</c> include pattern; without
-    ///     it, a zero-matched selection would now correctly produce exit code 2 (see the
-    ///     zero-files-matched exit code feature), which is unrelated to what this test verifies.
+    ///     Runs in an isolated working directory containing one deterministic, ASD-STE100-compliant
+    ///     Markdown file, so the default <c>**/*.md</c> include pattern matches exactly that file and
+    ///     the run genuinely exercises "no arguments" end-to-end (default file selection, a clean
+    ///     lint pass, exit code 0) rather than opting out of the default file-selection behavior via
+    ///     <c>--allow-empty</c>.
     /// </remarks>
     [Fact]
     public void Ste100Mark_NoArguments_Invoked_DisplaysBanner()
     {
-        // Arrange: (none — constructor initializes _dllPath)
+        // Arrange: an isolated working directory containing one compliant Markdown file
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(workingDirectory, "doc.md"),
+                "# Title\n\nOpen the panel.\n");
 
-        // Act: run the tool with no arguments, accepting an empty file selection
-        var exitCode = Runner.Run(
-            out var output,
-            "dotnet",
-            _dllPath,
-            "--allow-empty");
+            // Act: run the tool with no arguments
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath);
 
-        // Assert: banner is displayed with tool name and copyright; exit code is success
-        Assert.Equal(0, exitCode);
-        Assert.Contains("Ste100Mark version", output);
-        Assert.Contains("Copyright", output);
+            // Assert: banner is displayed with tool name and copyright; exit code is success
+            Assert.Equal(0, exitCode);
+            Assert.Contains("Ste100Mark version", output);
+            Assert.Contains("Copyright", output);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
     }
 
     /// <summary>

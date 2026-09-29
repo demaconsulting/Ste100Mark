@@ -126,23 +126,29 @@ public class ProgramTests
     ///     Test that Run with no arguments displays default behavior.
     /// </summary>
     /// <remarks>
-    ///     <c>--allow-empty</c> is supplied because this test asserts on the banner text, not on
-    ///     lint results, and the working directory used by the test runner may not contain any
-    ///     Markdown files matching the default <c>**/*.md</c> include pattern; without it, a
-    ///     zero-matched selection would now correctly produce exit code 2 (see
-    ///     <see cref="Context.NoFilesMatchedExitCode"/>), which is unrelated to what this test
-    ///     verifies.
+    ///     Runs in an isolated working directory containing one deterministic,
+    ///     ASD-STE100-compliant Markdown file, so the default <c>**/*.md</c> include pattern
+    ///     matches exactly that file and the run genuinely exercises "no arguments" end-to-end
+    ///     (default file selection, a clean lint pass, exit code 0) rather than opting out of the
+    ///     default file-selection behavior via <c>--allow-empty</c>.
     /// </remarks>
     [Fact]
     public void Program_Run_NoArguments_DisplaysDefaultBehavior()
     {
         // Arrange: setup test conditions
         var originalOut = Console.Out;
+        var originalDirectory = Directory.GetCurrentDirectory();
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-program-").FullName;
         try
         {
+            File.WriteAllText(
+                Path.Combine(workingDirectory, "doc.md"),
+                "# Title\n\nOpen the panel.\n");
+            Directory.SetCurrentDirectory(workingDirectory);
+
             using var outWriter = new StringWriter();
             Console.SetOut(outWriter);
-            using var context = Context.Create(["--allow-empty"]);
+            using var context = Context.Create([]);
 
             // Act: execute the operation being tested
             Program.Run(context);
@@ -156,6 +162,8 @@ public class ProgramTests
         finally
         {
             Console.SetOut(originalOut);
+            Directory.SetCurrentDirectory(originalDirectory);
+            Directory.Delete(workingDirectory, true);
         }
     }
 
