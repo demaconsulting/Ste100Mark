@@ -18,7 +18,8 @@ int? Column,
 string RuleCode,
 Severity Severity,
 string Message,
-string? Suggestion)`.
+string? Suggestion,
+IReadOnlyList<DictionaryCitation>? Citations = null)`.
 
 - `File`: `string` - file path reported to the user exactly as resolved by `Linter`.
 - `Line`: `int` - 1-based source line number where the finding begins.
@@ -28,6 +29,22 @@ string? Suggestion)`.
 - `Severity`: `Severity` - effective enforcement level of the finding.
 - `Message`: `string` - human-readable explanation of the problem.
 - `Suggestion`: `string?` - optional suggested correction.
+- `Citations`: `IReadOnlyList<DictionaryCitation>?` - optional trailing field, defaulting to
+  `null`, carrying structured approved-term citations backing `Suggestion`. Populated only by
+  `DictionaryChecker` for `STE100-DICT` findings that have at least one real alternative term;
+  `null` for every other rule, for a purely self-referential dictionary sense, and for a
+  dictionary sense/candidate with no alternatives at all. Additive alongside `Suggestion`
+  (which is unchanged) rather than a replacement, so a consumer can use structured term/
+  part-of-speech data instead of parsing it back out of prose, without breaking existing
+  text-mode/JSON consumers of `Suggestion`.
+
+**DictionaryCitation**: `internal sealed record DictionaryCitation(string Term, string Pos)` -
+one structured approved-term citation backing a `Diagnostic.Citations` list.
+
+- `Term`: `string` - the approved replacement term (for example `"GIVE"`).
+- `Pos`: `string` - the grammatical role the term is approved in, rendered the same way as
+  `Diagnostic.Message`'s part-of-speech wording (for example `"noun"`, `"verb"`, or `"general"`
+  for a role-independent term).
 
 The record relies on compiler-generated immutability and value-based equality, which the
 subsystem uses for predictable aggregation and simple test assertions.
@@ -46,6 +63,7 @@ messages, and suggestions.
 #### Dependencies
 
 - **Severity** - stores the finding severity.
+- **DictionaryCitation** - structured payload type for the optional `Citations` field.
 - **.NET record support** - provides immutability and value-based equality semantics.
 
 #### Callers
