@@ -81,32 +81,40 @@ public class RuleCatalogTests
     }
 
     /// <summary>
-    ///     Test that mechanical rules are classified as official and advisory heuristics are not.
+    ///     Test that official numbered rules, the mechanical dictionary check, and the advisory
+    ///     heuristics are each classified distinctly.
     /// </summary>
     [Fact]
-    public void RuleCatalog_Entries_ClassifiesOfficialAndAdvisoryRulesCorrectly()
+    public void RuleCatalog_Entries_ClassifiesOfficialMechanicalAndAdvisoryRulesCorrectly()
     {
-        // Arrange: the codes expected to be official versus advisory. STE100-DICT is a
-        // tool-defined mechanical check, not an actual ASD-STE100 numbered rule, so it is
-        // classified alongside the advisory heuristics for this field.
+        // Arrange: the codes expected in each classification. STE100-DICT is a tool-defined,
+        // deterministic check, not an actual ASD-STE100 numbered rule, but unlike the
+        // STE100-ADV-* heuristics it is not fallible, so it gets its own "mechanical" bucket
+        // rather than being folded into either "official" or "advisory".
         string[] officialCodes = ["STE100-4.1", "STE100-8.1", "STE100-4.2"];
+        string[] mechanicalCodes = ["STE100-DICT"];
         string[] advisoryCodes =
         [
-            "STE100-DICT", "STE100-ADV-PARA", "STE100-ADV-PASSIVE", "STE100-ADV-COMPLEXVERB",
-            "STE100-ADV-INGFORM"
+            "STE100-ADV-PARA", "STE100-ADV-PASSIVE", "STE100-ADV-COMPLEXVERB", "STE100-ADV-INGFORM"
         ];
 
         // Act & Assert: verify expected behavior
         foreach (var code in officialCodes)
         {
             var entry = RuleCatalog.Entries.Single(e => e.Code == code);
-            Assert.True(entry.Official, $"{code} should be classified as official");
+            Assert.Equal("official", entry.Classification);
+        }
+
+        foreach (var code in mechanicalCodes)
+        {
+            var entry = RuleCatalog.Entries.Single(e => e.Code == code);
+            Assert.Equal("mechanical", entry.Classification);
         }
 
         foreach (var code in advisoryCodes)
         {
             var entry = RuleCatalog.Entries.Single(e => e.Code == code);
-            Assert.False(entry.Official, $"{code} should be classified as advisory");
+            Assert.Equal("advisory", entry.Classification);
         }
     }
 
@@ -156,7 +164,7 @@ public class RuleCatalogTests
         var first = document.RootElement[0];
         Assert.True(first.TryGetProperty("code", out _));
         Assert.True(first.TryGetProperty("title", out _));
-        Assert.True(first.TryGetProperty("official", out _));
+        Assert.True(first.TryGetProperty("classification", out _));
         Assert.True(first.TryGetProperty("suggestionKind", out _));
         Assert.True(first.TryGetProperty("modes", out _));
     }

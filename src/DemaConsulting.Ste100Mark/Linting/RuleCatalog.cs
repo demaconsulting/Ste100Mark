@@ -28,8 +28,8 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     <see cref="Program"/>'s <c>--list-rules</c> dispatch path.
 /// </summary>
 /// <remarks>
-///     This is the single source of truth for rule <em>metadata</em> (title, official/advisory
-///     classification, suggestion kind, applicable modes) documented in <see cref="StructuralRules"/>
+///     This is the single source of truth for rule <em>metadata</em> (title, classification,
+///     suggestion kind, applicable modes) documented in <see cref="StructuralRules"/>
 ///     and <see cref="DictionaryChecker"/>; <see cref="RuleCodes"/> is the single source of truth for
 ///     the code <em>strings</em> themselves, shared by this catalog and both emitters. Every rule
 ///     code emitted by either of those units must have a corresponding <see cref="Entries"/> entry,
@@ -45,49 +45,49 @@ internal static partial class RuleCatalog
         new RuleCatalogEntry(
             RuleCodes.SentenceWordLimit,
             "Sentence word-count limit (Rules 4.1, 8.4-8.7).",
-            Official: true,
+            Classification: "official",
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
             RuleCodes.NoSemicolons,
             "No semicolons (Rule 8.1).",
-            Official: true,
+            Classification: "official",
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
             RuleCodes.NoContractions,
             "No contractions (Rule 4.2).",
-            Official: true,
+            Classification: "official",
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
             RuleCodes.Dictionary,
             "Dictionary/vocabulary enforcement against the effective (default or configured) dictionary.",
-            Official: false,
+            Classification: "mechanical",
             SuggestionKind: "citationForm",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
             RuleCodes.AdvisoryParagraphLength,
             "Paragraph sentence-count cap (advisory heuristic, not an official STE100 rule).",
-            Official: false,
+            Classification: "advisory",
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
             RuleCodes.AdvisoryPassiveVoice,
             "Passive-voice detection (advisory heuristic, not an official STE100 rule).",
-            Official: false,
+            Classification: "advisory",
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
             RuleCodes.AdvisoryComplexVerb,
             "Perfect/modal-perfect tense detection (advisory heuristic, not an official STE100 rule).",
-            Official: false,
+            Classification: "advisory",
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"]),
         new RuleCatalogEntry(
             RuleCodes.AdvisoryIngForm,
             "-ing form detection (advisory heuristic, not an official STE100 rule).",
-            Official: false,
+            Classification: "advisory",
             SuggestionKind: "advice",
             Modes: ["procedure", "descriptive"])
     ];
@@ -115,10 +115,14 @@ internal static partial class RuleCatalog
 /// </summary>
 /// <param name="Code">The stable rule identifier, for example <c>STE100-4.1</c>.</param>
 /// <param name="Title">Short human-readable description of what the rule checks.</param>
-/// <param name="Official">
-///     <see langword="true"/> for an actual ASD-STE100 numbered rule; <see langword="false"/> for
-///     any rule that is not itself a numbered ASD-STE100 rule, whether an advisory heuristic or a
-///     tool-defined mechanical check (for example <c>STE100-DICT</c>).
+/// <param name="Classification">
+///     <c>"official"</c> for an actual ASD-STE100 numbered rule; <c>"mechanical"</c> for a
+///     tool-defined, deterministic check that is not itself a numbered ASD-STE100 rule (for
+///     example <c>STE100-DICT</c>); or <c>"advisory"</c> for a heuristic that may under- or
+///     over-detect and is not itself a numbered ASD-STE100 rule (for example
+///     <c>STE100-ADV-PASSIVE</c>). This distinguishes "not a numbered rule, but still a reliable
+///     mechanical check" from "not a numbered rule, and a fallible heuristic", which a bare
+///     official/advisory boolean cannot express.
 /// </param>
 /// <param name="SuggestionKind">
 ///     <c>"advice"</c> when the rule's suggestion is free prose advice, or <c>"citationForm"</c>
@@ -128,6 +132,6 @@ internal static partial class RuleCatalog
 internal sealed record RuleCatalogEntry(
     string Code,
     string Title,
-    bool Official,
+    string Classification,
     string SuggestionKind,
     IReadOnlyList<string> Modes);

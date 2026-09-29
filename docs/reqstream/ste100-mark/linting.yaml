@@ -438,8 +438,8 @@ sections:
       - id: Ste100Mark-Linting-RuleCatalog
         title: >-
           The Linting subsystem shall provide a central catalog of every rule code it can emit,
-          each with a title, official/advisory classification, suggestion kind, and applicable
-          mode(s), serializable as a single JSON document.
+          each with a title, classification (official, mechanical, or advisory), suggestion
+          kind, and applicable mode(s), serializable as a single JSON document.
         justification: |
           Callers building tooling or documentation around the linter's rule codes need a
           reliable, machine-readable way to discover every rule code the tool can emit without
@@ -447,7 +447,7 @@ sections:
           releases.
         tests:
           - RuleCatalog_Entries_ContainsEveryEmittedRuleCode
-          - RuleCatalog_Entries_ClassifiesOfficialAndAdvisoryRulesCorrectly
+          - RuleCatalog_Entries_ClassifiesOfficialMechanicalAndAdvisoryRulesCorrectly
           - RuleCatalog_Entries_ClassifiesSuggestionKindCorrectly
           - RuleCatalog_Entries_ModesIncludeBothWritingModes
           - RuleCatalog_ToJson_ProducesValidCamelCaseJsonArray
