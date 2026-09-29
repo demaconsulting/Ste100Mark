@@ -277,6 +277,8 @@ sections:
           - Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr
           - Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin
           - Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment
+          - Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage
+          - Evaluate_PureSelfReferentialCandidate_WithinAmbiguousResult_UsesRoleRestrictionClause
 
       - id: Ste100Mark-Linting-AccurateLineNumbers
         title: >-
