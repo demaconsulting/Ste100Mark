@@ -5,13 +5,13 @@
 #### Purpose
 
 `MarkdownProseExtractor` identifies the Markdown text that should be checked as prose and
-strips content that should not affect linguistic rules. Fenced code blocks and link
-destination URLs are removed entirely; inline code spans are retained verbatim so downstream
-consumers can display them in diagnostics while still excluding their content from
-grammar-sensitive checks. Table rows are split into one segment per cell rather than merged
-into paragraphs, since concatenating several rows would corrupt sentence and word counting.
-Its single responsibility is to turn a raw Markdown document into ordered `ProseSegment`
-values.
+strips content that should not affect linguistic rules. A leading YAML front matter block,
+fenced code blocks, and link destination URLs are removed entirely; inline code spans are
+retained verbatim so downstream consumers can display them in diagnostics while still
+excluding their content from grammar-sensitive checks. Table rows are split into one segment
+per cell rather than merged into paragraphs, since concatenating several rows would corrupt
+sentence and word counting. Its single responsibility is to turn a raw Markdown document into
+ordered `ProseSegment` values.
 
 #### Data Model
 
@@ -43,9 +43,9 @@ walking `LineOffsets` to find the last entry whose offset does not exceed the gi
 - *Parameters*: `int charOffset` - character offset within `Text`.
 - *Returns*: `int` - the 1-based source line containing `charOffset`.
 
-**Regex set**: compiled regexes for fences, headings, list items, table rows, table
-separator rows, inline code spans, inline links, and blank lines. Each regex uses a
-one-second timeout.
+**Regex set**: compiled regexes for the front matter opening and closing delimiters, fences,
+headings, list items, table rows, table separator rows, inline code spans, inline links, and
+blank lines. Each regex uses a one-second timeout.
 
 #### Key Methods
 
@@ -54,12 +54,26 @@ one-second timeout.
 - *Parameters*: `string markdown` - full Markdown document text.
 - *Returns*: `IReadOnlyList<ProseSegment>` - extracted segments in document order.
 - *Preconditions*: `markdown` is not null.
-- *Postconditions*: Fenced code blocks are skipped, inline code spans are retained verbatim,
+- *Postconditions*: A leading YAML front matter block, if present, is skipped entirely (see
+  `SkipFrontMatter`); fenced code blocks are skipped, inline code spans are retained verbatim,
   paragraphs are merged across adjacent lines, list items are merged with any wrapped
   continuation lines but remain separate from other list items and from paragraphs, each
-  table row cell becomes its own segment, segment line numbers point to the start of each
-  emitted segment, and each multi-line paragraph's or list item's `LineOffsets` records every
-  folded line's true source line for later `ResolveLine` lookups.
+  table row cell becomes its own segment, segment line numbers point to the true source line
+  of each emitted segment (front matter lines are never renumbered away), and each multi-line
+  paragraph's or list item's `LineOffsets` records every folded line's true source line for
+  later `ResolveLine` lookups.
+
+**SkipFrontMatter**: Detects a leading YAML front matter block - the same convention Jekyll,
+Hugo, and Pandoc use - and returns the index of the first line of document content.
+
+- *Parameters*: `string[] lines` - source lines, already split on `\n`.
+- *Returns*: `int` - `0` (no lines skipped) unless line `0` is exactly `---` and a later line
+  is exactly `---` or `...`, in which case the index immediately after that closing
+  delimiter.
+- *Postconditions*: The opening delimiter must be the document's literal first line; a `---`
+  line appearing anywhere else is never treated as an opening delimiter. A first line of
+  `---` with no closing delimiter anywhere in the document is not treated as front matter and
+  no lines are skipped, matching Jekyll/Hugo/Pandoc behavior for that edge case.
 
 **CleanLine**: Rewrites inline links to keep visible text, leaving inline code spans
 untouched.
@@ -109,7 +123,9 @@ propagate `ArgumentNullException` for null input. The extractor performs no file
 and does not catch regex exceptions; the compiled regex timeout bounds worst-case matching
 time. Unclosed fenced code blocks are tolerated by remaining in fence mode until end of
 input, which suppresses the remainder of the document rather than producing partial mixed
-content.
+content. An unclosed leading front matter block (no closing `---` or `...` anywhere in the
+document) is tolerated by falling back to treating the `---` line as ordinary paragraph
+content rather than suppressing the rest of the document.
 
 #### Dependencies
 

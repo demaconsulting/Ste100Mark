@@ -177,6 +177,21 @@ internal static class MarkdownProseExtractor
     private static readonly Regex TableSeparatorRowRegex = new(@"^\s{0,3}\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>
+    ///     Matches the opening delimiter of a YAML front matter block: a line consisting of exactly
+    ///     three hyphens (with only trailing whitespace permitted), and only valid as the document's
+    ///     very first line. This is the same trigger Jekyll, Hugo, and Pandoc use to recognize front
+    ///     matter.
+    /// </summary>
+    private static readonly Regex FrontMatterDelimiterRegex = new(@"^-{3}\s*$", RegexOptions.Compiled, RegexTimeout);
+
+    /// <summary>
+    ///     Matches the closing delimiter of a YAML front matter block: a line consisting of exactly
+    ///     three hyphens or three dots (with only trailing whitespace permitted), matching the YAML
+    ///     document-end marker Pandoc also accepts.
+    /// </summary>
+    private static readonly Regex FrontMatterEndRegex = new(@"^(-{3}|\.{3})\s*$", RegexOptions.Compiled, RegexTimeout);
+
+    /// <summary>
     ///     Matches an inline code span (single backtick-delimited run with no embedded backtick).
     ///     Shared by <see cref="SentenceAnalyzer"/>, <see cref="StructuralRules"/>, and
     ///     <see cref="DictionaryChecker"/> so every consumer identifies inline code spans
@@ -195,7 +210,8 @@ internal static class MarkdownProseExtractor
     /// </summary>
     /// <param name="markdown">Full text of a Markdown file.</param>
     /// <returns>
-    ///     Prose segments in document order. Fenced code block contents and link destination URLs
+    ///     Prose segments in document order. A leading YAML front matter block (see
+    ///     <see cref="SkipFrontMatter"/>), fenced code block contents, and link destination URLs
     ///     are excluded from every segment's <see cref="ProseSegment.Text"/>; inline code spans are
     ///     retained verbatim (see <see cref="ProseSegment.Text"/> remarks).
     /// </returns>
@@ -206,13 +222,15 @@ internal static class MarkdownProseExtractor
         var segments = new List<ProseSegment>();
         var lines = markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
 
+        var startIndex = SkipFrontMatter(lines);
+
         var buffer = new StringBuilder();
         var bufferStartLine = -1;
         var bufferRole = SegmentRole.Paragraph;
         var lineOffsets = new List<(int Offset, int Line)>();
         var inFence = false;
 
-        for (var i = 0; i < lines.Length; i++)
+        for (var i = startIndex; i < lines.Length; i++)
         {
             var lineNumber = i + 1;
             var rawLine = lines[i];
@@ -337,6 +355,39 @@ internal static class MarkdownProseExtractor
         FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
 
         return segments;
+    }
+
+    /// <summary>
+    ///     Detects a leading YAML front matter block (the convention used by Jekyll, Hugo, and
+    ///     Pandoc) and returns the index of the first line after it, so <see cref="Extract"/> can
+    ///     skip the block entirely rather than treating front matter keys and values as prose.
+    /// </summary>
+    /// <param name="lines">Source lines, already split on <c>\n</c>.</param>
+    /// <returns>
+    ///     The 0-based index of the first line to treat as document content. This is <c>0</c>
+    ///     (no lines skipped) unless line 0 is exactly <c>---</c> (see
+    ///     <see cref="FrontMatterDelimiterRegex"/>) and a later line is exactly <c>---</c> or
+    ///     <c>...</c> (see <see cref="FrontMatterEndRegex"/>), in which case it is the index
+    ///     immediately after that closing delimiter. A file whose first line is <c>---</c> but that
+    ///     has no closing delimiter is not front matter - per the same convention Jekyll, Hugo, and
+    ///     Pandoc use - and no lines are skipped.
+    /// </returns>
+    private static int SkipFrontMatter(string[] lines)
+    {
+        if (lines.Length == 0 || !FrontMatterDelimiterRegex.IsMatch(lines[0]))
+        {
+            return 0;
+        }
+
+        for (var i = 1; i < lines.Length; i++)
+        {
+            if (FrontMatterEndRegex.IsMatch(lines[i]))
+            {
+                return i + 1;
+            }
+        }
+
+        return 0;
     }
 
     /// <summary>
