@@ -16,6 +16,7 @@ package Ste100Mark {
         part structuralRules : StructuralRules;
         part dictionaryChecker : DictionaryChecker;
         part diagnosticReporter : DiagnosticReporter;
+        part ruleCatalog : RuleCatalog;
         part linter : Linter;
     }
 }
