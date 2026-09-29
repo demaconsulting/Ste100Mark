@@ -457,6 +457,42 @@ public class DictionaryCheckerTests
     }
 
     /// <summary>
+    ///     Test that a confidently-resolved (single-sense) term with no alternatives at all -
+    ///     disallowed outright with no suggested replacement word, and not purely
+    ///     self-referential (there is no alternative list containing the headword to trigger that
+    ///     path) - reports the generic "not an approved ASD-STE100-style term" message with both
+    ///     <see cref="Diagnostic.Suggestion"/> and <see cref="Diagnostic.Citations"/> null.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ConfidentSingleSenseTermWithNoAlternatives_SuggestionAndCitationsAreNull()
+    {
+        // Arrange: "widget" is a single-sense noun entry that is simply disallowed with no
+        // suggested replacement word.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["widget"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = [] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("The widget failed during the test.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: the generic no-alternatives wording is used, and neither Suggestion nor
+        // Citations offers a (nonexistent) replacement word.
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Contains("it is not an approved ASD-STE100-style term", diagnostic.Message);
+        Assert.Null(diagnostic.Suggestion);
+        Assert.Null(diagnostic.Citations);
+    }
+
+    /// <summary>
     ///     Test that a confidently-resolved sense with exactly one alternative embeds it plainly,
     ///     with no "or" joining word.
     /// </summary>

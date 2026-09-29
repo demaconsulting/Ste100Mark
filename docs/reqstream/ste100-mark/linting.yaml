@@ -279,6 +279,7 @@ sections:
           - Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment
           - Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage
           - Evaluate_PureSelfReferentialCandidate_WithinAmbiguousResult_UsesRoleRestrictionClause
+          - Evaluate_ConfidentSingleSenseTermWithNoAlternatives_SuggestionAndCitationsAreNull
 
       - id: Ste100Mark-Linting-AccurateLineNumbers
         title: >-
