@@ -170,8 +170,12 @@ sense's alternatives within the diagnostic message, for both the confident and a
 paths, is additionally verified by `Evaluate_ConfidentSenseSingleAlternative_NoOrInMessage`,
 `Evaluate_ConfidentSenseTwoAlternatives_JoinsWithOrNoOxfordComma`,
 `Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr`, and
-`Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin`. Per-file
-dictionary allowances supplied via a matching `Profile`'s `dictionary.allow`/
+`Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin`. An ambiguous
+candidate sense with no alternatives at all (a pure role restriction, disallowed with no
+suggested replacement word) is excluded from the combined suggestion string rather than
+contributing a stray leading-space/bare-part-of-speech fragment (for example " (adjective)"),
+verified by `Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment`.
+Per-file dictionary allowances supplied via a matching `Profile`'s `dictionary.allow`/
 `dictionary.ignore` are verified by `Evaluate_TermInExtraAllowedTerms_NotFlagged`,
 `Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic`, and
 `Evaluate_ExtraAllowedTermsUnrelatedTerm_StillFlagsOtherDisallowedTerm`.

@@ -368,10 +368,14 @@ internal static class DictionaryChecker
         // A candidate whose only alternative is the entry's own headword (see
         // IsPureSelfReferentialSense) is phrased as a role restriction, not a word swap, for the
         // same reason as ConfidentDiagnostic - "use 'test'" is a nonsensical no-op when the term
-        // being flagged already is "test".
+        // being flagged already is "test". A candidate with no alternatives at all (disallowed in
+        // that role with no suggested replacement word) is excluded from the suggestion the same
+        // way, so it does not leave a stray leading-space/bare-part-of-speech fragment (for example
+        // " (adjective)") in the combined string; its role restriction is still surfaced via
+        // CorrectionClause in the message's "possible corrections" text.
         var corrections = string.Join("; ", candidates.Select(s => CorrectionClause(s, term)));
         var suggestion = string.Join("; ", candidates
-            .Where(s => !IsPureSelfReferentialSense(s, term))
+            .Where(s => !IsPureSelfReferentialSense(s, term) && s.Alternatives.Count > 0)
             .Select(s => $"{string.Join(", ", s.Alternatives)} ({PosLabel(s.Pos)})"));
 
         return new Diagnostic(

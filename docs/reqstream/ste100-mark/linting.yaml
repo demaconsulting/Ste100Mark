@@ -276,6 +276,7 @@ sections:
           - Evaluate_ConfidentSenseTwoAlternatives_JoinsWithOrNoOxfordComma
           - Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr
           - Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin
+          - Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment
 
       - id: Ste100Mark-Linting-AccurateLineNumbers
         title: >-

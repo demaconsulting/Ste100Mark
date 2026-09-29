@@ -107,9 +107,12 @@ plain, comma-separated list of alternatives.
 ambiguous, when the heuristic could not confidently resolve one sense. The message has the
 shape `"Ambiguous part of speech for '{term}' — possible corrections: {clauses}."`, where each
 candidate sense's clause is produced by `CorrectionClause` (see below), joined across senses
-with `"; "`. The `Suggestion` field lists only the non-self-referential candidates' plain,
-comma-separated alternatives, `"{alternatives} ({pos}); ..."`, since a purely self-referential
-candidate has no real alternative word to suggest.
+with `"; "`. The `Suggestion` field lists only the candidates that are both non-self-referential
+and have at least one alternative, `"{alternatives} ({pos}); ..."`; a purely self-referential
+candidate has no real alternative word to suggest, and a candidate with no alternatives at all
+(disallowed in that role with no suggested replacement) is likewise excluded rather than
+contributing a stray leading-space/bare-part-of-speech fragment (for example `" (adjective)"`) -
+its role restriction is still surfaced via `CorrectionClause` in the message text.
 
 **CorrectionClause**: Renders one candidate sense's clause for `AmbiguousDiagnostic`'s message.
 A purely self-referential sense (see `IsPureSelfReferentialSense`) renders as
