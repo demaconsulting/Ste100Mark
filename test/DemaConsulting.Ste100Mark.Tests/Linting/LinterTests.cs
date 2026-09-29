@@ -228,7 +228,7 @@ public sealed class LinterTests : IDisposable
     ///     globs supplied) produces the same distinct exit code as the CLI-glob case above.
     /// </summary>
     [Fact]
-    public void Run_NoFilesMatchViaConfigIncludeExclude_ProducesNoFilesMatchedExitCode()
+    public void Run_NoFilesMatchViaConfigInclude_ProducesNoFilesMatchedExitCode()
     {
         // Arrange: a config include pattern that matches no files on disk
         File.WriteAllText(Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"), "include: [\"no-such-file.md\"]\n");
@@ -243,6 +243,39 @@ public sealed class LinterTests : IDisposable
             Linter.Run(context);
 
             // Assert: verify expected behavior
+            Assert.Equal(Context.NoFilesMatchedExitCode, context.ExitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that a configured <c>exclude</c> pattern that subtracts every file matched by
+    ///     <c>include</c> produces the same distinct exit code as the empty-include case above,
+    ///     exercising the branch of <c>ResolveFiles</c> that subtracts a matching exclude set down
+    ///     to zero rather than merely matching an empty include set.
+    /// </summary>
+    [Fact]
+    public void Run_NoFilesMatchViaConfigIncludeExcludeSubtraction_ProducesNoFilesMatchedExitCode()
+    {
+        // Arrange: one file matched by include, then removed entirely by exclude
+        File.WriteAllText(Path.Combine(_tempDirectory.FullName, "excluded.md"), "# Title\n\nOpen the panel.\n");
+        File.WriteAllText(
+            Path.Combine(_tempDirectory.FullName, ".ste100mark.yaml"),
+            "include: [\"excluded.md\"]\nexclude: [\"excluded.md\"]\n");
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["--silent"]);
+
+            // Act: execute the operation being tested
+            Linter.Run(context);
+
+            // Assert: the include match was fully subtracted by exclude, leaving zero files
             Assert.Equal(Context.NoFilesMatchedExitCode, context.ExitCode);
         }
         finally

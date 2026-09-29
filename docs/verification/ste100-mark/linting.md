@@ -301,7 +301,8 @@ This scenario is tested by `Run_CleanMarkdownFile_ProducesSuccessExitCode`,
 for both the CLI-glob and configured-include/exclude routes to zero matched files, in-process and
 through the published CLI. This scenario is tested by
 `Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode`,
-`Run_NoFilesMatchViaConfigIncludeExclude_ProducesNoFilesMatchedExitCode`,
+`Run_NoFilesMatchViaConfigInclude_ProducesNoFilesMatchedExitCode`,
+`Run_NoFilesMatchViaConfigIncludeExcludeSubtraction_ProducesNoFilesMatchedExitCode`,
 `Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode`,
 `Report_NoFilesMatchedTrue_WritesFailureSummaryLine`,
 `Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary`,
