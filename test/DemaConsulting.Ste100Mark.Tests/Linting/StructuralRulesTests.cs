@@ -619,6 +619,30 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that an <c>-ing</c> word touching a sentence-ending period (the last word before
+    ///     the period, with no following word for the transitive-object/strong-noun evidence to
+    ///     examine) is not flagged, since <see cref="PartOfSpeechGuesser.GuessIngFormRole"/>
+    ///     resolves as inconclusive (not a verb) rather than flagging it on preceding-word evidence
+    ///     alone. Regression test restoring dedicated coverage of the sentence-ending-period
+    ///     scenario after an earlier test with this role was repurposed for the catenative-verb
+    ///     scenario (see <see cref="Evaluate_IngWordFollowedByCatenativeVerb_NotFlagged"/>).
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordTouchingSentenceEndingPeriod_NotFlagged()
+    {
+        // Arrange: "updating" is the last word before the sentence-ending period; "requires" is a
+        // finite verb, so this is not a verbless segment, and nothing follows "updating" for the
+        // transitive-object/strong-noun evidence to match against
+        var segments = Paragraph("The report requires updating.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: no ing-form diagnostic for the word touching the sentence-ending period
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM");
+    }
+
+    /// <summary>
     ///     Test that an <c>-ing</c> word that is the first word of a new sentence (a
     ///     sentence-initial subject gerund) is treated as a noun by
     ///     <see cref="PartOfSpeechGuesser.GuessIngFormRole"/> and skipped by the ing-form

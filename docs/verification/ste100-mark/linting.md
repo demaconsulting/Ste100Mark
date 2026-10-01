@@ -96,7 +96,9 @@ object of a preposition, a gerund complement directly after a catenative verb su
 and an "-ing" word inside a `Heading`/`TableHeader` segment, an admonition label, or a
 quoted/cited title are never flagged, while a genuine present-participle verb use remains
 flagged - is verified by `Evaluate_IngWordFollowedByCatenativeVerb_NotFlagged` (gerund complement
-after a catenative verb), `Evaluate_IngWordPrecededByPeriod_NotFlagged` (sentence-initial subject
+after a catenative verb), `Evaluate_IngWordTouchingSentenceEndingPeriod_NotFlagged` (the last word
+before a sentence-ending period, with no following word for the transitive-object/strong-noun
+evidence to examine), `Evaluate_IngWordPrecededByPeriod_NotFlagged` (sentence-initial subject
 gerund immediately after a preceding sentence's period),
 `Evaluate_IngWordAsSentenceInitialSubject_NotFlagged`,
 `Evaluate_IngWordAsObjectOfPreposition_NotFlagged`, `Evaluate_IngWordAsMaterialNoun_NotFlagged`,
