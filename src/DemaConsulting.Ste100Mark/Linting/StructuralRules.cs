@@ -511,7 +511,12 @@ internal static class StructuralRules
                 && match.Groups["next"].Value.Equals("not", StringComparison.OrdinalIgnoreCase);
         }
 
-        return !IsDeclarativeSubjectContinuation(sentenceText[match.Length..]);
+        // Slice from the end of the captured "verb" group only, not match.Length - the regex also
+        // captures an optional "next" word (used only by the "do not" check above), and including
+        // it here would skip that word entirely, hiding a determiner/stop-word it contains (e.g.
+        // "the" in "Confirm the gasket is inspected.") from the subject-continuation scan.
+        var verbGroup = match.Groups["verb"];
+        return !IsDeclarativeSubjectContinuation(sentenceText[(verbGroup.Index + verbGroup.Length)..]);
     }
 
     /// <summary>

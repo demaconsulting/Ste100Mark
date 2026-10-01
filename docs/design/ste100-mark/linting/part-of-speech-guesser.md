@@ -236,15 +236,17 @@ material noun, or participial adjective - should not be flagged).
   `GuessEffective`: those general-purpose methods treat a bare `-ing` suffix as a strong verb
   signal in its own right, which is circular when the very question being asked is "is this
   `-ing` word a verb" - every candidate ends in `-ing` by construction. A confident `Verb`
-  result requires: preceded by a `BeAuxiliaries`/`ModalAuxiliaries` word or "to" (progressive/
-  infinitive), or followed by an `Articles`/`ObjectPronouns` word or a number (transitive
-  object, e.g. "closing the valve"). Otherwise, `Noun` is returned when: preceded by an
-  article/possessive/quantifier/preposition/`CatenativeVerbs` entry (gerund complement, e.g.
-  "continue monitoring"), `GoverningDeterminer` finds a governing determiner, followed by
-  `"of"`, followed by a word that looks like a noun it modifies (a participial-adjective use,
-  e.g. "moving structure"), the match is sentence/list-item/heading-initial, or no finite verb
-  exists anywhere in the segment. Everything else defaults to `null` (not flagged), matching
-  this feature's intent of reducing `-ing`-form false positives.
+  result requires: preceded by a `BeAuxiliaries`/`ModalAuxiliaries` word (progressive/modal), or
+  followed by an `Articles`/`ObjectPronouns` word or a number (transitive object, e.g. "closing
+  the valve"). Otherwise, `Noun` is returned when: preceded by an article/possessive/quantifier/
+  preposition (including "to" - there is no true "to testing" infinitive, so "to" + `-ing`
+  always governs a preposition-object gerund, e.g. "the key to testing the gauge")/
+  `CatenativeVerbs` entry (gerund complement, e.g. "continue monitoring"), `GoverningDeterminer`
+  finds a governing determiner, followed by `"of"`, followed by a word that looks like a noun it
+  modifies (a participial-adjective use, e.g. "moving structure"), the match is
+  sentence/list-item/heading-initial, or no finite verb exists anywhere in the segment.
+  Everything else defaults to `null` (not flagged), matching this feature's intent of reducing
+  `-ing`-form false positives.
 
 #### Error Handling
 

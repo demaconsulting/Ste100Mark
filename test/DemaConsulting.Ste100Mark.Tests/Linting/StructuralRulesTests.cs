@@ -1199,6 +1199,30 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that an imperative lead whose captured lookahead includes a determiner before the
+    ///     "to be" copula (here "Confirm the gasket is ...") correctly starts its
+    ///     subject-continuation scan immediately after the lead verb, not after the regex's
+    ///     optional "next" capture group. Regression test for a reported bug where the scan slice
+    ///     used the whole match length (verb + next), skipping the determiner "the" entirely and
+    ///     so wrongly resolving the sentence as a declarative subject noun phrase because the scan
+    ///     then started at "gasket" and immediately found "is".
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeWithDeterminerBeforeCopula_NotFlagged()
+    {
+        // Arrange: "Confirm the gasket is inspected." is a genuine imperative ("the" immediately
+        // follows the lead verb "Confirm"); "inspected" is deliberately not in StativeParticiples,
+        // so only a correctly-recognized imperative-lead exemption explains this not being flagged
+        var segments = Paragraph("Confirm the gasket is inspected.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
     ///     Test that a hyphenated compound word beginning with the same letters as an imperative
     ///     lead verb (here "Open-loop", not the verb "Open") is not mistaken for that lead verb.
     ///     Regression test for a reported bug where the lead-verb regex matched "Open" as a
