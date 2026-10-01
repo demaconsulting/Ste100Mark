@@ -54,6 +54,14 @@ internal static class StructuralRules
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
 
     /// <summary>
+    ///     Maximum number of words <see cref="IsDeclarativeSubjectContinuation"/> scans forward past
+    ///     a captured imperative-lead verb while looking for a "to be" copula before giving up and
+    ///     treating the sentence as a genuine imperative. Bounds the scan to a plausible noun-phrase
+    ///     length so it cannot run unbounded over very long sentences.
+    /// </summary>
+    private const int MaxSubjectContinuationLookaheadWords = 6;
+
+    /// <summary>
     ///     Matches common English contractions (Rule 4.2). The <c>'s</c> suffix is ambiguous between
     ///     a contraction ("it's" = "it is") and a possessive ("project's"), so it is matched here and
     ///     disambiguated afterwards in <see cref="EvaluateContractions"/> using
@@ -135,6 +143,22 @@ internal static class StructuralRules
     private static readonly HashSet<string> DeclarativeBeAuxiliaries = new(StringComparer.OrdinalIgnoreCase)
     {
         "is", "are", "was", "were", "be", "being", "been",
+    };
+
+    /// <summary>
+    ///     Words that, if encountered while scanning forward from a captured lead verb (see
+    ///     <see cref="IsImperativeLeadSentence"/>) before any <see cref="DeclarativeBeAuxiliaries"/>
+    ///     entry is found, mean the scan has reached a determiner/complement boundary that starts
+    ///     the imperative's own direct object or a subordinate/coordinate clause (for example "the"
+    ///     in "Keep the panel closed..." or "while" in "...while it is energized."), rather than
+    ///     continuing a bare declarative subject noun phrase (for example "systems" in "Open systems
+    ///     are used..."). Reaching one of these words therefore means the sentence is a genuine
+    ///     imperative, not a declarative sentence.
+    /// </summary>
+    private static readonly HashSet<string> SubjectContinuationStopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "the", "a", "an", "that", "which", "who", "whom", "whose", "while", "when", "if",
+        "because", "before", "after", "since", "unless", "although", "and", "or", "but", "so",
     };
 
     /// <summary>
@@ -447,23 +471,30 @@ internal static class StructuralRules
     ///     <para>
     ///     A lead word in <see cref="CommonImperativeLeadVerbs"/> is also ambiguous with a
     ///     declarative sentence whose subject noun phrase happens to be headed by that same word
-    ///     used adjectivally (for example "Open systems are used for ventilation." or "Check valves
-    ///     are inspected monthly."), where the real main verb is a "to be" copula two or three words
-    ///     in, not the lead word itself. To disambiguate, the regex also captures the word
-    ///     immediately after the lead verb (<c>next</c>), and if the word after that is a
-    ///     <see cref="DeclarativeBeAuxiliaries"/> entry, the lead word + <c>next</c> are read as the
-    ///     declarative subject noun phrase ("Open systems", "Check valves") rather than an
+    ///     used adjectivally (for example "Open systems are used for ventilation.", "Check valves
+    ///     are inspected monthly.", or "Open system components are inspected monthly."), where the
+    ///     real main verb is a "to be" copula some number of words in, not the lead word itself. To
+    ///     disambiguate, <see cref="IsDeclarativeSubjectContinuation"/> scans forward word-by-word
+    ///     after the lead verb: if a <see cref="DeclarativeBeAuxiliaries"/> entry (the copula) is
+    ///     reached before any <see cref="SubjectContinuationStopWords"/> entry, the lead word and
+    ///     the scanned words are read as the declarative subject noun phrase rather than an
     ///     imperative verb + its object, so the sentence is not treated as an imperative lead. A
-    ///     genuine imperative's third word is an ordinary object/complement noun (for example
-    ///     "panel" in "Keep the panel closed..." or "valve" in "Confirm the valve is closed..."),
-    ///     not a "to be" form, so this check does not affect those cases.
+    ///     genuine imperative's object/complement begins with an ordinary determiner or triggers a
+    ///     subordinate/coordinate clause first (for example "the" in "Keep the panel closed..." or
+    ///     "while" in "...while it is energized."), so this check does not affect those cases.
+    ///     </para>
+    ///     <para>
+    ///     The lead-verb capture also rejects a match that is immediately followed by a hyphen (no
+    ///     intervening space), since that means the matched letters are only a prefix of a
+    ///     hyphenated compound word (for example "Open" in "Open-loop systems are inspected
+    ///     monthly."), which is an adjective, not the standalone lead verb "Open".
     ///     </para>
     /// </remarks>
     private static bool IsImperativeLeadSentence(string sentenceText)
     {
         var match = Regex.Match(
             sentenceText,
-            @"^\s*(?:[-*+]\s+|\d+[.)]\s+)?(?<verb>[A-Za-z]+)(?:\s+(?<next>[A-Za-z]+))?(?:\s+(?<after>[A-Za-z]+))?",
+            @"^\s*(?:[-*+]\s+|\d+[.)]\s+)?(?<verb>[A-Za-z]+)(?!-)(?:\s+(?<next>[A-Za-z]+))?",
             RegexOptions.None,
             RegexTimeout);
 
@@ -480,15 +511,48 @@ internal static class StructuralRules
                 && match.Groups["next"].Value.Equals("not", StringComparison.OrdinalIgnoreCase);
         }
 
-        // A "to be" form immediately after "next" means the lead verb + "next" are actually a
-        // declarative subject noun phrase (e.g. "Open systems are ...", "Check valves are ..."),
-        // not an imperative verb + object - see remarks.
-        if (match.Groups["after"].Success && DeclarativeBeAuxiliaries.Contains(match.Groups["after"].Value))
+        return !IsDeclarativeSubjectContinuation(sentenceText[match.Length..]);
+    }
+
+    /// <summary>
+    ///     Scans forward word-by-word through <paramref name="textAfterLeadVerb"/> (the sentence
+    ///     text immediately after a captured <see cref="CommonImperativeLeadVerbs"/> lead word),
+    ///     bounded to <see cref="MaxSubjectContinuationLookaheadWords"/> words, to determine whether
+    ///     the lead word is actually heading a declarative subject noun phrase rather than being an
+    ///     imperative verb - see <see cref="IsImperativeLeadSentence"/>'s remarks. Returns
+    ///     <see langword="true"/> (declarative) as soon as a <see cref="DeclarativeBeAuxiliaries"/>
+    ///     entry is found; returns <see langword="false"/> (imperative) as soon as a
+    ///     <see cref="SubjectContinuationStopWords"/> entry is found, or if the lookahead is
+    ///     exhausted (words run out or the cap is reached) without finding either.
+    /// </summary>
+    private static bool IsDeclarativeSubjectContinuation(string textAfterLeadVerb)
+    {
+        var remaining = textAfterLeadVerb;
+
+        for (var i = 0; i < MaxSubjectContinuationLookaheadWords; i++)
         {
-            return false;
+            var wordMatch = Regex.Match(remaining, @"^\s*(?<word>[A-Za-z]+)", RegexOptions.None, RegexTimeout);
+            if (!wordMatch.Success)
+            {
+                return false;
+            }
+
+            var word = wordMatch.Groups["word"].Value;
+
+            if (DeclarativeBeAuxiliaries.Contains(word))
+            {
+                return true;
+            }
+
+            if (SubjectContinuationStopWords.Contains(word))
+            {
+                return false;
+            }
+
+            remaining = remaining[(wordMatch.Index + wordMatch.Length)..];
         }
 
-        return true;
+        return false;
     }
 
     /// <summary>

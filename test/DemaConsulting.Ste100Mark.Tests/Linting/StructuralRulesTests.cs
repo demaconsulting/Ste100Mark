@@ -1154,6 +1154,47 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that a declarative subject noun phrase longer than two words (here "Open system
+    ///     components", where the "to be" copula is the fourth word, not the third) is still
+    ///     correctly disambiguated from an imperative lead. Regression test for a reported bug
+    ///     where the disambiguation only looked at a fixed 3rd-word position and so missed longer
+    ///     subject noun phrases.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeLongerNounPhraseLead_StillFlagged()
+    {
+        // Arrange: "Open system components are ..." - the copula "are" is the 4th word, past the
+        // fixed 3rd-word lookahead the previous fix used
+        var segments = Paragraph("Open system components are inspected during maintenance.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a hyphenated compound word beginning with the same letters as an imperative
+    ///     lead verb (here "Open-loop", not the verb "Open") is not mistaken for that lead verb.
+    ///     Regression test for a reported bug where the lead-verb regex matched "Open" as a
+    ///     standalone word even when it was only a prefix of the hyphenated adjective "Open-loop".
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceHyphenatedCompoundLead_StillFlagged()
+    {
+        // Arrange: "Open-loop systems are ..." - "Open-loop" is a hyphenated adjective, not the
+        // imperative verb "Open"
+        var segments = Paragraph("Open-loop systems are inspected during maintenance.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
     ///     Test that a sentence-initial "Do" is not treated as an imperative lead when it opens a
     ///     yes/no question, so the question's genuine "are inspected" passive construction is still
     ///     flagged rather than being wrongly exempted. Regression test for a reported bug where
