@@ -95,8 +95,8 @@ object of a preposition, a gerund complement directly after a catenative verb su
 "continue"), a material noun ending in "-ing", a participial adjective directly before a noun,
 and an "-ing" word inside a `Heading`/`TableHeader` segment, an admonition label, or a
 quoted/cited title are never flagged, while a genuine present-participle verb use remains
-flagged - is verified by `Evaluate_IngWordFollowedByPeriod_NotFlagged` (gerund complement after
-a catenative verb), `Evaluate_IngWordPrecededByPeriod_NotFlagged` (sentence-initial subject
+flagged - is verified by `Evaluate_IngWordFollowedByCatenativeVerb_NotFlagged` (gerund complement
+after a catenative verb), `Evaluate_IngWordPrecededByPeriod_NotFlagged` (sentence-initial subject
 gerund immediately after a preceding sentence's period),
 `Evaluate_IngWordAsSentenceInitialSubject_NotFlagged`,
 `Evaluate_IngWordAsObjectOfPreposition_NotFlagged`, `Evaluate_IngWordAsMaterialNoun_NotFlagged`,

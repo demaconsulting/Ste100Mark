@@ -809,13 +809,25 @@ internal static class PartOfSpeechGuesser
     ///     </para>
     ///     <para>
     ///     Decision rule: a confident <see cref="PartOfSpeech.Verb"/> result requires genuine
-    ///     progressive/catenative-complement evidence (preceded by a "to be" auxiliary, a modal, or
-    ///     an infinitive marker) or - when the match is not itself sentence-initial, does not
-    ///     immediately follow a <see cref="CatenativeVerbs"/> entry, and does not immediately
-    ///     follow a <see cref="Prepositions"/> entry - a transitive-object follow-on (followed by
-    ///     an article, object pronoun, or qualified number) with no conflicting noun evidence.
-    ///     Everything else defaults to not-flagged (noun/adjective), matching this feature's intent
-    ///     of reducing false positives on gerunds and participial adjectives.
+    ///     progressive/modal evidence (preceded by a "to be" auxiliary or a modal) or - when the
+    ///     match is not itself sentence-initial, does not immediately follow a
+    ///     <see cref="CatenativeVerbs"/> entry, and does not immediately follow a
+    ///     <see cref="Prepositions"/> entry (or "to" - see below) - a transitive-object follow-on
+    ///     (followed by an article, object pronoun, or qualified number) with no conflicting noun
+    ///     evidence. Everything else defaults to not-flagged (noun/adjective), matching this
+    ///     feature's intent of reducing false positives on gerunds and participial adjectives.
+    ///     </para>
+    ///     <para>
+    ///     Unlike <see cref="HasOtherVerbSignal"/> - where a preceding "to" is valid infinitive-
+    ///     marker evidence for a non-<c>-ing</c> dictionary term (e.g. "to test") - "to" is never a
+    ///     true infinitive marker here: a genuine infinitive is always "to" + the bare base verb
+    ///     form (e.g. "to test"), never "to" + an <c>-ing</c> form (there is no infinitival "to
+    ///     testing"). Every <c>-ing</c> word immediately preceded by "to" is therefore a gerund
+    ///     functioning as the object of the preposition "to" (e.g. "the key <c>to testing</c> the
+    ///     gauge", "object <c>to monitoring</c> the system"), so a preceding "to" is folded into
+    ///     <c>precededByPreposition</c> below alongside the <see cref="Prepositions"/> set, gating
+    ///     it out of the transitive-object shortcut exactly like any other preposition-object
+    ///     gerund, rather than being treated as verb evidence.
     ///     </para>
     ///     <para>
     ///     The sentence-initial and catenative-complement gate on the transitive-object follow-on
@@ -825,11 +837,12 @@ internal static class PartOfSpeechGuesser
     ///     alone would wrongly classify both as verbs before the sentence-initial/catenative noun
     ///     evidence below ever gets a chance to fire. The additional preposition gate exists for
     ///     the same reason: a gerund that is itself the object of a preposition (e.g. "before
-    ///     <c>testing</c> the gauge") can still take its own direct object, so being preceded by a
-    ///     preposition does not imply there is no following word for the transitive-object
-    ///     follow-on to match against - without this explicit gate, that following direct object
-    ///     would wrongly trigger the transitive-object shortcut before the preposition-governed
-    ///     noun evidence below ever gets a chance to fire.
+    ///     <c>testing</c> the gauge", "the key to <c>testing</c> the gauge") can still take its own
+    ///     direct object, so being preceded by a preposition (including "to") does not imply there
+    ///     is no following word for the transitive-object follow-on to match against - without
+    ///     this explicit gate, that following direct object would wrongly trigger the transitive-
+    ///     object shortcut before the preposition-governed noun evidence below ever gets a chance
+    ///     to fire.
     ///     </para>
     /// </remarks>
     internal static PartOfSpeech? GuessIngFormRole(string segmentText, int matchIndex, int matchLength)
@@ -842,12 +855,18 @@ internal static class PartOfSpeechGuesser
         var followingWord = followingWords.Length > 0 ? followingWords[0] : null;
         var isSentenceStart = IsSentenceStart(segmentText, matchIndex);
         var precededByCatenativeVerb = precedingWord is not null && CatenativeVerbs.Contains(precedingWord);
-        var precededByPreposition = precedingWord is not null && Prepositions.Contains(precedingWord);
+
+        // "to" is folded in here alongside the Prepositions set: unlike HasOtherVerbSignal's use
+        // of "to" as an infinitive marker for non-ing dictionary terms, "to" + an -ing word is
+        // never a true infinitive (there is no "to testing") - it is always "to" as a preposition
+        // governing a gerund object (e.g. "the key to testing the gauge"). See remarks.
+        var precededByPreposition = precedingWord is not null
+                                     && (Prepositions.Contains(precedingWord)
+                                         || string.Equals(precedingWord, "to", StringComparison.OrdinalIgnoreCase));
 
         var progressiveOrInfinitiveVerb =
             (precedingWord is not null && BeAuxiliaries.Contains(precedingWord)) // progressive, e.g. "is closing"
-            || (precedingWord is not null && ModalAuxiliaries.Contains(precedingWord))
-            || string.Equals(precedingWord, "to", StringComparison.OrdinalIgnoreCase);
+            || (precedingWord is not null && ModalAuxiliaries.Contains(precedingWord));
 
         if (progressiveOrInfinitiveVerb)
         {
@@ -883,7 +902,7 @@ internal static class PartOfSpeechGuesser
                 && (PossessivePronouns.Contains(precedingWord)
                     || precedingWord.EndsWith("'s", StringComparison.OrdinalIgnoreCase)))
             || (precedingWord is not null && QuantifiersOrDemonstratives.Contains(precedingWord))
-            || (precedingWord is not null && Prepositions.Contains(precedingWord)) // object of a preposition
+            || precededByPreposition // object of a preposition, including "to" (see remarks)
             || precededByCatenativeVerb // gerund complement
             || (governingWord is not null
                 && (Articles.Contains(governingWord)

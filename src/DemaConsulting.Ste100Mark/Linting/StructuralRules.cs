@@ -125,6 +125,19 @@ internal static class StructuralRules
     };
 
     /// <summary>
+    ///     "To be" auxiliary/copula forms used by <see cref="IsImperativeLeadSentence"/> to detect
+    ///     when the word immediately following the captured lead-verb-plus-next-word span is a
+    ///     main verb rather than part of an imperative verb phrase - see that method's remarks for
+    ///     why this disambiguates a genuine imperative from a declarative sentence whose subject
+    ///     noun phrase happens to start with the same word (for example "Open systems are used for
+    ///     ventilation.").
+    /// </summary>
+    private static readonly HashSet<string> DeclarativeBeAuxiliaries = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "is", "are", "was", "were", "be", "being", "been",
+    };
+
+    /// <summary>
     ///     Heuristic perfect/modal-perfect tense pattern: <c>has</c>/<c>have</c>/<c>had</c>
     ///     (optionally followed by <c>been</c>) plus a past-participle-looking word, or a modal verb
     ///     plus <c>have</c> plus a past-participle-looking word. See the precedence note on
@@ -414,9 +427,11 @@ internal static class StructuralRules
     /// <summary>
     ///     Determines whether a sentence opens with (after optionally skipping a Markdown list-item
     ///     marker or leading ordinal) a word in <see cref="CommonImperativeLeadVerbs"/>, indicating
-    ///     an imperative-mood instruction sentence.
+    ///     an imperative-mood instruction sentence (for example "Keep the panel closed while it is
+    ///     energized." or "Confirm the valve is closed...").
     /// </summary>
     /// <remarks>
+    ///     <para>
     ///     "do" is special-cased: unlike the other entries in <see cref="CommonImperativeLeadVerbs"/>,
     ///     "do" is not an unambiguous imperative lead on its own, because it is also the auxiliary
     ///     that opens a yes/no question (for example "Do the covers remain closed while they are
@@ -428,12 +443,27 @@ internal static class StructuralRules
     ///     itself (rather than being removed) because other logic/doc comments in this class
     ///     reference that set as the full list of recognized imperative leads; this method is the
     ///     sole place the extra condition is enforced.
+    ///     </para>
+    ///     <para>
+    ///     A lead word in <see cref="CommonImperativeLeadVerbs"/> is also ambiguous with a
+    ///     declarative sentence whose subject noun phrase happens to be headed by that same word
+    ///     used adjectivally (for example "Open systems are used for ventilation." or "Check valves
+    ///     are inspected monthly."), where the real main verb is a "to be" copula two or three words
+    ///     in, not the lead word itself. To disambiguate, the regex also captures the word
+    ///     immediately after the lead verb (<c>next</c>), and if the word after that is a
+    ///     <see cref="DeclarativeBeAuxiliaries"/> entry, the lead word + <c>next</c> are read as the
+    ///     declarative subject noun phrase ("Open systems", "Check valves") rather than an
+    ///     imperative verb + its object, so the sentence is not treated as an imperative lead. A
+    ///     genuine imperative's third word is an ordinary object/complement noun (for example
+    ///     "panel" in "Keep the panel closed..." or "valve" in "Confirm the valve is closed..."),
+    ///     not a "to be" form, so this check does not affect those cases.
+    ///     </para>
     /// </remarks>
     private static bool IsImperativeLeadSentence(string sentenceText)
     {
         var match = Regex.Match(
             sentenceText,
-            @"^\s*(?:[-*+]\s+|\d+[.)]\s+)?(?<verb>[A-Za-z]+)(?:\s+(?<next>[A-Za-z]+))?",
+            @"^\s*(?:[-*+]\s+|\d+[.)]\s+)?(?<verb>[A-Za-z]+)(?:\s+(?<next>[A-Za-z]+))?(?:\s+(?<after>[A-Za-z]+))?",
             RegexOptions.None,
             RegexTimeout);
 
@@ -448,6 +478,14 @@ internal static class StructuralRules
         {
             return match.Groups["next"].Success
                 && match.Groups["next"].Value.Equals("not", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // A "to be" form immediately after "next" means the lead verb + "next" are actually a
+        // declarative subject noun phrase (e.g. "Open systems are ...", "Check valves are ..."),
+        // not an imperative verb + object - see remarks.
+        if (match.Groups["after"].Success && DeclarativeBeAuxiliaries.Contains(match.Groups["after"].Value))
+        {
+            return false;
         }
 
         return true;

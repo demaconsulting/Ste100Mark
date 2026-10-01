@@ -868,6 +868,49 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that an <c>-ing</c> word immediately preceded by "to" is not flagged, because "to"
+    ///     + an <c>-ing</c> word is never a true infinitive (there is no infinitival "to testing") -
+    ///     it is always "to" used as a preposition governing a gerund object. Regression test for a
+    ///     reported false positive where <see cref="PartOfSpeechGuesser.GuessIngFormRole"/> treated
+    ///     every "to" + <c>-ing</c> sequence as an infinitive-marker verb signal and returned
+    ///     <see cref="PartOfSpeech.Verb"/> before the noun/preposition checks ever ran.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordPrecededByTo_NotFlagged()
+    {
+        // Arrange: "testing" is the object of the preposition "to" ("the key to testing the
+        // gauge"), not part of an infinitive - there is no infinitival "to testing"
+        var segments = Paragraph("The key to testing the gauge is a steady hand.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("testing"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word immediately preceded by "to", that is itself immediately
+    ///     followed by its own direct object, is still not flagged - the same preposition-object
+    ///     gating that applies to other prepositions (see
+    ///     <see cref="Evaluate_IngWordAsObjectOfPrepositionWithDirectObject_NotFlagged"/>) must also
+    ///     apply when the preposition is "to".
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordPrecededByToWithDirectObject_NotFlagged()
+    {
+        // Arrange: "monitoring" is the object of the preposition "to", but is itself immediately
+        // followed by its own direct object ("the system")
+        var segments = Paragraph("Engineers take an approach to monitoring the system continuously.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("monitoring"));
+    }
+
+    /// <summary>
     ///     Test that a material noun ending in "-ing" (preceded by an article) is not flagged.
     ///     Category E regression test.
     /// </summary>
@@ -1056,6 +1099,52 @@ public class StructuralRulesTests
     {
         // Arrange: a plain declarative sentence, not an imperative instruction
         var segments = Paragraph("The report is reviewed every week by the supervisor.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a declarative sentence whose subject noun phrase happens to be headed by a
+    ///     word in <c>CommonImperativeLeadVerbs</c> (here "Open", used adjectivally in "Open
+    ///     systems") is not mistaken for an imperative lead, so its genuine "are inspected" passive
+    ///     construction is still flagged rather than being wrongly exempted. Regression test for a
+    ///     reported bug where every sentence starting with one of these lexical lead words was
+    ///     treated as imperative, even when the word two positions later was a "to be" auxiliary
+    ///     indicating the first two words were actually the sentence's subject, not an imperative
+    ///     verb + its object.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeNounPhraseLead_StillFlagged()
+    {
+        // Arrange: "Open systems are ..." - "Open systems" is the declarative subject noun phrase,
+        // not an imperative verb ("Open") + direct object; "inspected" is deliberately not in
+        // StativeParticiples, so only a wrongly-applied imperative-lead exemption could explain
+        // this being suppressed
+        var segments = Paragraph("Open systems are inspected during maintenance.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a second declarative subject noun-phrase lead word ("Check") is likewise not
+    ///     mistaken for an imperative lead, confirming the disambiguation is not specific to a
+    ///     single lead word. Regression test companion to
+    ///     <see cref="Evaluate_PassiveVoiceDeclarativeNounPhraseLead_StillFlagged"/>.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeNounPhraseLeadCheckValves_StillFlagged()
+    {
+        // Arrange: "Check valves are ..." - "Check valves" (a type of valve) is the declarative
+        // subject noun phrase, not an imperative verb ("Check") + direct object
+        var segments = Paragraph("Check valves are tested before installation.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
