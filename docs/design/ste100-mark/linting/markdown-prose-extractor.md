@@ -22,6 +22,11 @@ ordered `ProseSegment` values.
   lines (a following line with no list marker of its own), so may span multiple source
   lines.
 - `TableRow` - one emitted Markdown table cell segment, always single-line.
+- `TableHeader` - the header row of a Markdown table - the single row immediately followed
+  by the table's separator row (for example `| --- | --- |`). Column header cells (for
+  example "Hazard" or "Use") are short labels, not prose sentences, so `DictionaryChecker`
+  and `StructuralRules` skip them entirely rather than running them through the same checks
+  as an ordinary `TableRow` data cell. Always single-line.
 - `Paragraph` - one or more consecutive non-heading, non-list-item, non-table-row lines.
 
 **ProseSegment**: immutable record describing one extracted prose run.
@@ -44,8 +49,9 @@ walking `LineOffsets` to find the last entry whose offset does not exceed the gi
 - *Returns*: `int` - the 1-based source line containing `charOffset`.
 
 **Regex set**: compiled regexes for the front matter opening and closing delimiters, fences,
-headings, list items, table rows, table separator rows, inline code spans, inline links, and
-blank lines. Each regex uses a one-second timeout.
+headings, list items, table rows, table separator rows, inline code spans, inline links,
+blank lines, bold admonition-label spans (`AdmonitionLabelRegex`), and double-quoted/
+single-emphasis spans (`QuotedOrEmphasisSpanRegex`). Each regex uses a one-second timeout.
 
 #### Key Methods
 
@@ -58,10 +64,11 @@ blank lines. Each regex uses a one-second timeout.
   `SkipFrontMatter`); fenced code blocks are skipped, inline code spans are retained verbatim,
   paragraphs are merged across adjacent lines, list items are merged with any wrapped
   continuation lines but remain separate from other list items and from paragraphs, each
-  table row cell becomes its own segment, segment line numbers point to the true source line
-  of each emitted segment (front matter lines are never renumbered away), and each multi-line
-  paragraph's or list item's `LineOffsets` records every folded line's true source line for
-  later `ResolveLine` lookups.
+  table row cell becomes its own segment (tagged `TableHeader` instead of `TableRow` when the
+  row is immediately followed by a table separator row, see `FindTableHeaderLineIndexes`),
+  segment line numbers point to the true source line of each emitted segment (front matter
+  lines are never renumbered away), and each multi-line paragraph's or list item's
+  `LineOffsets` records every folded line's true source line for later `ResolveLine` lookups.
 
 **SkipFrontMatter**: Detects a leading YAML front matter block - the same convention Jekyll,
 Hugo, and Pandoc use - and returns the index of the first line of document content.
@@ -75,6 +82,17 @@ Hugo, and Pandoc use - and returns the index of the first line of document conte
   `---` with no closing delimiter anywhere in the document is not treated as front matter and
   no lines are skipped, matching Jekyll/Hugo/Pandoc behavior for that edge case.
 
+**FindTableHeaderLineIndexes**: Pre-scans every line to find the 0-based index of each table
+row immediately followed by a table separator row - each table's single header row.
+
+- *Parameters*: `string[] lines` - source lines, already split on `\n`; `int startIndex` -
+  0-based index of the first line to consider (see `SkipFrontMatter`).
+- *Returns*: `HashSet<int>` - the 0-based index of each line that is a table's header row.
+- *Postconditions*: A separate one-line lookahead pass rather than inline in `Extract`'s own
+  single-pass loop, since deciding a row's role requires already knowing about the next line.
+  Fenced code block contents are skipped the same way `Extract` skips them, so a fenced block
+  that merely resembles a table is never misidentified as one.
+
 **CleanLine**: Rewrites inline links to keep visible text, leaving inline code spans
 untouched.
 
@@ -87,6 +105,25 @@ separator.
 
 - *Parameters*: `string row` - a single table row line already known to start with `|`.
 - *Returns*: `IEnumerable<string>` - non-empty trimmed cell texts, in column order.
+
+**FindAdmonitionLabelSpans**: Locates every bold admonition-label span (for example
+`**Caution.**` or `**Warning:**`) that begins at the very start of the segment text - a short
+block label, not a prose sentence, that `DictionaryChecker` and `StructuralRules` skip over.
+
+- *Parameters*: `string text` - verbatim segment text to search.
+- *Returns*: `IReadOnlyList<(int Start, int Length)>` - the start index and length of the
+  admonition-label span, if the segment begins with one; otherwise empty.
+- *Preconditions*: `text` is not null.
+
+**FindQuotedOrEmphasisSpans**: Locates every double-quoted span, or single-asterisk/
+underscore emphasis span, in the segment or sentence text - recognizing a "mention" (for
+example a cited document title or a quoted term) rather than a "use" of the enclosed word(s)
+in ordinary prose.
+
+- *Parameters*: `string text` - verbatim segment or sentence text to search.
+- *Returns*: `IReadOnlyList<(int Start, int Length)>` - the start index and length of each
+  quoted/emphasis span, in document order.
+- *Preconditions*: `text` is not null.
 
 **FindInlineCodeSpans**: Locates every inline code span's character offsets in a verbatim
 segment or sentence text.
@@ -131,8 +168,9 @@ content rather than suppressing the rest of the document.
 
 - **.NET BCL** - `StringBuilder`, LINQ, and `Regex`.
 - **SentenceAnalyzer** - consumes extracted segment text and the shared inline-code regex.
-- **StructuralRules** and **DictionaryChecker** - consume extracted segments and the inline
-  code span helper methods.
+- **StructuralRules** and **DictionaryChecker** - consume extracted segments (including the
+  `TableHeader` role) and the `FindInlineCodeSpans`/`OverlapsInlineCodeSpan`/
+  `MaskInlineCodeSpans`/`FindAdmonitionLabelSpans`/`FindQuotedOrEmphasisSpans` helper methods.
 
 #### Callers
 

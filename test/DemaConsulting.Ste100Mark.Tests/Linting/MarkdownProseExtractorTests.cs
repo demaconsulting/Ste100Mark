@@ -121,7 +121,14 @@ public class MarkdownProseExtractorTests
 
         // Assert: no segment contains a pipe character (which would indicate rows were merged)
         Assert.All(segments, s => Assert.DoesNotContain('|', s.Text));
-        Assert.All(segments, s => Assert.Equal(SegmentRole.TableRow, s.Role));
+
+        // Assert: the header row's cells are tagged TableHeader, the data row's cells TableRow
+        Assert.All(
+            segments.Where(s => s.Text is "Option" or "Description"),
+            s => Assert.Equal(SegmentRole.TableHeader, s.Role));
+        Assert.All(
+            segments.Where(s => s.Text is not ("Option" or "Description")),
+            s => Assert.Equal(SegmentRole.TableRow, s.Role));
     }
 
     /// <summary>
@@ -535,5 +542,145 @@ public class MarkdownProseExtractorTests
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => MarkdownProseExtractor.Extract(null!));
+    }
+
+    /// <summary>
+    ///     Test that a table's header row (immediately followed by a separator row) is tagged
+    ///     <see cref="SegmentRole.TableHeader"/>, while its data rows remain
+    ///     <see cref="SegmentRole.TableRow"/>. Category B regression test.
+    /// </summary>
+    [Fact]
+    public void Extract_TableWithSeparatorRow_FirstRowIsTableHeader()
+    {
+        // Arrange: a two-column table with one header row, a separator row, and one data row
+        const string markdown = "| Hazard | Action |\n| --- | --- |\n| Pinch point | Keep hands clear |";
+
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract(markdown);
+
+        // Assert: the header row's two cells are TableHeader; the data row's two cells are TableRow
+        Assert.Equal(4, segments.Count);
+        Assert.Equal(SegmentRole.TableHeader, segments[0].Role);
+        Assert.Equal("Hazard", segments[0].Text);
+        Assert.Equal(SegmentRole.TableHeader, segments[1].Role);
+        Assert.Equal("Action", segments[1].Text);
+        Assert.Equal(SegmentRole.TableRow, segments[2].Role);
+        Assert.Equal("Pinch point", segments[2].Text);
+        Assert.Equal(SegmentRole.TableRow, segments[3].Role);
+        Assert.Equal("Keep hands clear", segments[3].Text);
+    }
+
+    /// <summary>
+    ///     Test that a table row with no following separator row (for example a single-row
+    ///     fragment, or a malformed table) is not misclassified as a header.
+    /// </summary>
+    [Fact]
+    public void Extract_TableRowWithoutFollowingSeparator_RemainsTableRow()
+    {
+        // Act: execute the operation being tested
+        var segments = MarkdownProseExtractor.Extract("| Option | Description |");
+
+        // Assert: with no separator row following, neither cell is treated as a header
+        Assert.All(segments, s => Assert.Equal(SegmentRole.TableRow, s.Role));
+    }
+
+    /// <summary>
+    ///     Test that a bold admonition label at the very start of a block (for example
+    ///     <c>**Caution.**</c>) is detected as a single span covering exactly the label.
+    /// </summary>
+    [Fact]
+    public void FindAdmonitionLabelSpans_LabelAtBlockStart_ReturnsOneSpan()
+    {
+        // Act: execute the operation being tested
+        var spans = MarkdownProseExtractor.FindAdmonitionLabelSpans("**Caution.** Keep hands clear of the panel.");
+
+        // Assert: verify expected behavior
+        var span = Assert.Single(spans);
+        Assert.Equal(0, span.Start);
+        Assert.Equal("**Caution.**".Length, span.Length);
+    }
+
+    /// <summary>
+    ///     Test that bold text appearing mid-sentence (not at the very start of the block) is not
+    ///     mistaken for an admonition label.
+    /// </summary>
+    [Fact]
+    public void FindAdmonitionLabelSpans_BoldTextMidSentence_ReturnsNoSpans()
+    {
+        // Act: execute the operation being tested
+        var spans = MarkdownProseExtractor.FindAdmonitionLabelSpans("Keep the **panel** closed at all times.");
+
+        // Assert: verify expected behavior
+        Assert.Empty(spans);
+    }
+
+    /// <summary>
+    ///     Test that a quoted phrase (for example a cited document title) is detected as a span.
+    /// </summary>
+    [Fact]
+    public void FindQuotedOrEmphasisSpans_QuotedTitle_ReturnsSpan()
+    {
+        // Act: execute the operation being tested
+        var spans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans("See \"Closing Procedures\" for details.");
+
+        // Assert: verify expected behavior
+        var span = Assert.Single(spans);
+        Assert.Equal("\"Closing Procedures\"", "See \"Closing Procedures\" for details.".Substring(span.Start, span.Length));
+    }
+
+    /// <summary>
+    ///     Test that a single-asterisk emphasized phrase (for example an italicized cited title) is
+    ///     detected as a span, while a double-asterisk bold span is not mistaken for it.
+    /// </summary>
+    [Fact]
+    public void FindQuotedOrEmphasisSpans_SingleAsteriskEmphasis_ReturnsSpanNotBold()
+    {
+        // Arrange: a single-asterisk emphasis span and an unrelated double-asterisk bold span
+        const string text = "Refer to *Closing Procedures* and **Warning** text.";
+
+        // Act: execute the operation being tested
+        var spans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(text);
+
+        // Assert: only the single-asterisk emphasis span is returned, not the bold span
+        Assert.Contains(spans, s => text.Substring(s.Start, s.Length) == "*Closing Procedures*");
+        Assert.DoesNotContain(spans, s => text.Substring(s.Start, s.Length).Contains("Warning"));
+    }
+
+    /// <summary>
+    ///     Test that an underscore inside a snake_case identifier is not mistaken for emphasis
+    ///     delimiters, so a disallowed term embedded in the identifier (for example "queue" in
+    ///     "retry_queue_limit") remains visible to DICT/<c>-ing</c> checks instead of being hidden
+    ///     inside a false "_queue_" emphasis span.
+    /// </summary>
+    [Fact]
+    public void FindQuotedOrEmphasisSpans_UnderscoreInsideIdentifier_ReturnsNoSpan()
+    {
+        // Arrange: a snake_case identifier whose middle segment looks like an emphasis span
+        const string text = "Set the retry_queue_limit before restarting the service.";
+
+        // Act: execute the operation being tested
+        var spans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(text);
+
+        // Assert: no span is produced, because the underscores sit between word characters,
+        // not at a word boundary
+        Assert.Empty(spans);
+    }
+
+    /// <summary>
+    ///     Test that genuine underscore emphasis - delimiters sitting at word boundaries, not
+    ///     inside an identifier - is still detected as a span.
+    /// </summary>
+    [Fact]
+    public void FindQuotedOrEmphasisSpans_GenuineUnderscoreEmphasis_ReturnsSpan()
+    {
+        // Arrange: a sentence with genuine underscore emphasis around a standalone word
+        const string text = "Confirm the reading is _accurate_ before logging it.";
+
+        // Act: execute the operation being tested
+        var spans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(text);
+
+        // Assert: the emphasis span is detected
+        var span = Assert.Single(spans);
+        Assert.Equal("_accurate_", text.Substring(span.Start, span.Length));
     }
 }

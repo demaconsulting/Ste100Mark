@@ -35,6 +35,19 @@ base verb, e.g. `during`, `morning`, `something`), excluded from `EvaluateIngFor
 unconditionally rather than relying on the project-supplied allow list to cover every one of
 them.
 
+**StativeParticiples**: `HashSet<string>` of common stative/adjectival past participles (for
+example `energized`, `closed`, `connected`, `locked`) that, when following `is`/`are`, read as
+a predicate adjective describing a current state rather than a genuine passive construction.
+`EvaluatePassiveVoice`/`HasGenuinePassiveMatch` does not count such a match as passive unless
+an explicit `by <agent>` phrase immediately follows the participle.
+
+**CommonImperativeLeadVerbs**: `HashSet<string>` of common imperative-mood lead verbs (for
+example `keep`, `confirm`, `verify`) for Procedure-mode instruction sentences. When one of
+these starts a sentence, `HasGenuinePassiveMatch` treats a later `is`/`are` + past-participle
+match in that same sentence as a predicate-adjective state the instruction asks the reader to
+verify or maintain, not a passive construction, subject to the same explicit-agent-phrase
+override as `StativeParticiples`.
+
 **Rule codes**:
 
 - `STE100-4.1` - sentence word-count limit.
@@ -101,8 +114,35 @@ possessives.
 - *Parameters*: `string file`; `ProseSegment segment`; `IReadOnlyList<Sentence> sentences`;
   `RulesConfig rules`; `List<Diagnostic> diagnostics`.
 - *Returns*: `void`.
-- *Postconditions*: Tests `PassiveVoiceRegex` against a masked copy of each sentence while
-  reporting the verbatim sentence text in the diagnostic message.
+- *Postconditions*: Delegates to `HasGenuinePassiveMatch` (tested against a masked copy of
+  each sentence) while reporting the verbatim sentence text in the diagnostic message.
+
+**HasGenuinePassiveMatch**: Private helper determining whether a (masked) sentence contains
+at least one `PassiveVoiceRegex` match that is a genuine passive construction rather than a
+predicate adjective.
+
+- *Parameters*: `string sentenceText` - masked sentence text.
+- *Returns*: `bool` - `true` when at least one match is a genuine passive.
+- *Postconditions*: A present-tense (`is`/`are`) match is treated as adjectival, not passive,
+  when either the participle is in `StativeParticiples` or the sentence is an imperative lead
+  sentence (see `IsImperativeLeadSentence`); either exemption is overridden - the match still
+  counts as passive - when `HasAgentPhraseAfter` finds an explicit `by <agent>` phrase
+  immediately following the participle. `was`/`were`/`be`/`being`/`been` matches are never
+  exempted by either rule, since both exemptions apply only to present-tense `is`/`are`.
+
+**IsImperativeLeadSentence**: Private helper determining whether a sentence opens (after
+optionally skipping a Markdown list-item marker or leading ordinal) with a word in
+`CommonImperativeLeadVerbs`.
+
+- *Parameters*: `string sentenceText`.
+- *Returns*: `bool`.
+
+**HasAgentPhraseAfter**: Private helper determining whether the first word following a given
+index is `by`, indicating an explicit agent phrase that makes a match unambiguously passive
+regardless of either exemption above.
+
+- *Parameters*: `string text`; `int index`.
+- *Returns*: `bool`.
 
 **EvaluateComplexVerb**: Private advisory evaluator that emits at `rules.ComplexVerb`
 severity.
@@ -120,9 +160,15 @@ once per matched `-ing` word.
   `IReadOnlyCollection<string>? allowedTerms` - the file's resolved allow-list vocabulary;
   `List<Diagnostic> diagnostics`.
 - *Returns*: `void`.
-- *Postconditions*: Skips matches inside inline code spans, skips matches touching a
-  sentence-ending period immediately before or after the word, and skips any match whose exact
-  word is either in `IngFormExclusions` or in `allowedTerms`.
+- *Postconditions*: Skips the whole segment when it is a `Heading` or `TableHeader` - a short
+  label, not a prose sentence. For each remaining `IngFormRegex` match, skips it when it
+  overlaps an inline code span (`MarkdownProseExtractor.FindInlineCodeSpans`), an admonition
+  label (`FindAdmonitionLabelSpans`), or a quoted/emphasis span (`FindQuotedOrEmphasisSpans`
+  - a cited title or mention, not a use). Skips any match whose exact word is either in
+  `IngFormExclusions` or in `allowedTerms`. For every surviving match, delegates to
+  `PartOfSpeechGuesser.GuessIngFormRole` and reports the finding only when it resolves to
+  `PartOfSpeech.Verb` - a gerund/participial-adjective use (noun-phrase subject, object of a
+  preposition, gerund complement, material noun, or noun modifier) is not flagged.
 
 **EvaluateParagraphLength**: Private advisory evaluator that runs only for paragraph
 segments and is disabled when `rules.MaxSentencesParagraph` is `0`.
@@ -148,8 +194,12 @@ Configuration disables checks by value (`AllowSemicolons`, `AllowContractions`, 
 
 - **SentenceAnalyzer** - supplies sentence splitting and word counts.
 - **MarkdownProseExtractor** - supplies `ProseSegment` text and roles, and the
-  `MaskInlineCodeSpans` and `OverlapsInlineCodeSpan` helpers used to exclude inline-code
-  content from grammar-sensitive checks.
+  `MaskInlineCodeSpans`, `OverlapsInlineCodeSpan`, `FindInlineCodeSpans`,
+  `FindAdmonitionLabelSpans`, and `FindQuotedOrEmphasisSpans` helpers used to exclude
+  inline-code, admonition-label, and quoted/mention content from grammar-sensitive checks.
+- **PartOfSpeechGuesser** - `EvaluateIngForm` delegates to `GuessIngFormRole` to resolve
+  whether a matched `-ing` word is a genuine present-participle verb use or a
+  gerund/participial-adjective use that should not be flagged.
 - **LintConfig** - provides `LintMode` and `RulesConfig` inputs.
 - **Diagnostic** and **Severity** - carry rule output.
 - **.NET BCL** - regex support and `Match` values.

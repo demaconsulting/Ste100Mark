@@ -121,7 +121,8 @@ sections:
           verb forms.
         tests:
           - Evaluate_IngWordMidSentence_FlagsIngFormAdvisory
-          - Evaluate_IngWordFollowedByPeriod_NotFlagged
+          - Evaluate_IngWordFollowedByCatenativeVerb_NotFlagged
+          - Evaluate_IngWordTouchingSentenceEndingPeriod_NotFlagged
           - Evaluate_IngWordPrecededByPeriod_NotFlagged
           - Evaluate_IngFormOff_NoDiagnostic
           - Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic

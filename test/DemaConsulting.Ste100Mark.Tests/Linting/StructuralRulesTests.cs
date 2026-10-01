@@ -600,25 +600,76 @@ public class StructuralRulesTests
     }
 
     /// <summary>
-    ///     Test that an <c>-ing</c> word immediately followed by a sentence-ending period is
-    ///     skipped by the ing-form heuristic.
+    ///     Test that an <c>-ing</c> word immediately following a catenative verb (a gerund
+    ///     complement, e.g. "continue reading") is treated as a noun by
+    ///     <see cref="PartOfSpeechGuesser.GuessIngFormRole"/> and skipped by the ing-form
+    ///     heuristic, rather than as a verb.
     /// </summary>
     [Fact]
-    public void Evaluate_IngWordFollowedByPeriod_NotFlagged()
+    public void Evaluate_IngWordFollowedByCatenativeVerb_NotFlagged()
     {
-        // Arrange: the -ing word is the last word of the sentence, touching the period
+        // Arrange: "reading" is the gerund complement of the catenative verb "continue"
         var segments = Paragraph("Continue reading.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
 
-        // Assert: no ing-form diagnostic for the word touching the period
+        // Assert: no ing-form diagnostic for the gerund complement
         Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM");
     }
 
     /// <summary>
-    ///     Test that an <c>-ing</c> word immediately preceded by a sentence-ending period (the
-    ///     first word of a new sentence) is skipped by the ing-form heuristic.
+    ///     Test that an <c>-ing</c> word immediately following "consider" (a gerund-taking
+    ///     catenative verb) is treated as a noun, even when immediately followed by a direct
+    ///     object ("the gauge") that would otherwise trigger the transitive-object verb signal.
+    ///     Regression test for a reported bug where "consider" was missing from the catenative
+    ///     verb list used by <see cref="PartOfSpeechGuesser.GuessIngFormRole"/>, so "Consider
+    ///     testing the gauge." still resolved "testing" as a verb via the transitive-object
+    ///     signal.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordFollowedByConsiderCatenativeVerb_NotFlagged()
+    {
+        // Arrange: "testing" is the gerund complement of the catenative verb "consider", despite
+        // being immediately followed by the direct object "the gauge"
+        var segments = Paragraph("Consider testing the gauge.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: no ing-form diagnostic for the gerund complement
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM");
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word touching a sentence-ending period (the last word before
+    ///     the period, with no following word for the transitive-object/strong-noun evidence to
+    ///     examine) is not flagged, since <see cref="PartOfSpeechGuesser.GuessIngFormRole"/>
+    ///     resolves as inconclusive (not a verb) rather than flagging it on preceding-word evidence
+    ///     alone. Regression test restoring dedicated coverage of the sentence-ending-period
+    ///     scenario after an earlier test with this role was repurposed for the catenative-verb
+    ///     scenario (see <see cref="Evaluate_IngWordFollowedByCatenativeVerb_NotFlagged"/>).
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordTouchingSentenceEndingPeriod_NotFlagged()
+    {
+        // Arrange: "updating" is the last word before the sentence-ending period; "requires" is a
+        // finite verb, so this is not a verbless segment, and nothing follows "updating" for the
+        // transitive-object/strong-noun evidence to match against
+        var segments = Paragraph("The report requires updating.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: no ing-form diagnostic for the word touching the sentence-ending period
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM");
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word that is the first word of a new sentence (a
+    ///     sentence-initial subject gerund) is treated as a noun by
+    ///     <see cref="PartOfSpeechGuesser.GuessIngFormRole"/> and skipped by the ing-form
+    ///     heuristic, even when no space separates it from the preceding sentence's period.
     /// </summary>
     [Fact]
     public void Evaluate_IngWordPrecededByPeriod_NotFlagged()
@@ -657,8 +708,12 @@ public class StructuralRulesTests
     [Fact]
     public void Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic()
     {
-        // Arrange: the -ing word appears only inside an inline code span
-        var segments = Paragraph("Run the `checking` command before closing the tool fully.");
+        // Arrange: the -ing word appears only inside an inline code span. "while" (not a
+        // preposition) precedes "closing" so the genuine verbal gerund-with-object reading is
+        // exercised without also tripping the preposition-object gate added for
+        // GuessIngFormRole's "before testing the gauge" fix (see
+        // Evaluate_IngWordAsObjectOfPrepositionWithDirectObject_NotFlagged).
+        var segments = Paragraph("Run the `checking` command while closing the tool fully.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
@@ -675,8 +730,9 @@ public class StructuralRulesTests
     [Fact]
     public void Evaluate_IngWordInExclusionList_NotFlagged()
     {
-        // Arrange: "during" ends in "-ing" but is a preposition, not a verb form
-        var segments = Paragraph("Record the reading during the test.");
+        // Arrange: "during" ends in "-ing" but is a preposition, not a verb form; "is reading" is a
+        // genuine present-participle verb use, distinct from the noun use of "reading" elsewhere
+        var segments = Paragraph("The operator is reading the gauge during the test.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
@@ -694,8 +750,12 @@ public class StructuralRulesTests
     [Fact]
     public void Evaluate_IngWordOnAllowedTermsList_NotFlagged()
     {
-        // Arrange: "metering" is approved via the file's resolved allow list
-        var segments = Paragraph("Check the metering system before closing the panel.");
+        // Arrange: "metering" is approved via the file's resolved allow list. "while" (not a
+        // preposition) precedes "closing" so the genuine verbal gerund-with-object reading is
+        // exercised without also tripping the preposition-object gate added for
+        // GuessIngFormRole's "before testing the gauge" fix (see
+        // Evaluate_IngWordAsObjectOfPrepositionWithDirectObject_NotFlagged).
+        var segments = Paragraph("Check the metering system while closing the panel.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate(
@@ -737,8 +797,12 @@ public class StructuralRulesTests
     [Fact]
     public void Evaluate_IngWordStringInExclusionList_NotFlagged()
     {
-        // Arrange: "string" ends in "-ing" but is a base-form noun/verb, not a verb form
-        var segments = Paragraph("String the cable before closing the panel.");
+        // Arrange: "string" ends in "-ing" but is a base-form noun/verb, not a verb form. "while"
+        // (not a preposition) precedes "closing" so the genuine verbal gerund-with-object reading
+        // is exercised without also tripping the preposition-object gate added for
+        // GuessIngFormRole's "before testing the gauge" fix (see
+        // Evaluate_IngWordAsObjectOfPrepositionWithDirectObject_NotFlagged).
+        var segments = Paragraph("String the cable while closing the panel.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
@@ -746,5 +810,589 @@ public class StructuralRulesTests
         // Assert: "string" is not flagged, but "closing" still is
         Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("string", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("closing"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word used as a sentence-initial subject noun (a gerund process
+    ///     noun) is not flagged. Category E regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordAsSentenceInitialSubject_NotFlagged()
+    {
+        // Arrange: "Testing" is the subject noun of the sentence, not a present-participle verb
+        var segments = Paragraph("Testing confirms the seal integrity.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("Testing"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word used as a sentence-initial subject noun is still not
+    ///     flagged even when it is itself immediately followed by a direct object (e.g. "the
+    ///     flow"). Regression test for a reported false positive where the transitive-object
+    ///     follow-on signal was checked before the sentence-initial noun signal, wrongly
+    ///     classifying a gerund subject as a verb merely because the next word was an article.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordAsSentenceInitialSubjectWithDirectObject_NotFlagged()
+    {
+        // Arrange: "Metering" is the sentence-initial subject noun, even though "the flow"
+        // immediately follows it like a transitive verb's direct object would
+        var segments = Paragraph("Metering the flow is required.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("Metering"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word immediately following a catenative verb (a gerund
+    ///     complement) is still not flagged even when it is itself immediately followed by a
+    ///     direct object (e.g. "the gauge"). Regression test for a reported false positive where
+    ///     the transitive-object follow-on signal was checked before the catenative-complement
+    ///     noun signal, wrongly classifying a catenative gerund complement as a verb merely
+    ///     because the next word was an article.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordAsCatenativeComplementWithDirectObject_NotFlagged()
+    {
+        // Arrange: "monitoring" is the gerund complement of the catenative verb "continue", even
+        // though "the gauge" immediately follows it like a transitive verb's direct object would
+        var segments = Paragraph("Continue monitoring the gauge.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("monitoring"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word used as the object of a preposition, with no direct object
+    ///     of its own, is not flagged (a nominal gerund, not a verbal one). Category E regression
+    ///     test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordAsObjectOfPreposition_NotFlagged()
+    {
+        // Arrange: "testing" is the object of "before", with no direct object of its own
+        var segments = Paragraph("Check the gauge reading before testing.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("testing"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word used as the object of a preposition is not flagged even
+    ///     when it is itself immediately followed by its own direct object. Regression test for a
+    ///     reported false positive where the transitive-object follow-on shortcut was gated only
+    ///     for sentence starts and catenative complements, not for a preceding preposition, so a
+    ///     gerund object of a preposition that itself took a direct object (e.g. "before
+    ///     <c>testing</c> the gauge") fell through to that shortcut and was wrongly classified as a
+    ///     verb.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordAsObjectOfPrepositionWithDirectObject_NotFlagged()
+    {
+        // Arrange: "testing" is the object of the preposition "before", but unlike the previous
+        // preposition-object test, it is also immediately followed by its own direct object ("the
+        // gauge"), which is the scenario that previously reached the transitive-object shortcut
+        var segments = Paragraph("Confirm the valve is closed before testing the gauge for leaks.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("testing"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word immediately preceded by "to" is not flagged, because "to"
+    ///     + an <c>-ing</c> word is never a true infinitive (there is no infinitival "to testing") -
+    ///     it is always "to" used as a preposition governing a gerund object. Regression test for a
+    ///     reported false positive where <see cref="PartOfSpeechGuesser.GuessIngFormRole"/> treated
+    ///     every "to" + <c>-ing</c> sequence as an infinitive-marker verb signal and returned
+    ///     <see cref="PartOfSpeech.Verb"/> before the noun/preposition checks ever ran.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordPrecededByTo_NotFlagged()
+    {
+        // Arrange: "testing" is the object of the preposition "to" ("the key to testing the
+        // gauge"), not part of an infinitive - there is no infinitival "to testing"
+        var segments = Paragraph("The key to testing the gauge is a steady hand.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("testing"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word immediately preceded by "to", that is itself immediately
+    ///     followed by its own direct object, is still not flagged - the same preposition-object
+    ///     gating that applies to other prepositions (see
+    ///     <see cref="Evaluate_IngWordAsObjectOfPrepositionWithDirectObject_NotFlagged"/>) must also
+    ///     apply when the preposition is "to".
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordPrecededByToWithDirectObject_NotFlagged()
+    {
+        // Arrange: "monitoring" is the object of the preposition "to", but is itself immediately
+        // followed by its own direct object ("the system")
+        var segments = Paragraph("Engineers take an approach to monitoring the system continuously.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("monitoring"));
+    }
+
+    /// <summary>
+    ///     Test that a material noun ending in "-ing" (preceded by an article) is not flagged.
+    ///     Category E regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordAsMaterialNoun_NotFlagged()
+    {
+        // Arrange: "tubing" is a material noun, not a present-participle verb form
+        var segments = Paragraph("Route the tubing away from the heat source.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("tubing"));
+    }
+
+    /// <summary>
+    ///     Test that a participial adjective directly before a noun (modifying it) is not flagged.
+    ///     Category E regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordAsParticipialAdjectiveBeforeNoun_NotFlagged()
+    {
+        // Arrange: "moving" modifies the following noun "structure" as an adjective
+        var segments = Paragraph("Keep hands clear of the moving structure.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("moving"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word in a Markdown heading segment is not flagged, since
+    ///     headings are short labels, not prose sentences. Category E/B regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordInHeading_NotFlagged()
+    {
+        // Arrange: a heading-role segment whose text would otherwise resolve as a verb use
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Closing the Maintenance Log", 1, SegmentRole.Heading)];
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM");
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word in a table header segment is not flagged, even when it
+    ///     would otherwise resolve as a genuine verb use (followed by an article). Category B
+    ///     regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordInTableHeader_NotFlagged()
+    {
+        // Arrange: a table-header-role segment cell that would otherwise resolve as a verb use
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Closing the Valve", 1, SegmentRole.TableHeader)];
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM");
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word inside a quoted/cited document title is not flagged, even
+    ///     though it would otherwise resolve as a genuine verb use (followed by a direct-object
+    ///     pronoun). Category E regression test for cited document titles.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordInQuotedCitedTitle_NotFlagged()
+    {
+        // Arrange: "Closing it Quickly" is a quoted document title; "Closing" followed by the
+        // object pronoun "it" would otherwise resolve as a genuine verb use
+        var segments = Paragraph("The guide \"Closing it Quickly\" explains the steps.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("Closing"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word inside an admonition label at the start of a block (for
+    ///     example <c>**Caution.**</c>) is not flagged. Category B regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordInsideAdmonitionLabel_NotFlagged()
+    {
+        // Arrange: "Warning" as a bold admonition label at the start of the block
+        var segments = Paragraph("**Warning.** Keep hands clear of the moving structure.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: "Warning" (the label) is not flagged, "moving" is unaffected by the label skip
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("Warning"));
+    }
+
+    /// <summary>
+    ///     Test that a common stative/adjectival participle following "is"/"are" is not flagged as
+    ///     passive voice - a predicate adjective describing a current state, not a passive
+    ///     construction naming an action done by an implied agent. Category G regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceStativeParticiple_NotFlagged()
+    {
+        // Arrange: "Keep X while it is energized." - "energized" is a stative/adjectival participle
+        var segments = Paragraph("Keep the cover closed while the circuit is energized.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that an "is/are + participle" construction in the complement clause of an imperative
+    ///     main clause is not flagged as passive voice, even for a participle not in the common
+    ///     stative-participle set, since the imperative instruction reads as a state to verify.
+    ///     Category G regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeMainClauseComplement_NotFlagged()
+    {
+        // Arrange: "Confirm Y is seated." - an imperative lead verb governing a stative complement
+        var segments = Paragraph("Confirm the gasket is seated before closing the cover.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that "is unobstructed" - a pure adjectival participle reading with no implied agent
+    ///     - is never flagged as passive voice. Category G regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceIsUnobstructed_NeverFlagged()
+    {
+        // Arrange: "is unobstructed" - a predicate adjective, not a passive construction
+        var segments = Paragraph("Confirm the exhaust path is unobstructed before starting the engine.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that an explicit "by &lt;agent&gt;" phrase overrides both the stative-participle and
+    ///     imperative-main-clause exemptions, so a genuinely passive construction with a named agent
+    ///     is still flagged even inside an imperative sentence. Recall-regression test for Category
+    ///     G, ensuring the fix does not silently suppress genuine passive voice.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeWithExplicitAgent_StillFlagged()
+    {
+        // Arrange: "is closed by the latch" names an explicit agent, so this is still passive
+        var segments = Paragraph("Keep the panel closed while it is secured by the latch.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a genuine declarative passive-voice sentence (not an imperative instruction,
+    ///     and not a common stative participle) is still flagged. Recall-regression test for
+    ///     Category G, ensuring the imperative-main-clause exemption is scoped to imperative
+    ///     sentences only.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeSentence_StillFlagged()
+    {
+        // Arrange: a plain declarative sentence, not an imperative instruction
+        var segments = Paragraph("The report is reviewed every week by the supervisor.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a declarative sentence whose subject noun phrase happens to be headed by a
+    ///     word in <c>CommonImperativeLeadVerbs</c> (here "Open", used adjectivally in "Open
+    ///     systems") is not mistaken for an imperative lead, so its genuine "are inspected" passive
+    ///     construction is still flagged rather than being wrongly exempted. Regression test for a
+    ///     reported bug where every sentence starting with one of these lexical lead words was
+    ///     treated as imperative, even when the word two positions later was a "to be" auxiliary
+    ///     indicating the first two words were actually the sentence's subject, not an imperative
+    ///     verb + its object.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeNounPhraseLead_StillFlagged()
+    {
+        // Arrange: "Open systems are ..." - "Open systems" is the declarative subject noun phrase,
+        // not an imperative verb ("Open") + direct object; "inspected" is deliberately not in
+        // StativeParticiples, so only a wrongly-applied imperative-lead exemption could explain
+        // this being suppressed
+        var segments = Paragraph("Open systems are inspected during maintenance.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a second declarative subject noun-phrase lead word ("Check") is likewise not
+    ///     mistaken for an imperative lead, confirming the disambiguation is not specific to a
+    ///     single lead word. Regression test companion to
+    ///     <see cref="Evaluate_PassiveVoiceDeclarativeNounPhraseLead_StillFlagged"/>.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeNounPhraseLeadCheckValves_StillFlagged()
+    {
+        // Arrange: "Check valves are ..." - "Check valves" (a type of valve) is the declarative
+        // subject noun phrase, not an imperative verb ("Check") + direct object
+        var segments = Paragraph("Check valves are tested before installation.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a declarative subject noun phrase longer than two words (here "Open system
+    ///     components", where the "to be" copula is the fourth word, not the third) is still
+    ///     correctly disambiguated from an imperative lead. Regression test for a reported bug
+    ///     where the disambiguation only looked at a fixed 3rd-word position and so missed longer
+    ///     subject noun phrases.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeLongerNounPhraseLead_StillFlagged()
+    {
+        // Arrange: "Open system components are ..." - the copula "are" is the 4th word, past the
+        // fixed 3rd-word lookahead the previous fix used
+        var segments = Paragraph("Open system components are inspected during maintenance.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a declarative subject noun phrase long enough to push the "to be" copula past
+    ///     the fixed word-lookahead cap previously used (here "Open high pressure hydraulic control
+    ///     system components", where the copula "are" is the seventh word after the lead verb) is
+    ///     still correctly disambiguated from an imperative lead. Regression test for a reported
+    ///     bug where the subject-continuation scan's cap was exhausted before reaching the copula,
+    ///     so the sentence was wrongly treated as an imperative and the genuine passive construction
+    ///     was suppressed.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeLongTechnicalNounPhraseLead_StillFlagged()
+    {
+        // Arrange: the copula "are" is the 7th word after the lead verb "Open", past the 6-word
+        // lookahead cap the previous fix used
+        var segments = Paragraph("Open high pressure hydraulic control system components are inspected.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that an imperative lead whose captured lookahead includes a determiner before the
+    ///     "to be" copula (here "Confirm the gasket is ...") correctly starts its
+    ///     subject-continuation scan immediately after the lead verb, not after the regex's
+    ///     optional "next" capture group. Regression test for a reported bug where the scan slice
+    ///     used the whole match length (verb + next), skipping the determiner "the" entirely and
+    ///     so wrongly resolving the sentence as a declarative subject noun phrase because the scan
+    ///     then started at "gasket" and immediately found "is".
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeWithDeterminerBeforeCopula_NotFlagged()
+    {
+        // Arrange: "Confirm the gasket is inspected." is a genuine imperative ("the" immediately
+        // follows the lead verb "Confirm"); "inspected" is deliberately not in StativeParticiples,
+        // so only a correctly-recognized imperative-lead exemption explains this not being flagged
+        var segments = Paragraph("Confirm the gasket is inspected.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a hyphenated compound word beginning with the same letters as an imperative
+    ///     lead verb (here "Open-loop", not the verb "Open") is not mistaken for that lead verb.
+    ///     Regression test for a reported bug where the lead-verb regex matched "Open" as a
+    ///     standalone word even when it was only a prefix of the hyphenated adjective "Open-loop".
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceHyphenatedCompoundLead_StillFlagged()
+    {
+        // Arrange: "Open-loop systems are ..." - "Open-loop" is a hyphenated adjective, not the
+        // imperative verb "Open"
+        var segments = Paragraph("Open-loop systems are inspected during maintenance.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a sentence-initial "Do" is not treated as an imperative lead when it opens a
+    ///     yes/no question, so the question's genuine "are inspected" passive construction is still
+    ///     flagged rather than being wrongly exempted. Regression test for a reported bug where
+    ///     every sentence-initial "do" was treated as imperative, even though "do" is also the
+    ///     auxiliary that starts a yes/no question.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDoQuestionLead_StillFlagged()
+    {
+        // Arrange: "Do the covers...?" is a question, not an imperative instruction
+        var segments = Paragraph("Do the covers remain closed while they are inspected?");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a sentence-initial "Do not" is still treated as an imperative lead (consistent
+    ///     with other imperative leads such as "Keep"/"Confirm"), so its stative "is energized"
+    ///     complement remains exempted rather than being flagged as passive voice.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDoNotImperativeLead_NotFlagged()
+    {
+        // Arrange: "Do not open..." is a genuine negative-imperative instruction; "checked" is
+        // deliberately not in StativeParticiples, so only the imperative-lead exemption (not the
+        // stative-participle exemption) can explain this remaining unflagged
+        var segments = Paragraph("Do not open the cover while it is checked for damage.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that the imperative-lead passive-voice exemption is scoped to the clause the
+    ///     imperative actually governs, not the whole sentence, so a later independent clause
+    ///     introduced by a coordinating conjunction after a comma still gets a genuine passive-voice
+    ///     advisory. Regression test for a reported bug where the exemption was applied sentence-
+    ///     wide, suppressing the finding for the independent second clause.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeLeadWithCoordinatedIndependentClause_StillFlagged()
+    {
+        // Arrange: "Keep X closed, but Y is checked weekly." - the "but"-clause is independent of
+        // the imperative lead and names no stative participle, so it is a genuine passive
+        var segments = Paragraph("Keep the valve closed, but the gauge is checked weekly.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that the imperative-lead passive-voice exemption is scoped to the clause the
+    ///     imperative actually governs even when the two clauses are joined by a bare semicolon
+    ///     (not a comma plus coordinating conjunction), so a genuine passive construction in the
+    ///     second independent clause still gets flagged. Regression test for a reported bug where
+    ///     <see cref="StructuralRules"/>'s clause-boundary regex recognized only the comma plus
+    ///     coordinating-conjunction boundary, not a semicolon, even though
+    ///     <see cref="SentenceAnalyzer"/> keeps semicolon-separated clauses within a single
+    ///     sentence - so the exemption wrongly extended across the semicolon and suppressed the
+    ///     second clause's genuine passive construction as if it were still governed by the leading
+    ///     imperative.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeLeadWithSemicolonIndependentClause_StillFlagged()
+    {
+        // Arrange: "Keep X closed; Y is checked weekly." - the clause after the semicolon is
+        // independent of the imperative lead and names no stative participle, so it is a genuine
+        // passive construction that must not be exempted by the leading imperative
+        var segments = Paragraph("Keep the cover closed; the gauge is checked weekly.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a subordinate clause introduced by "while" (not a coordinating conjunction)
+    ///     remains part of the imperative-governed clause and keeps its passive-voice exemption,
+    ///     confirming the clause-boundary fix does not regress the existing "while"-clause
+    ///     behavior.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeLeadWithSubordinateWhileClause_NotFlagged()
+    {
+        // Arrange: "Keep X closed while it is monitored." - "while" is subordinating, not
+        // coordinating, so the whole sentence remains the imperative-governed clause
+        var segments = Paragraph("Keep the valve closed while it is monitored.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
     }
 }

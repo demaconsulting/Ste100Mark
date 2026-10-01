@@ -54,6 +54,19 @@ internal static class StructuralRules
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
 
     /// <summary>
+    ///     Maximum number of words <see cref="IsDeclarativeSubjectContinuation"/> scans forward past
+    ///     a captured imperative-lead verb while looking for a "to be" copula before giving up and
+    ///     treating the sentence as a genuine imperative. A technical noun-phrase subject can
+    ///     legitimately run to many words before its copula (for example "Open high pressure
+    ///     hydraulic control system components are inspected monthly.", where the copula is the
+    ///     seventh word after the lead verb), and the scan already stops as soon as it reaches a
+    ///     <see cref="SubjectContinuationStopWords"/> entry or runs out of sentence text, so this
+    ///     cap is not meant to limit realistic sentence/noun-phrase length - it is only a safety
+    ///     valve bounding the scan against pathological/adversarial input.
+    /// </summary>
+    private const int MaxSubjectContinuationLookaheadWords = 60;
+
+    /// <summary>
     ///     Matches common English contractions (Rule 4.2). The <c>'s</c> suffix is ambiguous between
     ///     a contraction ("it's" = "it is") and a possessive ("project's"), so it is matched here and
     ///     disambiguated afterwards in <see cref="EvaluateContractions"/> using
@@ -87,7 +100,71 @@ internal static class StructuralRules
     ///     since a modal-perfect like "will have written" does not use any of those forms.
     /// </summary>
     private static readonly Regex PassiveVoiceRegex =
-        new(@"\b(is|are|was|were|be|being|(?<!(?:has|have|had)\s+)been)\s+\w+(ed|en)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout);
+        new(@"\b(?<aux>is|are|was|were|be|being|(?<!(?:has|have|had)\s+)been)\s+(?<word>\w+(?:ed|en))\b",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout);
+
+    /// <summary>
+    ///     Common stative/adjectival past participles that, when following <c>is</c>/<c>are</c>, are
+    ///     almost always a predicate adjective describing a current state (for example "the valve
+    ///     is <c>closed</c>") rather than a true passive construction naming an action done to the
+    ///     subject by an implied agent. <see cref="EvaluatePassiveVoice"/> does not flag these unless
+    ///     an explicit "by &lt;agent&gt;" phrase immediately follows, since an explicit agent (for
+    ///     example "is closed <c>by</c> the latch") makes the construction a genuine passive again.
+    /// </summary>
+    private static readonly HashSet<string> StativeParticiples = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "energized", "de-energized", "deenergized", "powered", "unpowered", "closed", "open",
+        "seated", "unseated", "filled", "initialized", "uninitialized", "connected",
+        "disconnected", "unobstructed", "obstructed", "locked", "unlocked", "secured", "engaged",
+        "disengaged", "enabled", "disabled", "grounded", "isolated", "pressurized",
+        "depressurized", "charged", "discharged", "installed", "attached", "mounted",
+    };
+
+    /// <summary>
+    ///     Common imperative-mood lead verbs for Procedure-mode instruction sentences (for example
+    ///     "Keep the panel closed while it is energized."). When one of these starts a sentence,
+    ///     <see cref="EvaluatePassiveVoice"/> treats a later "is"/"are" + past-participle match in
+    ///     that same sentence as a predicate-adjective state the instruction asks the reader to
+    ///     verify or maintain, not a passive construction, as long as no explicit "by &lt;agent&gt;"
+    ///     phrase follows the participle. "do" is included here but is additionally constrained by
+    ///     <see cref="IsImperativeLeadSentence"/> to only count as an imperative lead when
+    ///     immediately followed by "not" - see that method's remarks for why ("do" alone is also
+    ///     the yes/no-question auxiliary, e.g. "Do the covers remain closed...?").
+    /// </summary>
+    private static readonly HashSet<string> CommonImperativeLeadVerbs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "keep", "confirm", "stop", "open", "close", "check", "verify", "ensure", "wait",
+        "continue", "hold", "maintain", "leave", "make", "start", "do",
+    };
+
+    /// <summary>
+    ///     "To be" auxiliary/copula forms used by <see cref="IsImperativeLeadSentence"/> to detect
+    ///     when the word immediately following the captured lead-verb-plus-next-word span is a
+    ///     main verb rather than part of an imperative verb phrase - see that method's remarks for
+    ///     why this disambiguates a genuine imperative from a declarative sentence whose subject
+    ///     noun phrase happens to start with the same word (for example "Open systems are used for
+    ///     ventilation.").
+    /// </summary>
+    private static readonly HashSet<string> DeclarativeBeAuxiliaries = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "is", "are", "was", "were", "be", "being", "been",
+    };
+
+    /// <summary>
+    ///     Words that, if encountered while scanning forward from a captured lead verb (see
+    ///     <see cref="IsImperativeLeadSentence"/>) before any <see cref="DeclarativeBeAuxiliaries"/>
+    ///     entry is found, mean the scan has reached a determiner/complement boundary that starts
+    ///     the imperative's own direct object or a subordinate/coordinate clause (for example "the"
+    ///     in "Keep the panel closed..." or "while" in "...while it is energized."), rather than
+    ///     continuing a bare declarative subject noun phrase (for example "systems" in "Open systems
+    ///     are used..."). Reaching one of these words therefore means the sentence is a genuine
+    ///     imperative, not a declarative sentence.
+    /// </summary>
+    private static readonly HashSet<string> SubjectContinuationStopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "the", "a", "an", "that", "which", "who", "whom", "whose", "while", "when", "if",
+        "because", "before", "after", "since", "unless", "although", "and", "or", "but", "so",
+    };
 
     /// <summary>
     ///     Heuristic perfect/modal-perfect tense pattern: <c>has</c>/<c>have</c>/<c>had</c>
@@ -315,7 +392,7 @@ internal static class StructuralRules
         }
 
         foreach (var sentence in sentences.Where(
-                     sentence => PassiveVoiceRegex.IsMatch(MarkdownProseExtractor.MaskInlineCodeSpans(sentence.Text))))
+                     sentence => HasGenuinePassiveMatch(MarkdownProseExtractor.MaskInlineCodeSpans(sentence.Text))))
         {
             diagnostics.Add(new Diagnostic(
                 file,
@@ -326,6 +403,238 @@ internal static class StructuralRules
                 $"Possible passive voice (advisory heuristic, not an official STE100 rule): \"{Truncate(sentence.Text)}\"",
                 "Consider rewriting in active voice."));
         }
+    }
+
+    /// <summary>
+    ///     Determines whether a sentence (masked text) contains at least one "to be" + past-
+    ///     participle match that is a genuine passive construction rather than a predicate
+    ///     adjective. A "is"/"are" + participle match is treated as adjectival, not passive - and
+    ///     so does not count - when either (a) the participle is in <see cref="StativeParticiples"/>
+    ///     (a common state-describing word, e.g. "closed", "energized"), or (b) the match falls
+    ///     within the clause governed by a Procedure-style imperative lead (the sentence starts with
+    ///     a word in <see cref="CommonImperativeLeadVerbs"/>, e.g. "Keep", "Confirm") so that
+    ///     clause's "is"/"are" reads as a state the instruction asks the reader to verify or
+    ///     maintain, not a passive construction - see <see cref="ImperativeLeadClauseEnd"/> for how
+    ///     the governed clause's boundary is determined, so that a later, independent clause after a
+    ///     bare semicolon or a coordinating conjunction (for example the second clause in "Keep the
+    ///     cover closed; the report is reviewed weekly." or the "but"-clause in "Keep the cover
+    ///     closed, but the report is reviewed weekly.") is still evaluated as an ordinary,
+    ///     non-exempted passive construction; either exemption is itself overridden - the match
+    ///     still counts as passive -
+    ///     when an explicit "by &lt;agent&gt;" phrase immediately follows the participle, since
+    ///     naming the agent makes the construction unambiguously passive again. "was"/"were"/
+    ///     "be"/"being"/"been" matches are never exempted by either rule, since the
+    ///     imperative/stative readings above only apply to present-tense "is"/"are".
+    /// </summary>
+    private static bool HasGenuinePassiveMatch(string sentenceText)
+    {
+        var isImperativeLead = IsImperativeLeadSentence(sentenceText);
+        var imperativeLeadClauseEnd = isImperativeLead ? ImperativeLeadClauseEnd(sentenceText) : 0;
+
+        foreach (Match match in PassiveVoiceRegex.Matches(sentenceText))
+        {
+            var aux = match.Groups["aux"].Value;
+            var participle = match.Groups["word"].Value;
+            var isPresentTenseAux =
+                aux.Equals("is", StringComparison.OrdinalIgnoreCase) ||
+                aux.Equals("are", StringComparison.OrdinalIgnoreCase);
+            var isWithinImperativeLeadClause = isImperativeLead && match.Index < imperativeLeadClauseEnd;
+
+            if (isPresentTenseAux &&
+                (StativeParticiples.Contains(participle) || isWithinImperativeLeadClause) &&
+                !HasAgentPhraseAfter(sentenceText, match.Index + match.Length))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Determines whether a sentence opens with (after optionally skipping a Markdown list-item
+    ///     marker or leading ordinal) a word in <see cref="CommonImperativeLeadVerbs"/>, indicating
+    ///     an imperative-mood instruction sentence (for example "Keep the panel closed while it is
+    ///     energized." or "Confirm the valve is closed...").
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///     "do" is special-cased: unlike the other entries in <see cref="CommonImperativeLeadVerbs"/>,
+    ///     "do" is not an unambiguous imperative lead on its own, because it is also the auxiliary
+    ///     that opens a yes/no question (for example "Do the covers remain closed while they are
+    ///     inspected?"). Treating every sentence-initial "do" as imperative would wrongly exempt
+    ///     that question's genuine passive/state construction. "do" therefore only counts as an
+    ///     imperative lead when immediately followed by "not" (for example "Do not open the cover
+    ///     while it is energized."), which is unambiguously the negative-imperative construction and
+    ///     never the start of a question. "do" remains in <see cref="CommonImperativeLeadVerbs"/>
+    ///     itself (rather than being removed) because other logic/doc comments in this class
+    ///     reference that set as the full list of recognized imperative leads; this method is the
+    ///     sole place the extra condition is enforced.
+    ///     </para>
+    ///     <para>
+    ///     A lead word in <see cref="CommonImperativeLeadVerbs"/> is also ambiguous with a
+    ///     declarative sentence whose subject noun phrase happens to be headed by that same word
+    ///     used adjectivally (for example "Open systems are used for ventilation.", "Check valves
+    ///     are inspected monthly.", or "Open system components are inspected monthly."), where the
+    ///     real main verb is a "to be" copula some number of words in, not the lead word itself. To
+    ///     disambiguate, <see cref="IsDeclarativeSubjectContinuation"/> scans forward word-by-word
+    ///     after the lead verb: if a <see cref="DeclarativeBeAuxiliaries"/> entry (the copula) is
+    ///     reached before any <see cref="SubjectContinuationStopWords"/> entry, the lead word and
+    ///     the scanned words are read as the declarative subject noun phrase rather than an
+    ///     imperative verb + its object, so the sentence is not treated as an imperative lead. A
+    ///     genuine imperative's object/complement begins with an ordinary determiner or triggers a
+    ///     subordinate/coordinate clause first (for example "the" in "Keep the panel closed..." or
+    ///     "while" in "...while it is energized."), so this check does not affect those cases.
+    ///     </para>
+    ///     <para>
+    ///     The lead-verb capture also rejects a match that is immediately followed by a hyphen (no
+    ///     intervening space), since that means the matched letters are only a prefix of a
+    ///     hyphenated compound word (for example "Open" in "Open-loop systems are inspected
+    ///     monthly."), which is an adjective, not the standalone lead verb "Open".
+    ///     </para>
+    /// </remarks>
+    private static bool IsImperativeLeadSentence(string sentenceText)
+    {
+        var match = Regex.Match(
+            sentenceText,
+            @"^\s*(?:[-*+]\s+|\d+[.)]\s+)?(?<verb>[A-Za-z]+)(?!-)(?:\s+(?<next>[A-Za-z]+))?",
+            RegexOptions.None,
+            RegexTimeout);
+
+        if (!match.Success || !CommonImperativeLeadVerbs.Contains(match.Groups["verb"].Value))
+        {
+            return false;
+        }
+
+        // "do" alone is ambiguous with a yes/no question's auxiliary "do" (see remarks); only
+        // "do not" is unambiguously imperative.
+        if (match.Groups["verb"].Value.Equals("do", StringComparison.OrdinalIgnoreCase))
+        {
+            return match.Groups["next"].Success
+                && match.Groups["next"].Value.Equals("not", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Slice from the end of the captured "verb" group only, not match.Length - the regex also
+        // captures an optional "next" word (used only by the "do not" check above), and including
+        // it here would skip that word entirely, hiding a determiner/stop-word it contains (e.g.
+        // "the" in "Confirm the gasket is inspected.") from the subject-continuation scan.
+        var verbGroup = match.Groups["verb"];
+        return !IsDeclarativeSubjectContinuation(sentenceText[(verbGroup.Index + verbGroup.Length)..]);
+    }
+
+    /// <summary>
+    ///     Scans forward word-by-word through <paramref name="textAfterLeadVerb"/> (the sentence
+    ///     text immediately after a captured <see cref="CommonImperativeLeadVerbs"/> lead word),
+    ///     bounded to <see cref="MaxSubjectContinuationLookaheadWords"/> words, to determine whether
+    ///     the lead word is actually heading a declarative subject noun phrase rather than being an
+    ///     imperative verb - see <see cref="IsImperativeLeadSentence"/>'s remarks. Returns
+    ///     <see langword="true"/> (declarative) as soon as a <see cref="DeclarativeBeAuxiliaries"/>
+    ///     entry is found; returns <see langword="false"/> (imperative) as soon as a
+    ///     <see cref="SubjectContinuationStopWords"/> entry is found, or if the lookahead is
+    ///     exhausted (words run out or the cap is reached) without finding either.
+    /// </summary>
+    private static bool IsDeclarativeSubjectContinuation(string textAfterLeadVerb)
+    {
+        var remaining = textAfterLeadVerb;
+
+        for (var i = 0; i < MaxSubjectContinuationLookaheadWords; i++)
+        {
+            var wordMatch = Regex.Match(remaining, @"^\s*(?<word>[A-Za-z]+)", RegexOptions.None, RegexTimeout);
+            if (!wordMatch.Success)
+            {
+                return false;
+            }
+
+            var word = wordMatch.Groups["word"].Value;
+
+            if (DeclarativeBeAuxiliaries.Contains(word))
+            {
+                return true;
+            }
+
+            if (SubjectContinuationStopWords.Contains(word))
+            {
+                return false;
+            }
+
+            remaining = remaining[(wordMatch.Index + wordMatch.Length)..];
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Matches a comma followed by a coordinating conjunction ("but"/"and"/"or"/"so"), used by
+    ///     <see cref="ImperativeLeadClauseEnd"/> (together with a bare semicolon boundary - see that
+    ///     method's remarks) to find where an independent clause begins after an imperative-lead
+    ///     clause. Deliberately only matches these four coordinating conjunctions, not subordinating
+    ///     conjunctions such as "while"/"when"/"if"/"because": a subordinating conjunction
+    ///     introduces a dependent clause that is still part of the same imperative instruction (for
+    ///     example the "while"-clause in "Keep the panel closed while it is energized."), whereas a
+    ///     coordinating conjunction after a comma joins a separate, independent clause that the
+    ///     imperative no longer governs (for example the "but"-clause in "Keep the cover closed, but
+    ///     the report is reviewed weekly.").
+    /// </summary>
+    private static readonly Regex CoordinatingConjunctionAfterCommaRegex =
+        new(@",\s*(?:but|and|or|so)\b", RegexOptions.IgnoreCase, RegexTimeout);
+
+    /// <summary>
+    ///     Determines the end boundary (exclusive character index) of the clause governed by an
+    ///     imperative-lead sentence's leading instruction, for use by
+    ///     <see cref="HasGenuinePassiveMatch"/> to limit its imperative-lead passive-voice exemption
+    ///     to that clause rather than applying it to the whole sentence. The governed clause ends at
+    ///     whichever comes first: a bare semicolon, or a comma immediately followed by a
+    ///     coordinating conjunction ("but"/"and"/"or"/"so") - see
+    ///     <see cref="CoordinatingConjunctionAfterCommaRegex"/>; when neither boundary exists, the
+    ///     governed clause is the entire sentence.
+    /// </summary>
+    /// <remarks>
+    ///     A semicolon is always treated as an independent-clause boundary, with no "governed"
+    ///     exception analogous to a subordinating conjunction: unlike "while"/"when"/"if"/"because",
+    ///     which can introduce a dependent clause the imperative still governs, there is no
+    ///     subordinating use of a semicolon in English - a semicolon always joins two independent
+    ///     clauses (see <see cref="SentenceAnalyzer"/>, which deliberately keeps semicolon-separated
+    ///     clauses within one sentence rather than splitting on them). Without this boundary, the
+    ///     imperative-lead exemption would wrongly extend across the semicolon and exempt a genuine
+    ///     passive construction in the second, unrelated independent clause (for example "the report
+    ///     is reviewed weekly" in "Keep the cover closed; the report is reviewed weekly.").
+    /// </remarks>
+    private static int ImperativeLeadClauseEnd(string sentenceText)
+    {
+        var semicolonIndex = sentenceText.IndexOf(';');
+        var conjunctionMatch = CoordinatingConjunctionAfterCommaRegex.Match(sentenceText);
+
+        var boundary = sentenceText.Length;
+        if (semicolonIndex >= 0)
+        {
+            boundary = Math.Min(boundary, semicolonIndex);
+        }
+
+        if (conjunctionMatch.Success)
+        {
+            boundary = Math.Min(boundary, conjunctionMatch.Index);
+        }
+
+        return boundary;
+    }
+
+    /// <summary>
+    ///     Determines whether the first word following <paramref name="index"/> in
+    ///     <paramref name="text"/> is "by", indicating an explicit agent phrase (for example "is
+    ///     closed <c>by</c> the latch") that makes a "to be" + participle match an unambiguous
+    ///     passive construction regardless of any adjectival/imperative exemption.
+    /// </summary>
+    private static bool HasAgentPhraseAfter(string text, int index)
+    {
+        var match = Regex.Match(
+            text[index..],
+            @"^\s*(?<word>[A-Za-z]+)",
+            RegexOptions.None,
+            RegexTimeout);
+
+        return match.Success && match.Groups["word"].Value.Equals("by", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -366,13 +675,16 @@ internal static class StructuralRules
 
     /// <summary>
     ///     Advisory heuristic (not an official STE100 rule), <see cref="RulesConfig.IngForm"/>
-    ///     severity (default <see cref="Severity.Warn"/>): flags <c>-ing</c> words, since
-    ///     ASD-STE100 restricts <c>-ing</c> forms to technical nouns/adjectives, not verb forms. A
-    ///     match that touches a sentence-ending period immediately before or after (i.e. the
-    ///     character immediately preceding or following the match is <c>.</c>) is skipped, since
-    ///     such a match is unlikely to be a present-participle verb form embedded mid-sentence. A
-    ///     match appearing only inside an inline code span is not flagged, since inline code
-    ///     content is excluded from grammar-sensitive checks. A match whose exact word is either in
+    ///     severity (default <see cref="Severity.Warn"/>): flags <c>-ing</c> words that
+    ///     <see cref="PartOfSpeechGuesser.GuessIngFormRole"/> resolves as a genuine present-
+    ///     participle verb use, since ASD-STE100 restricts <c>-ing</c> forms to technical
+    ///     nouns/adjectives, not verb forms; a gerund/participial-adjective use (for example a
+    ///     noun-phrase subject, object of a preposition, list item, or noun modifier) is not
+    ///     flagged. A match appearing only inside an inline code span, an admonition label (for
+    ///     example <c>**Caution.**</c>), or a quoted/emphasized span (a cited title or mention) is
+    ///     also skipped, as is any match in a <see cref="SegmentRole.Heading"/> or
+    ///     <see cref="SegmentRole.TableHeader"/> segment - headings and table column headers are
+    ///     short labels, not prose sentences. A match whose exact word is either in
     ///     <see cref="IngFormExclusions"/> (never a verb form, e.g. "during") or in
     ///     <paramref name="allowedTerms"/> (a project-approved dictionary term, e.g. "metering") is
     ///     also skipped, so approving a term once suppresses it from this advisory too, not only
@@ -385,15 +697,20 @@ internal static class StructuralRules
         IReadOnlyCollection<string>? allowedTerms,
         List<Diagnostic> diagnostics)
     {
-        if (rules.IngForm == Severity.Off)
+        if (rules.IngForm == Severity.Off || segment.Role is SegmentRole.Heading or SegmentRole.TableHeader)
         {
             return;
         }
 
         var codeSpans = MarkdownProseExtractor.FindInlineCodeSpans(segment.Text);
+        var admonitionSpans = MarkdownProseExtractor.FindAdmonitionLabelSpans(segment.Text);
+        var quotedSpans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(segment.Text);
+
         foreach (Match match in IngFormRegex.Matches(segment.Text))
         {
-            if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, codeSpans))
+            if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, codeSpans)
+                || MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, admonitionSpans)
+                || MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, quotedSpans))
             {
                 continue;
             }
@@ -404,10 +721,7 @@ internal static class StructuralRules
                 continue;
             }
 
-            var precedingIndex = match.Index - 1;
-            var followingIndex = match.Index + match.Length;
-            if ((precedingIndex >= 0 && segment.Text[precedingIndex] == '.') ||
-                (followingIndex < segment.Text.Length && segment.Text[followingIndex] == '.'))
+            if (PartOfSpeechGuesser.GuessIngFormRole(segment.Text, match.Index, match.Length) != PartOfSpeech.Verb)
             {
                 continue;
             }

@@ -190,6 +190,63 @@ public class PartOfSpeechGuesserTests
         Assert.Null(result);
     }
 
+    /// <summary>
+    ///     Test that an imperative verb at the start of a Procedure-mode sentence still resolves as
+    ///     a verb via <see cref="PartOfSpeechGuesser.GuessEffective"/> when its following word
+    ///     ("blocks") is also an ordinary finite verb in technical/procedural English, not just a
+    ///     plural noun. Regression test for a reported bug where
+    ///     <c>CompoundNounHeadAllowList</c> previously included words such as "blocks" that are
+    ///     themselves common finite verbs, so the strong noun-compound signal wrongly out-ranked
+    ///     the weak imperative-at-sentence-start signal and misclassified the leading imperative as
+    ///     a noun (see that list's own doc comment for the full exclusion rationale).
+    /// </summary>
+    [Fact]
+    public void Guess_ImperativeLeadWithAmbiguousVerbNounPluralFollows_ReturnsVerb()
+    {
+        // Arrange: "Test blocks daily." begins a Procedure-mode segment (weak imperative signal),
+        // and is immediately followed by "blocks", which used to be a noun-compound-head allow-list
+        // entry despite also being an ordinary finite verb. A trailing finite verb ("operates")
+        // elsewhere in the segment keeps the unrelated verbless-segment noun signal from firing.
+        const string text = "Test blocks daily. The system operates continuously.";
+        var index = text.IndexOf("Test", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.GuessEffective(text, index, "Test".Length, LintMode.Procedure);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that an imperative verb at the start of a Procedure-mode sentence does NOT resolve
+    ///     as a noun via <see cref="PartOfSpeechGuesser.GuessEffective"/> merely because its
+    ///     following word ("modules") is an allow-listed plural technical noun
+    ///     (<c>NounCompoundModifier</c> signal). Regression test for a reported bug where that
+    ///     single, genuinely ambiguous signal (a following word that looks like a plural noun is
+    ///     just as consistent with "imperative verb + plural direct object" as with "noun-compound
+    ///     modifier + noun head") was treated as equally unambiguous as the other strong-noun
+    ///     sources, so it silently out-ranked the weak imperative-sentence-start signal and
+    ///     misclassified the leading imperative's direct object as a noun-compound head. The
+    ///     implementation resolves this conflict as inconclusive (<see langword="null"/>) rather
+    ///     than guessing either role.
+    /// </summary>
+    [Fact]
+    public void GuessEffective_ImperativeLeadWithAllowListedPluralObject_DoesNotReturnNoun()
+    {
+        // Arrange: "Check modules daily." begins a Procedure-mode segment (weak imperative
+        // signal), and is immediately followed by "modules", an allow-listed compound-noun head
+        // that is also a plausible plural direct object of the imperative "Check". A trailing
+        // finite verb ("operates") elsewhere in the segment keeps the unrelated verbless-segment
+        // noun signal from firing, isolating the NounCompoundModifier-only conflict under test.
+        const string text = "Check modules daily. The system operates continuously.";
+        var index = text.IndexOf("Check", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.GuessEffective(text, index, "Check".Length, LintMode.Procedure);
+
+        // Assert: verify expected behavior - the conflict must not resolve to Noun
+        Assert.NotEqual(PartOfSpeech.Noun, result);
+    }
 
     /// <summary>
     ///     Test that the same sentence-start text in Descriptive mode does not trigger the
@@ -652,5 +709,250 @@ public class PartOfSpeechGuesserTests
 
         // Assert: verify expected behavior
         Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that a sentence-initial word immediately followed by a bare numeral/identifier (not
+    ///     a decimal number) resolves as a noun, for example "Block 0" labeling a specific unit, not
+    ///     a verb taking "0" as an object. Regression test for a reported false positive where a
+    ///     subject-position label noun was given verb-only dictionary suggestions.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByBareIdentifierNumber_ReturnsNoun()
+    {
+        // Arrange: "Block 0" - "Block" labels a specific numbered unit, not a verb
+        const string text = "Block 0 failed the self-test.";
+        var index = text.IndexOf("Block", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Block".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a bare-identifier number followed by an unrelated short word (here "test",
+    ///     four letters) still resolves as a noun, not a verb - the short word must not be
+    ///     mistaken for a unit-of-measure abbreviation just because it is short. Regression test
+    ///     for a reported bug where any alphabetic word of four or fewer letters was accepted as a
+    ///     unit, wrongly "qualifying" an unrelated bare-identifier number and selecting a verb
+    ///     reading over the correct noun-label reading.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByBareIdentifierNumberThenUnrelatedShortWord_ReturnsNoun()
+    {
+        // Arrange: "Block 0 test failed" - "test" is not a unit of measure
+        const string text = "Block 0 test failed.";
+        var index = text.IndexOf("Block", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Block".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a decimal number following a match still resolves as a verb (the "bare
+    ///     identifier" noun signal is restricted to whole numbers with no decimal point), so the
+    ///     existing "use 0.12 ohms" verb behavior is unaffected by the new bare-identifier signal.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByDecimalNumber_StillReturnsVerb()
+    {
+        // Arrange: "set 0.12" - a decimal number is still a verb's direct object, not a bare label
+        const string text = "Technicians set 0.12 ohms as the target value.";
+        var index = text.IndexOf("set", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "set".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that a word immediately followed by a whole number and a named unit-of-measure word
+    ///     longer than the short-abbreviation length cap (for example "volts", five letters) still
+    ///     resolves as a verb, not a bare-identifier noun. Regression test for a reported false
+    ///     negative where the unit-word check's four-character cap excluded real unit names such as
+    ///     "volts"/"watts", falling through to the bare-identifier noun signal instead.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByWholeNumberAndNamedUnit_ReturnsVerb()
+    {
+        // Arrange: "set 5 volts" - "volts" qualifies the number as a measured value, not a label
+        const string text = "Technicians set 5 volts across the terminals.";
+        var index = text.IndexOf("set", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "set".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that a word immediately followed by a whole number and a single-letter SI unit
+    ///     symbol (for example "V" for volts) still resolves as a verb, not a bare-identifier
+    ///     noun. Regression test for a reported false negative where the curated unit-abbreviation
+    ///     list omitted common one-letter SI symbols such as "V"/"A", so the bare-identifier noun
+    ///     signal could suppress a genuine verb-only dictionary finding for notation users actually
+    ///     write.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByWholeNumberAndSingleLetterUnitSymbol_ReturnsVerb()
+    {
+        // Arrange: "set 5 V" - "V" (volts) qualifies the number as a measured value, not a label
+        const string text = "Technicians set 5 V across the terminals.";
+        var index = text.IndexOf("set", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "set".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that a sentence-initial word immediately followed by "not" resolves as a noun, for
+    ///     example a subject noun in "Trigger not issued", not a verb. Regression test for a
+    ///     reported false positive where such a subject noun was given verb-only dictionary
+    ///     suggestions.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByNegationNot_ReturnsNoun()
+    {
+        // Arrange: "Trigger not issued" - "Trigger" is the subject noun, not a verb
+        const string text = "Trigger not issued correctly by the controller.";
+        var index = text.IndexOf("Trigger", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Trigger".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a modal auxiliary verb immediately followed by "not" (for example "shall not")
+    ///     does not resolve as a noun. Regression test for a defect introduced alongside the
+    ///     "FollowedByNegation" noun signal above, where a blanket "followed by not/never implies
+    ///     noun" rule incorrectly reclassified ordinary modal-plus-negation verb phrases as nouns.
+    /// </summary>
+    [Fact]
+    public void Guess_ModalAuxiliaryFollowedByNegation_DoesNotReturnNoun()
+    {
+        // Arrange: "shall not" - "shall" is a modal auxiliary verb, never a noun, regardless of
+        // the following negation
+        const string text = "The system shall not report a false alarm.";
+        var index = text.IndexOf("shall", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "shall".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.NotEqual(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a "do"/"have"-family auxiliary immediately followed by "not" also does not
+    ///     resolve as a noun, covering the other auxiliary group excluded from the
+    ///     "FollowedByNegation" signal alongside modal and "to be" auxiliaries.
+    /// </summary>
+    [Fact]
+    public void Guess_DoAuxiliaryFollowedByNegation_DoesNotReturnNoun()
+    {
+        // Arrange: "does not" - "does" is an auxiliary verb, never a noun
+        const string text = "The gauge does not reach the target value.";
+        var index = text.IndexOf("does", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "does".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.NotEqual(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that a noun modifier directly before another noun is recognized as a compound-noun
+    ///     component rather than a verb, for example "backup" in "backup modules". Regression test
+    ///     for a reported false positive where a noun modifier before a plural technical noun was
+    ///     given verb-only dictionary suggestions. Uses "modules" (not "cycles") as the plural head
+    ///     noun because "cycles" is also an ordinary finite verb ("the valve cycles") and was
+    ///     removed from <see cref="PartOfSpeechGuesser"/>'s <c>CompoundNounHeadAllowList</c> for
+    ///     that reason; see <see cref="Guess_ImperativeLeadWithAmbiguousVerbNounPluralFollows_ReturnsVerb"/>.
+    /// </summary>
+    [Fact]
+    public void Guess_NounModifierBeforeAllowedPluralCompoundHead_ReturnsNoun()
+    {
+        // Arrange: "backup modules" - "backup" modifies the plural head noun "modules"
+        const string text = "Schedule the backup modules for every shift.";
+        var index = text.IndexOf("backup", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "backup".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that an ambiguous word ("mix") directly before a singular technical noun resolves
+    ///     as a noun-compound component (Category D: wrong word sense), not a verb, when the
+    ///     surrounding context is a compound technical term, for example "coolant mix ratio".
+    /// </summary>
+    [Fact]
+    public void Guess_AmbiguousWordMixBeforeNoun_ReturnsNoun()
+    {
+        // Arrange: "mix ratio" - "mix" modifies the head noun "ratio" in a compound technical term
+        const string text = "Check the coolant mix ratio before startup.";
+        var index = text.IndexOf("mix", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "mix".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that an ambiguous word ("port") directly before a singular technical noun resolves
+    ///     as a noun-compound component (Category D: wrong word sense), not a verb, when the
+    ///     surrounding context is a compound technical term, for example "serial port settings".
+    /// </summary>
+    [Fact]
+    public void Guess_AmbiguousWordPortBeforeNoun_ReturnsNoun()
+    {
+        // Arrange: "port settings" - "port" modifies the head noun "settings" in a compound
+        // technical term
+        const string text = "Configure the serial port settings before first use.";
+        var index = text.IndexOf("port", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "port".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that the idiom "in use" (object of the preposition "in") is recognized as a noun,
+    ///     not a verb (Category F). Regression test for a reported false positive where "use" in
+    ///     this idiom was treated inconsistently with its grammatical role.
+    /// </summary>
+    [Fact]
+    public void Guess_IdiomInUsePrecededByPreposition_ReturnsNoun()
+    {
+        // Arrange: "in use" - "use" is the object of the preposition "in"
+        const string text = "Keep the valve in use during the test.";
+        var index = text.IndexOf("use", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "use".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
     }
 }

@@ -32,10 +32,10 @@ role-restriction prose rather than a word list.
 negative lookbehind/lookahead for `\w` and `-`, with spaces widened to `\s+`.
 
 **Sense selection**: every match (including single-sense terms) is resolved by calling
-`PartOfSpeechGuesser.Guess` with the segment text and match position. A confident `Noun` or
-`Verb` guess narrows the candidate senses to those matching that role (plus any `Any`-pos
-sense); when the guess is confident but matches no sense in the schema, the term is not being
-used in a role ASD-STE100 restricts here, and no diagnostic is reported at all. An
+`PartOfSpeechGuesser.GuessEffective` with the segment text and match position. A confident
+`Noun` or `Verb` guess narrows the candidate senses to those matching that role (plus any
+`Any`-pos sense); when the guess is confident but matches no sense in the schema, the term is
+not being used in a role ASD-STE100 restricts here, and no diagnostic is reported at all. An
 inconclusive guess keeps every sense as a candidate. Exactly one surviving candidate is
 reported confidently (labeled with the sense's `Pos` in the message only when the entry has
 more than one sense, so a single-sense entry's message stays unqualified; `Any` renders as
@@ -56,7 +56,7 @@ is excluded before a diagnostic is built, using the same "falls entirely inside"
 test (`MarkdownProseExtractor.OverlapsInlineCodeSpan`) as the inline-code-span exclusion below.
 Unlike `extraAllowedTerms`, this does not remove the term from consideration project-wide: the
 same disallowed word elsewhere in the same segment, outside any listed phrase, is still
-flagged. This lets a project declare a specific approved phrase (for example "swish mix" as the
+flagged. This lets a project declare a specific approved phrase (for example "trail mix" as the
 approved name of a thing) without silently permitting the disallowed word ("mix") on its own.
 
 **Inline code exclusion**: matches falling wholly inside an inline code span (per
@@ -65,13 +65,36 @@ diagnostic is built, so a disallowed term that appears only inside inline code (
 CLI flag written as `` `utilize-flag` ``) is not flagged; the same term appearing outside a
 code span in the same segment is still flagged normally.
 
+**Table-header exclusion**: a segment whose `Role` is `SegmentRole.TableHeader` is skipped in
+its entirety, before any term matching runs. Table column header cells (for example "Hazard" or
+"Use") are short labels, not prose sentences, and are routinely a bare noun/verb-looking word
+out of any sentence context - the same reasoning `StructuralRules.EvaluateIngForm` applies to
+headings and table headers for the `-ing`-form advisory.
+
+**Admonition-label and quoted/mention exclusion**: matches falling wholly inside a bold
+admonition-label span at the start of a block (`MarkdownProseExtractor.FindAdmonitionLabelSpans`,
+for example `**Caution.**`) or inside a double-quoted or single-emphasis span
+(`MarkdownProseExtractor.FindQuotedOrEmphasisSpans`, for example a quoted or cited document
+title) are ignored before a diagnostic is built. A label is not a prose sentence, and a word
+inside a quotation or cited title is a *mention* of that exact text, not a *use* of the word in
+this document's own prose, so neither is flagged.
+
+**Self-referential alternative filtering**: `FilterSelfAlternatives` removes the exact matched
+surface form (case-insensitively) from a sense's alternatives before any suggestion or citation
+is built, so a suggestion never tells the user to replace a word with itself (for example a
+sense whose alternatives happen to include an inflected form matching the match text). This is
+distinct from, and does not replace, `IsSelfReferentialSense`/`IsPureSelfReferentialSense` below,
+which compare against the dictionary entry's own headword (`DictionaryEntry.Term`) for
+role-restriction detection - the matched surface form (for example an inflected "running") can
+differ from the entry's headword (for example "run"), so both comparisons are needed.
+
 #### Key Methods
 
 **Evaluate**: Scans every extracted prose segment against the merged dictionary.
 
 - *Parameters*: `string file` - file path for diagnostics; `IReadOnlyList<ProseSegment> segments`
   - prose segments; `LintDictionary dictionary` - merged dictionary; `LintMode mode` - the
-  file's resolved writing mode, forwarded to `PartOfSpeechGuesser.Guess`;
+  file's resolved writing mode, forwarded to `PartOfSpeechGuesser.GuessEffective`;
   `IReadOnlyCollection<string>? extraAllowedTerms` - optional additional per-file allowed
   terms (typically `LintConfig.ResolveAllowedTerms`), defaulting to `null` (no per-file
   allowance); `IReadOnlyCollection<string>? allowedPhrases` - optional phrase-scoped
@@ -79,12 +102,14 @@ code span in the same segment is still flagged normally.
   phrase-scoped allowance).
 - *Returns*: `IReadOnlyList<Diagnostic>` - one diagnostic per matched occurrence, excluding
   matches suppressed by a confident-but-non-matching POS guess, by `extraAllowedTerms`, or by
-  falling wholly inside an `allowedPhrases` occurrence.
+  falling wholly inside an `allowedPhrases`, admonition-label, or quoted/emphasis span
+  occurrence.
 - *Preconditions*: `file`, `segments`, and `dictionary` are non-null.
-- *Postconditions*: Matches are returned in segment order, excluding any match that falls
-  wholly inside an inline code span or an allowed-phrase occurrence; every diagnostic uses
-  severity `Error`, rule code `STE100-DICT`, and a suggestion string when alternatives are
-  present.
+- *Postconditions*: A `TableHeader`-role segment is skipped entirely before matching. Matches
+  are returned in segment order, excluding any match that falls wholly inside an inline code
+  span, an allowed-phrase occurrence, an admonition-label span, or a quoted/emphasis span;
+  every diagnostic uses severity `Error`, rule code `STE100-DICT`, and a suggestion string
+  when alternatives (after self-referential filtering) are present.
 
 **FindAllowedPhraseSpans**: Locates every occurrence of every configured `allowedPhrases` entry
 within a segment's text, using the same case-insensitive, whitespace-tolerant pattern shape as
@@ -94,6 +119,16 @@ against.
 **BuildDiagnostic**: Selects the applicable sense(s) for one match and builds its diagnostic,
 or returns `null` when a confident POS guess rules out every sense (the term is not
 disallowed in the grammatical role it is being used in here).
+
+**FilterSelfAlternatives**: Removes the exact matched surface form (case-insensitive) from a
+sense's alternatives list.
+
+- *Parameters*: `IReadOnlyList<string> alternatives` - the sense's configured alternatives;
+  `string matchedWord` - the exact surface form matched in the segment text.
+- *Returns*: `IReadOnlyList<string>` - `alternatives` with the matched word removed.
+- *Postconditions*: Used by `ConfidentDiagnostic`, `AmbiguousDiagnostic`, and
+  `CorrectionClause` before any suggestion/citation is built, so a diagnostic never suggests
+  replacing the flagged word with itself.
 
 **IsPureSelfReferentialSense**: Determines whether a sense's *only* alternative is the entry's
 own headword (for example `test (v) -> TEST`), as distinct from a sense whose alternatives
@@ -154,9 +189,11 @@ one-second timeout and no local exception handling.
 #### Dependencies
 
 - **LintDictionary** - supplies the effective dictionary entries.
-- **PartOfSpeechGuesser** - selects the applicable sense(s) of a multi-sense entry.
-- **MarkdownProseExtractor** - supplies segment text and line numbers, and the
-  `FindInlineCodeSpans`/`OverlapsInlineCodeSpan` helpers used to exclude inline-code matches.
+- **PartOfSpeechGuesser** - `GuessEffective` selects the applicable sense(s) of a multi-sense
+  entry.
+- **MarkdownProseExtractor** - supplies segment text, line numbers, and the `TableHeader`
+  segment role, plus the `FindInlineCodeSpans`/`OverlapsInlineCodeSpan`,
+  `FindAdmonitionLabelSpans`, and `FindQuotedOrEmphasisSpans` helpers used to exclude matches.
 - **LintConfig** - supplies the `LintMode` forwarded to `PartOfSpeechGuesser`, and the
   per-file `extraAllowedTerms`/`allowedPhrases` via `ResolveAllowedTerms`/`ResolveAllowedPhrases`.
 - **Diagnostic** and **Severity** - encode the reported finding.

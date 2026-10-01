@@ -44,6 +44,18 @@ internal enum SegmentRole
     /// <summary>A single Markdown table row line (a line whose first non-whitespace character is <c>|</c>). Always single-line.</summary>
     TableRow,
 
+    /// <summary>
+    ///     The header row of a Markdown table - the single row immediately followed by the table's
+    ///     separator row (for example <c>| --- | --- |</c>). Column header cells such as "Hazard"
+    ///     or "Use" are short labels, not prose sentences, so <see cref="DictionaryChecker"/> and
+    ///     <see cref="StructuralRules"/>'s <c>-ing</c>-form evaluator skip them entirely rather than
+    ///     running them through the same checks as an ordinary <see cref="TableRow"/> data cell;
+    ///     <see cref="StructuralRules"/>'s other checks (word-limit, semicolon, contraction,
+    ///     complex-verb, and passive-voice) still evaluate this role like any other segment. Always
+    ///     single-line.
+    /// </summary>
+    TableHeader,
+
     /// <summary>One or more consecutive non-heading, non-list-item, non-table-row lines forming a paragraph.</summary>
     Paragraph
 }
@@ -223,6 +235,7 @@ internal static class MarkdownProseExtractor
         var lines = markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
 
         var startIndex = SkipFrontMatter(lines);
+        var tableHeaderLineIndexes = FindTableHeaderLineIndexes(lines, startIndex);
 
         var buffer = new StringBuilder();
         var bufferStartLine = -1;
@@ -303,11 +316,12 @@ internal static class MarkdownProseExtractor
                 FlushBuffer(segments, buffer, lineOffsets, bufferRole, ref bufferStartLine);
                 if (!TableSeparatorRowRegex.IsMatch(cleaned))
                 {
+                    var role = tableHeaderLineIndexes.Contains(i) ? SegmentRole.TableHeader : SegmentRole.TableRow;
                     foreach (var cell in SplitTableRowCells(cleaned))
                     {
                         if (cell.Length > 0)
                         {
-                            segments.Add(new ProseSegment(cell, lineNumber, SegmentRole.TableRow));
+                            segments.Add(new ProseSegment(cell, lineNumber, role));
                         }
                     }
                 }
@@ -388,6 +402,126 @@ internal static class MarkdownProseExtractor
         }
 
         return 0;
+    }
+
+    /// <summary>
+    ///     Pre-scans every line to find the 0-based index of each table row that is immediately
+    ///     followed by a table separator row (see <see cref="TableSeparatorRowRegex"/>), that is,
+    ///     each table's single header row (see <see cref="SegmentRole.TableHeader"/>). Done as a
+    ///     separate one-line lookahead pass rather than inline in <see cref="Extract"/>'s own
+    ///     single-pass loop, since deciding a row's role requires already knowing about the next
+    ///     line, which the main loop does not look ahead to for any other line type. Fenced code
+    ///     block contents are skipped the same way <see cref="Extract"/> skips them, so a fenced
+    ///     block that merely resembles a table is never misidentified as one.
+    /// </summary>
+    /// <param name="lines">Source lines, already split on <c>\n</c>.</param>
+    /// <param name="startIndex">0-based index of the first line to consider (see <see cref="SkipFrontMatter"/>).</param>
+    /// <returns>The 0-based index of each line that is a table's header row.</returns>
+    private static HashSet<int> FindTableHeaderLineIndexes(string[] lines, int startIndex)
+    {
+        var headerLineIndexes = new HashSet<int>();
+        var inFence = false;
+        var blockStart = -1;
+
+        for (var i = startIndex; i < lines.Length; i++)
+        {
+            var rawLine = lines[i];
+
+            if (FenceRegex.IsMatch(rawLine))
+            {
+                inFence = !inFence;
+                blockStart = -1;
+                continue;
+            }
+
+            if (inFence)
+            {
+                continue;
+            }
+
+            var cleaned = CleanLine(rawLine);
+            if (!TableRowRegex.IsMatch(cleaned))
+            {
+                blockStart = -1;
+                continue;
+            }
+
+            if (blockStart == -1)
+            {
+                blockStart = i;
+            }
+            else if (i == blockStart + 1 && TableSeparatorRowRegex.IsMatch(cleaned))
+            {
+                headerLineIndexes.Add(blockStart);
+            }
+        }
+
+        return headerLineIndexes;
+    }
+
+    /// <summary>
+    ///     Matches a bold admonition-style label at the very start of a line (for example
+    ///     <c>**Caution.**</c> or <c>**Warning:**</c>) - a short block label, not a prose sentence,
+    ///     that <see cref="DictionaryChecker"/> and <see cref="StructuralRules"/> skip over rather
+    ///     than running through DICT/<c>-ing</c>-form checks.
+    /// </summary>
+    private static readonly Regex AdmonitionLabelRegex =
+        new(@"^\*\*[^*\n]+[.:]\*\*", RegexOptions.Compiled, RegexTimeout);
+
+    /// <summary>
+    ///     Matches a double-quoted span, or a single-asterisk/underscore emphasis span, used to
+    ///     recognize a "mention" (for example a cited document title or a quoted term) rather than
+    ///     a "use" of the enclosed word(s) in ordinary prose.
+    /// </summary>
+    /// <remarks>
+    ///     The underscore alternative requires a non-word character (or start/end of string)
+    ///     immediately outside each delimiter, not merely "not another underscore" - Markdown
+    ///     itself only treats <c>_..._</c> as emphasis when its delimiters sit at a word
+    ///     boundary, so without this check an identifier such as <c>snake_case_value</c> would
+    ///     wrongly match as <c>_case_</c> emphasis and hide a disallowed term ("case") inside it
+    ///     from the DICT and <c>-ing</c> checks.
+    /// </remarks>
+    private static readonly Regex QuotedOrEmphasisSpanRegex =
+        new(
+            "\"[^\"\\n]+\"|(?<!\\*)\\*[^*\\n]+\\*(?!\\*)|(?<!\\w)_[^_\\n]+_(?!\\w)",
+            RegexOptions.Compiled,
+            RegexTimeout);
+
+    /// <summary>
+    ///     Locates every bold admonition-label span (see <see cref="AdmonitionLabelRegex"/>) that
+    ///     begins at the very start of <paramref name="text"/>, preserving its character offset so
+    ///     callers can test whether some other match falls inside one via
+    ///     <see cref="OverlapsInlineCodeSpan"/> (the same containment test used for inline code
+    ///     spans applies equally here).
+    /// </summary>
+    /// <param name="text">Verbatim segment text to search.</param>
+    /// <returns>The start index and length of the admonition-label span, if the segment begins with one.</returns>
+    internal static IReadOnlyList<(int Start, int Length)> FindAdmonitionLabelSpans(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        var match = AdmonitionLabelRegex.Match(text);
+        return match.Success ? [(match.Index, match.Length)] : [];
+    }
+
+    /// <summary>
+    ///     Locates every double-quoted or single-emphasis span in <paramref name="text"/> (for
+    ///     example a cited document title or a quoted term), preserving character offsets so
+    ///     callers can test whether some other match falls inside one via
+    ///     <see cref="OverlapsInlineCodeSpan"/>. A word inside such a span is being mentioned
+    ///     (referred to as a word/title), not used in ordinary prose, so DICT/<c>-ing</c>-form
+    ///     checks skip it.
+    /// </summary>
+    /// <param name="text">Verbatim segment or sentence text to search.</param>
+    /// <returns>The start index and length of each quoted/emphasis span, in document order.</returns>
+    internal static IReadOnlyList<(int Start, int Length)> FindQuotedOrEmphasisSpans(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        return QuotedOrEmphasisSpanRegex
+            .Matches(text)
+            .Select(m => (m.Index, m.Length))
+            .ToList();
     }
 
     /// <summary>

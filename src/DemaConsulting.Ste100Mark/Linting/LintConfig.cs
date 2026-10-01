@@ -291,7 +291,7 @@ internal sealed class DictionaryConfig
     public List<string>? Ignore { get; set; }
 
     /// <summary>
-    ///     Multi-word phrases (for example <c>"swish mix"</c>) whose disallowed sub-terms (for
+    ///     Multi-word phrases (for example <c>"trail mix"</c>) whose disallowed sub-terms (for
     ///     example <c>"mix"</c>) are suppressed only when the match falls entirely inside an
     ///     occurrence of one of these phrases, leaving the same term still flagged everywhere else
     ///     it appears. Unlike <see cref="Allow"/>/<see cref="Ignore"/>, which suppress a term

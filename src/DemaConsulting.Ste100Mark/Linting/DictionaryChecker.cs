@@ -35,7 +35,7 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     "utilized" is not incorrectly flagged by a "utilize" entry unless "utilized" is itself
 ///     matched by the word-boundary regex (which it is not, since the boundary requires the exact
 ///     term). Multi-word terms match across the segment's normalized single-space-separated text.
-///     A term is always evaluated through <see cref="PartOfSpeechGuesser.Guess"/>, even when it
+///     A term is always evaluated through <see cref="PartOfSpeechGuesser.GuessEffective"/>, even when it
 ///     has only one sense: when the guesser confidently resolves a grammatical role (noun or
 ///     verb) that none of the entry's senses restrict, the term is not being used in a
 ///     disallowed role at this location and no diagnostic is reported. When the guess matches
@@ -56,7 +56,7 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     <see cref="DictionaryConfig.AllowInPhrase"/>, resolved per-file into
 ///     <c>allowedPhrases</c>) is also ignored, using the same "falls entirely inside" containment
 ///     test as the inline-code-span exclusion. This lets a project declare that a specific phrase
-///     (for example "swish mix") is the approved name of a thing, without also silently permitting
+///     (for example "trail mix") is the approved name of a thing, without also silently permitting
 ///     the disallowed word ("mix") everywhere else it appears - unlike
 ///     <see cref="LintConfig.ResolveAllowedTerms"/>, which suppresses a term unconditionally.
 /// </remarks>
@@ -69,7 +69,7 @@ internal static class DictionaryChecker
     /// <param name="segments">Prose segments produced by <see cref="MarkdownProseExtractor"/>.</param>
     /// <param name="dictionary">Merged dictionary to check against.</param>
     /// <param name="mode">
-    ///     The file's resolved <see cref="LintMode"/>, forwarded to <see cref="PartOfSpeechGuesser.Guess"/>
+    ///     The file's resolved <see cref="LintMode"/>, forwarded to <see cref="PartOfSpeechGuesser.GuessEffective"/>
     ///     for the imperative-sentence-start signal.
     /// </param>
     /// <param name="extraAllowedTerms">
@@ -114,8 +114,20 @@ internal static class DictionaryChecker
         var diagnostics = new List<Diagnostic>();
         foreach (var segment in segments)
         {
+            if (segment.Role == SegmentRole.TableHeader)
+            {
+                // Table column header cells (for example "Hazard", "Use") are short labels, not
+                // prose sentences, and are routinely a bare noun/verb-looking word out of any
+                // sentence context - they are excluded from the dictionary check entirely, the
+                // same way headings and table headers are excluded from the -ing-form advisory
+                // (see StructuralRules.EvaluateIngForm).
+                continue;
+            }
+
             var codeSpans = MarkdownProseExtractor.FindInlineCodeSpans(segment.Text);
             var phraseSpans = FindAllowedPhraseSpans(segment.Text, allowedPhrases);
+            var admonitionSpans = MarkdownProseExtractor.FindAdmonitionLabelSpans(segment.Text);
+            var quotedSpans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(segment.Text);
 
             foreach (var entry in entries)
             {
@@ -129,6 +141,22 @@ internal static class DictionaryChecker
 
                     if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, phraseSpans))
                     {
+                        continue;
+                    }
+
+                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, admonitionSpans))
+                    {
+                        // A bold admonition label at the start of a block (for example
+                        // "**Caution.**") is a label, not a prose sentence, so it is not run
+                        // through the dictionary check.
+                        continue;
+                    }
+
+                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, quotedSpans))
+                    {
+                        // A word inside a quotation or cited title (for example a document title
+                        // in quotes or italics) is a mention of that exact text, not a use of the
+                        // word in this document's own prose, so it is not flagged.
                         continue;
                     }
 
@@ -186,7 +214,7 @@ internal static class DictionaryChecker
         Match match,
         LintMode mode)
     {
-        var guess = PartOfSpeechGuesser.Guess(segment.Text, match.Index, match.Length, mode);
+        var guess = PartOfSpeechGuesser.GuessEffective(segment.Text, match.Index, match.Length, mode);
         var candidates = guess is null
             ? entry.Senses
             : entry.Senses.Where(s => s.Pos == guess || s.Pos == PartOfSpeech.Any).ToList();
@@ -254,7 +282,7 @@ internal static class DictionaryChecker
     ///     role it can grammatically take, so there is no part-of-speech switch that would resolve
     ///     a finding: whichever role the word is used in here, ASD-STE100 already approves it in
     ///     that role. Such an entry can never produce an actionable diagnostic and is never
-    ///     flagged, regardless of what <see cref="PartOfSpeechGuesser.Guess"/> returns. This differs
+    ///     flagged, regardless of what <see cref="PartOfSpeechGuesser.GuessEffective"/> returns. This differs
     ///     from <see cref="IsSelfReferential"/> only in scope: <see cref="IsSelfReferential"/> asks
     ///     whether *any* sense is self-referential (used to relax a single-sense entry's
     ///     inconclusive-guess case), whereas this asks whether *every* sense across *more than one*
@@ -330,12 +358,14 @@ internal static class DictionaryChecker
                 $"Rewrite the sentence so '{term}' is not used as a {PosLabel(sense.Pos)}.");
         }
 
+        var alternatives = FilterSelfAlternatives(sense.Alternatives, match.Value);
+
         string message;
-        if (sense.Alternatives.Count > 0)
+        if (alternatives.Count > 0)
         {
             message = labelPos
-                ? $"Avoid '{match.Value}'; use {JoinAlternatives(sense.Alternatives)} instead (used as a {PosLabel(sense.Pos)})."
-                : $"Avoid '{match.Value}'; use {JoinAlternatives(sense.Alternatives)} instead.";
+                ? $"Avoid '{match.Value}'; use {JoinAlternatives(alternatives)} instead (used as a {PosLabel(sense.Pos)})."
+                : $"Avoid '{match.Value}'; use {JoinAlternatives(alternatives)} instead.";
         }
         else
         {
@@ -351,10 +381,28 @@ internal static class DictionaryChecker
             RuleCodes.Dictionary,
             Severity.Error,
             message,
-            sense.Alternatives.Count > 0 ? string.Join(", ", sense.Alternatives) : null,
-            sense.Alternatives.Count > 0
-                ? sense.Alternatives.Select(a => new DictionaryCitation(a, PosLabel(sense.Pos))).ToList()
+            alternatives.Count > 0 ? string.Join(", ", alternatives) : null,
+            alternatives.Count > 0
+                ? alternatives.Select(a => new DictionaryCitation(a, PosLabel(sense.Pos))).ToList()
                 : null);
+    }
+
+    /// <summary>
+    ///     Removes the flagged match's own text (case-insensitive) from a sense's
+    ///     <see cref="DictionarySense.Alternatives"/> list before it is used to build a
+    ///     suggestion/citation, since suggesting the exact word just flagged as its own
+    ///     "alternative" is a no-op that would confuse rather than help the reader. Distinct from
+    ///     <see cref="IsSelfReferentialSense"/>/<see cref="IsPureSelfReferentialSense"/>, which
+    ///     compare against the dictionary entry's own headword (<see cref="DictionaryEntry.Term"/>)
+    ///     for role-restriction detection and are unaffected by this filtering: the matched surface
+    ///     form (for example an inflected "running") can differ from the entry's headword
+    ///     (for example "run"), so both comparisons are needed and neither replaces the other.
+    /// </summary>
+    private static IReadOnlyList<string> FilterSelfAlternatives(IReadOnlyList<string> alternatives, string matchedWord)
+    {
+        return alternatives
+            .Where(a => !string.Equals(a, matchedWord, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 
     /// <summary>
@@ -376,14 +424,15 @@ internal static class DictionaryChecker
         // way, so it does not leave a stray leading-space/bare-part-of-speech fragment (for example
         // " (adjective)") in the combined string; its role restriction is still surfaced via
         // CorrectionClause in the message's "possible corrections" text.
-        var corrections = string.Join("; ", candidates.Select(s => CorrectionClause(s, term)));
+        var corrections = string.Join("; ", candidates.Select(s => CorrectionClause(s, term, match.Value)));
         var citableCandidates = candidates
-            .Where(s => !IsPureSelfReferentialSense(s, term) && s.Alternatives.Count > 0)
+            .Select(s => (Sense: s, Alternatives: FilterSelfAlternatives(s.Alternatives, match.Value)))
+            .Where(c => !IsPureSelfReferentialSense(c.Sense, term) && c.Alternatives.Count > 0)
             .ToList();
         var suggestion = string.Join("; ", citableCandidates
-            .Select(s => $"{string.Join(", ", s.Alternatives)} ({PosLabel(s.Pos)})"));
+            .Select(c => $"{string.Join(", ", c.Alternatives)} ({PosLabel(c.Sense.Pos)})"));
         var citations = citableCandidates
-            .SelectMany(s => s.Alternatives.Select(a => new DictionaryCitation(a, PosLabel(s.Pos))))
+            .SelectMany(c => c.Alternatives.Select(a => new DictionaryCitation(a, PosLabel(c.Sense.Pos))))
             .ToList();
 
         return new Diagnostic(
@@ -403,15 +452,16 @@ internal static class DictionaryChecker
     ///     self-referential sense (see <see cref="IsPureSelfReferentialSense"/>) instead of a
     ///     nonsensical "use 'X'" word-swap suggestion.
     /// </summary>
-    private static string CorrectionClause(DictionarySense sense, string term)
+    private static string CorrectionClause(DictionarySense sense, string term, string matchedWord)
     {
         if (IsPureSelfReferentialSense(sense, term))
         {
             return $"as a {PosLabel(sense.Pos)}, only a different grammatical role is approved";
         }
 
-        return sense.Alternatives.Count > 0
-            ? $"as a {PosLabel(sense.Pos)}, use {JoinAlternatives(sense.Alternatives)}"
+        var alternatives = FilterSelfAlternatives(sense.Alternatives, matchedWord);
+        return alternatives.Count > 0
+            ? $"as a {PosLabel(sense.Pos)}, use {JoinAlternatives(alternatives)}"
             : $"as a {PosLabel(sense.Pos)}";
     }
 
