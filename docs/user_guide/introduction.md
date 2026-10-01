@@ -94,6 +94,41 @@ It also reports these advisory heuristics:
 Advisory findings do not fail the process unless they are configured as `error` or `--strict`
 is used.
 
+## '-ing' Form Role Heuristic
+
+`STE100-ADV-INGFORM` only flags an `-ing` word when it resolves as a genuine present-participle
+verb use. A gerund or participial-adjective use of the same word is not flagged, including:
+
+- the subject of a sentence or list item (for example, "Metering the flow is required.")
+- the object of a preposition (for example, "before testing the gauge.")
+- a gerund complement directly after a catenative verb such as "continue" or "begin" (for
+  example, "continue monitoring the gauge.")
+- a material noun (for example, "the housing")
+- a participial adjective directly before a noun (for example, "the moving structure")
+- any match inside a heading, a table column-header row, an admonition label, or a
+  quoted/cited title
+
+For example, "Checking the gauge is required." is not flagged (gerund subject), while "The
+technician is checking the gauge." is still flagged (genuine present-participle verb).
+
+## Passive-Voice Exemptions
+
+`STE100-ADV-PASSIVE` does not flag an "is"/"are" plus past-participle match that reads as a
+predicate adjective describing a current state rather than a genuine passive construction.
+This exemption applies when either:
+
+- the participle is one of a curated set of common stative/adjectival participles (for
+  example "energized", "closed", "connected", "locked"), or
+- the sentence is an imperative-mode instruction that begins with a common lead verb (for
+  example "Keep", "Confirm", "Verify")
+
+Either exemption is overridden - the match is still flagged as passive - when an explicit "by
+\<agent\>" phrase immediately follows the participle, since naming the agent makes the
+construction unambiguously passive again.
+
+For example, "Keep the panel closed while it is energized." is not flagged, but "The panel is
+closed by the technician." is still flagged, since an explicit agent follows the participle.
+
 ## Discovering Rule Codes
 
 Run `ste100mark --list-rules` to display the full, machine-readable rule catalog as a JSON
@@ -178,7 +213,7 @@ dictionary:
   ignore:
     - api
   allow-in-phrase:
-    - swish mix
+    - trail mix
 ```
 
 Configuration fields:
@@ -263,6 +298,33 @@ every sense is reported, grouped per part of speech and clearly labeled as ambig
 example `Ambiguous part of speech for 'impact' — possible corrections: as a noun, use
 'effect'; as a verb, use 'affect'.`
 
+A reported suggestion never includes the exact word that was just flagged as one of its own
+alternatives, for both a confidently-resolved sense and an ambiguous, multi-sense result. For
+example, if a matched inflected form such as "running" also appears in its sense's
+alternatives list alongside "operating", only "operating" is suggested, since suggesting
+"running" as a replacement for "running" would be a meaningless no-op.
+
+The part-of-speech heuristic also recognizes a curated set of common technical plural nouns
+(for example "cycles", "units", "sensors") as the head of a noun-noun compound, even though
+each of these words ends in "-s", which is otherwise treated as ambiguous with a verb form.
+For example, in "Purge cycles are monitored.", "purge" is recognized as a noun modifier (not a
+verb) because it is immediately followed by the recognized compound-noun head "cycles".
+
+A table's column-header row (for example a "Hazard"/"Use" header above a table of data rows)
+and a bold admonition label at the very start of a block (for example `**Caution.**`) are
+treated as short labels, not prose sentences, and are skipped entirely by `STE100-DICT` and
+`STE100-ADV-INGFORM` - a bare label word is routinely a noun/verb-looking word out of any
+sentence context, and flagging it would be noise rather than a genuine finding. The same word
+appearing in an ordinary sentence elsewhere in the document, or in a table's data row rather
+than its header row, is still checked normally.
+
+A disallowed word appearing only inside a double-quoted span (for example a cited document
+title) or a single-asterisk/underscore emphasis span (italicized text) is a mention of that
+exact text, not a use of the word in the document's own prose, and is likewise skipped by
+`STE100-DICT` and `STE100-ADV-INGFORM`. For example, in `The chapter is titled "System
+Utilization".`, the disallowed word inside the quoted title is not flagged, while the same
+word used in ordinary prose elsewhere in the document is still flagged.
+
 **Why the real ASD-STE100 dictionary is not included:** The official ASD-STE100 Part 2
 Dictionary is commercially-licensed, copyrighted content owned by ASD (Aerospace, Security
 and Defence Industries Association of Europe). Because this repository is public and
@@ -286,15 +348,15 @@ of one of the listed phrases.
 ```yaml
 dictionary:
   allow-in-phrase:
-    - swish mix
+    - trail mix
     - primary mix
-    - air gap
-    - probe tip
-    - motion profile
+    - spark gap
+    - stylus tip
+    - duty cycle
 ```
 
-For example, if `mix` is a disallowed term, `allow-in-phrase: [swish mix]` suppresses the
-finding in "Fill the swish mix tank" (where "swish mix" is the name of a thing) while still
+For example, if `mix` is a disallowed term, `allow-in-phrase: [trail mix]` suppresses the
+finding in "Fill the trail mix tank" (where "trail mix" is the name of a thing) while still
 flagging "check the fuel mix" elsewhere in the same document. Matching is case-insensitive and
 tolerant of extra whitespace, identical to a multi-word `dictionary.disallow` term. Like
 `dictionary.allow`/`dictionary.ignore`, `dictionary.allow-in-phrase` can also be layered per

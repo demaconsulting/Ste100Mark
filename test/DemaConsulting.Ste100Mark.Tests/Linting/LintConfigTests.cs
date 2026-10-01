@@ -345,13 +345,13 @@ public class LintConfigTests
         // Arrange: a global allow-in-phrase list plus one unrelated profile
         var config = new LintConfig
         {
-            Dictionary = new DictionaryConfig { AllowInPhrase = ["swish mix"] },
+            Dictionary = new DictionaryConfig { AllowInPhrase = ["trail mix"] },
             Profiles =
             [
                 new Profile
                 {
                     Glob = "docs/requirements/**/*.md",
-                    Dictionary = new DictionaryOverride { AllowInPhrase = ["motion profile"] }
+                    Dictionary = new DictionaryOverride { AllowInPhrase = ["duty cycle"] }
                 }
             ]
         };
@@ -360,7 +360,7 @@ public class LintConfigTests
         var allowed = config.ResolveAllowedPhrases("docs/overview.md");
 
         // Assert: verify expected behavior
-        Assert.Equal(["swish mix"], allowed);
+        Assert.Equal(["trail mix"], allowed);
     }
 
     /// <summary>
@@ -374,13 +374,13 @@ public class LintConfigTests
         // additional phrase
         var config = new LintConfig
         {
-            Dictionary = new DictionaryConfig { AllowInPhrase = ["swish mix"] },
+            Dictionary = new DictionaryConfig { AllowInPhrase = ["trail mix"] },
             Profiles =
             [
                 new Profile
                 {
                     Glob = "docs/requirements/**/*.md",
-                    Dictionary = new DictionaryOverride { AllowInPhrase = ["motion profile"] }
+                    Dictionary = new DictionaryOverride { AllowInPhrase = ["duty cycle"] }
                 }
             ]
         };
@@ -389,8 +389,8 @@ public class LintConfigTests
         var allowed = config.ResolveAllowedPhrases("docs/requirements/spec.md");
 
         // Assert: both the global and profile-specific phrases are allowed
-        Assert.Contains("swish mix", allowed);
-        Assert.Contains("Motion Profile", allowed, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("trail mix", allowed);
+        Assert.Contains("Duty Cycle", allowed, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(2, allowed.Count);
     }
 }

@@ -94,7 +94,48 @@ internal static class PartOfSpeechGuesser
     private static readonly HashSet<string> Prepositions =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            "of", "in", "on", "for", "with", "by", "from", "about", "at", "into", "onto", "through", "during"
+            "of", "in", "on", "for", "with", "by", "from", "about", "at", "into", "onto", "through", "during",
+            "after", "before", "without", "upon", "against", "between", "among", "over", "under", "above",
+            "below", "near"
+        };
+
+    /// <summary>
+    ///     Personal/object pronouns: never the head noun of a noun-noun compound (for example the
+    ///     "it" in "...closing it fully" is a pronoun object, not a compound-noun head).
+    /// </summary>
+    private static readonly HashSet<string> ObjectPronouns =
+        new(StringComparer.OrdinalIgnoreCase)
+        { "it", "them", "him", "her", "us", "me", "you", "they", "we", "he", "she", "one" };
+
+    /// <summary>
+    ///     "do"/"have"-family auxiliary verb forms. Combined with <see cref="ModalAuxiliaries"/> and
+    ///     <see cref="BeAuxiliaries"/>, used to exclude the matched word itself from
+    ///     <see cref="HasNounSignal"/>'s "FollowedByNegation" signal: an auxiliary verb immediately
+    ///     followed by "not"/"never" (for example "shall <b>not</b>", "does <b>not</b>", "has
+    ///     <b>never</b>") is unambiguously still a verb use, not a noun, so the negation signal must
+    ///     not fire for the auxiliary word itself - only for an ordinary word in that position (for
+    ///     example the noun "Trigger" in "Trigger not issued").
+    /// </summary>
+    private static readonly HashSet<string> OtherAuxiliaryVerbs =
+        new(StringComparer.OrdinalIgnoreCase) { "do", "does", "did", "has", "have", "had" };
+
+    /// <summary>
+    ///     Common, unambiguous technical-writing plural nouns that are safe to recognize as the
+    ///     head of a noun-noun compound (for example "cycles" in "purge cycles") even though their
+    ///     spelling also ends in a bare "-s", which is otherwise deliberately excluded by
+    ///     <see cref="LooksLikeCompoundNoun"/> as too ambiguous with 3rd-person-singular verb
+    ///     forms (see that method's remarks). This is a closed, curated allow-list rather than a
+    ///     blanket relaxation, to avoid reintroducing that ambiguity.
+    /// </summary>
+    private static readonly HashSet<string> CompoundNounHeadAllowList =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "cycles", "units", "blocks", "channels", "levels", "modules", "sensors", "components",
+            "parameters", "limits", "thresholds", "intervals", "stages", "phases", "segments",
+            "sections", "zones", "ports", "nodes", "frames", "cells", "records", "entries", "items",
+            "elements", "devices", "assemblies", "fittings", "connectors", "terminals", "circuits",
+            "valves", "pumps", "motors", "gauges", "displays", "panels", "switches", "relays",
+            "actuators"
         };
 
     /// <summary>
@@ -171,18 +212,10 @@ internal static class PartOfSpeechGuesser
     /// </returns>
     public static PartOfSpeech? Guess(string segmentText, int matchIndex, int matchLength, LintMode mode)
     {
-        ArgumentNullException.ThrowIfNull(segmentText);
+        var signals = ComputeSignals(segmentText, matchIndex, matchLength, mode);
 
-        var matchText = segmentText.Substring(matchIndex, matchLength);
-        var precedingWord = PrecedingWord(segmentText, matchIndex);
-        var governingWord = GoverningDeterminer(segmentText, matchIndex);
-        var followingWord = FollowingWord(segmentText, matchIndex + matchLength);
-        var isSentenceStart = IsSentenceStart(segmentText, matchIndex);
-
-        var isImperative = isSentenceStart && mode == LintMode.Procedure;
-        var hasOtherVerbSignal = HasOtherVerbSignal(matchText, precedingWord, followingWord);
-        var hasVerb = isImperative || hasOtherVerbSignal;
-        var hasNoun = HasNounSignal(matchText, precedingWord, governingWord, followingWord, segmentText, hasOtherVerbSignal);
+        var hasVerb = signals.WeakVerb || signals.StrongVerb;
+        var hasNoun = signals.StrongNoun || signals.WeakNoun;
 
         if (hasVerb && !hasNoun)
         {
@@ -199,6 +232,81 @@ internal static class PartOfSpeechGuesser
     }
 
     /// <summary>
+    ///     An additive refinement of <see cref="Guess"/> that only ever narrows an otherwise
+    ///     ambiguous (<see langword="null"/>) result: when <see cref="Guess"/> itself resolves a
+    ///     role, that result is returned unchanged. Otherwise, this promotes to a role when exactly
+    ///     one of the two <i>strong</i> signal categories (<see cref="GuessSignals.StrongVerb"/>,
+    ///     <see cref="GuessSignals.StrongNoun"/>) fired, ignoring the two weaker, more easily
+    ///     out-voted categories (<see cref="GuessSignals.WeakVerb"/>, the mode-dependent
+    ///     imperative-sentence-start signal, and <see cref="GuessSignals.WeakNoun"/>, the plural-
+    ///     suffix/verbless-segment signals) that would otherwise have produced the conflict.
+    /// </summary>
+    /// <remarks>
+    ///     Use this overload (rather than <see cref="Guess"/>) wherever a confident role is
+    ///     actionable even from a single strong signal category alone, for example
+    ///     <see cref="DictionaryChecker"/>'s per-occurrence sense selection.
+    /// </remarks>
+    public static PartOfSpeech? GuessEffective(string segmentText, int matchIndex, int matchLength, LintMode mode)
+    {
+        var signals = ComputeSignals(segmentText, matchIndex, matchLength, mode);
+
+        var hasVerb = signals.WeakVerb || signals.StrongVerb;
+        var hasNoun = signals.StrongNoun || signals.WeakNoun;
+
+        if (hasVerb && !hasNoun)
+        {
+            return PartOfSpeech.Verb;
+        }
+
+        if (hasNoun && !hasVerb)
+        {
+            return PartOfSpeech.Noun;
+        }
+
+        if (signals.StrongVerb && !signals.StrongNoun)
+        {
+            return PartOfSpeech.Verb;
+        }
+
+        if (signals.StrongNoun && !signals.StrongVerb)
+        {
+            return PartOfSpeech.Noun;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    ///     The individual, un-aggregated signal categories computed for one match, split into
+    ///     <i>strong</i> (specific, local, hard-to-confuse evidence) and <i>weak</i> (broad,
+    ///     easily out-voted fallback evidence) tiers for each part of speech. See
+    ///     <see cref="Guess"/> (which treats all four as a simple two-way OR) and
+    ///     <see cref="GuessEffective"/> (which can additionally resolve on strong-only evidence).
+    /// </summary>
+    private readonly record struct GuessSignals(bool StrongVerb, bool StrongNoun, bool WeakVerb, bool WeakNoun);
+
+    /// <summary>Computes every individual signal category for one match (see <see cref="GuessSignals"/>).</summary>
+    private static GuessSignals ComputeSignals(string segmentText, int matchIndex, int matchLength, LintMode mode)
+    {
+        ArgumentNullException.ThrowIfNull(segmentText);
+
+        var matchText = segmentText.Substring(matchIndex, matchLength);
+        var precedingWord = PrecedingWord(segmentText, matchIndex);
+        var governingWord = GoverningDeterminer(segmentText, matchIndex);
+        var followingWords = FollowingWords(segmentText, matchIndex + matchLength, 2);
+        var followingWord = followingWords.Length > 0 ? followingWords[0] : null;
+        var secondFollowingWord = followingWords.Length > 1 ? followingWords[1] : null;
+        var isSentenceStart = IsSentenceStart(segmentText, matchIndex);
+
+        var weakVerb = isSentenceStart && mode == LintMode.Procedure;
+        var strongVerb = HasOtherVerbSignal(matchText, precedingWord, followingWord, secondFollowingWord);
+        var (strongNoun, weakNoun) =
+            HasNounSignal(matchText, precedingWord, governingWord, followingWord, segmentText, strongVerb);
+
+        return new GuessSignals(strongVerb, strongNoun, weakVerb, weakNoun);
+    }
+
+    /// <summary>
     ///     Evaluates every verb-leaning signal in the rule set that is anchored to the match's own
     ///     local context (infinitive marker, modal auxiliary, progressive auxiliary, verb
     ///     inflection suffix) - excluding the mode-dependent imperative-sentence-start signal.
@@ -207,7 +315,8 @@ internal static class PartOfSpeechGuesser
     ///     to out-vote them; the weaker imperative signal, by contrast, may still conflict with it
     ///     (see <see cref="Guess"/>).
     /// </summary>
-    private static bool HasOtherVerbSignal(string matchText, string? precedingWord, string? followingWord)
+    private static bool HasOtherVerbSignal(
+        string matchText, string? precedingWord, string? followingWord, string? secondFollowingWord)
     {
         if (string.Equals(precedingWord, "to", StringComparison.OrdinalIgnoreCase))
         {
@@ -236,9 +345,10 @@ internal static class PartOfSpeechGuesser
             return true; // FollowedByArticle (match takes a direct object noun phrase, e.g. "utilize the tool")
         }
 
-        if (followingWord is not null && LooksLikeNumber(followingWord))
+        if (followingWord is not null && LooksLikeNumber(followingWord)
+                                       && IsVerbQualifiedNumber(followingWord, secondFollowingWord))
         {
-            return true; // FollowedByNumber (match takes a numeric direct object, e.g. "use 0.12 ohms")
+            return true; // FollowedByQualifiedNumber (match takes a numeric direct object, e.g. "use 0.12 ohms")
         }
 
         return false;
@@ -257,10 +367,57 @@ internal static class PartOfSpeechGuesser
     }
 
     /// <summary>
-    ///     Evaluates every noun-leaning signal in the rule set as a set (any one hit is
-    ///     sufficient).
+    ///     Determines whether a following bare number is "qualified" in a way that still implies a
+    ///     transitive-verb reading: either the number itself carries a decimal point (a measured
+    ///     value, e.g. "0.12"), or the word immediately after it looks like a unit-of-measure
+    ///     abbreviation (e.g. "5 volts"). A bare, unqualified integer (for example "0" in
+    ///     "Block 0") is far more likely to be a trailing identifier/label for a preceding noun
+    ///     than a verb's numeric direct object, and is instead handled as a noun signal (see
+    ///     <see cref="HasNounSignal"/>'s <c>FollowedByBareIdentifier</c> signal).
     /// </summary>
-    private static bool HasNounSignal(
+    private static bool IsVerbQualifiedNumber(string number, string? secondFollowingWord)
+    {
+        if (number.Contains('.'))
+        {
+            return true;
+        }
+
+        return secondFollowingWord is not null && LooksLikeUnitWord(secondFollowingWord);
+    }
+
+    /// <summary>
+    ///     Determines whether a word looks like a short unit-of-measure abbreviation (for example
+    ///     "ohms", "volts", "ms", "kg", "psi") rather than an ordinary function word, by requiring
+    ///     a short, plain-alphabetic token that is not any closed-class function word already
+    ///     recognized elsewhere in this heuristic.
+    /// </summary>
+    private static bool LooksLikeUnitWord(string word)
+    {
+        if (word.Length is 0 or > 4 || !word.All(char.IsLetter))
+        {
+            return false;
+        }
+
+        if (Articles.Contains(word) || Prepositions.Contains(word) || ModalAuxiliaries.Contains(word)
+            || BeAuxiliaries.Contains(word) || QuantifiersOrDemonstratives.Contains(word)
+            || ClauseBreakingWords.Contains(word) || PossessivePronouns.Contains(word)
+            || NonCompoundHeadWords.Contains(word)
+            || string.Equals(word, "to", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    ///     Evaluates every noun-leaning signal in the rule set, split into a <i>strong</i> tier
+    ///     (specific, local, hard-to-confuse evidence) and a <i>weak</i> tier (the broad
+    ///     plural-suffix and whole-segment-verbless fallbacks), for use by <see cref="GuessEffective"/>
+    ///     (see <see cref="GuessSignals"/>). <see cref="Guess"/> treats both tiers identically (a
+    ///     plain OR), preserving this method's previous, unsplit behavior exactly.
+    /// </summary>
+    private static (bool StrongNoun, bool WeakNoun) HasNounSignal(
         string matchText,
         string? precedingWord,
         string? governingWord,
@@ -268,63 +425,39 @@ internal static class PartOfSpeechGuesser
         string segmentText,
         bool hasOtherVerbSignal)
     {
-        if (precedingWord is not null && Articles.Contains(precedingWord))
-        {
-            return true; // Article
-        }
+        var strongNoun =
+            (precedingWord is not null && Articles.Contains(precedingWord)) // Article
+            || (precedingWord is not null
+                && (PossessivePronouns.Contains(precedingWord) // Possessive
+                    || precedingWord.EndsWith("'s", StringComparison.OrdinalIgnoreCase)))
+            || (precedingWord is not null && QuantifiersOrDemonstratives.Contains(precedingWord)) // QuantifierOrDemonstrative
+            || (precedingWord is not null && Prepositions.Contains(precedingWord)) // Preposition
+            || (governingWord is not null
+                && (Articles.Contains(governingWord)
+                    || PossessivePronouns.Contains(governingWord)
+                    || QuantifiersOrDemonstratives.Contains(governingWord)
+                    || Prepositions.Contains(governingWord))) // DeterminerGovernsThroughModifiers
+            || string.Equals(followingWord, "of", StringComparison.OrdinalIgnoreCase) // NounPhraseContinuation
+            || (followingWord is not null && IsFiniteVerbForm(followingWord)) // FollowedByFiniteVerb (subject position)
+            || (followingWord is not null && LooksLikeCompoundNoun(followingWord) && !hasOtherVerbSignal) // NounCompoundModifier
+            || (followingWord is not null
+                && (string.Equals(followingWord, "not", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(followingWord, "never", StringComparison.OrdinalIgnoreCase))
+                && !ModalAuxiliaries.Contains(matchText)
+                && !BeAuxiliaries.Contains(matchText)
+                && !OtherAuxiliaryVerbs.Contains(matchText)) // FollowedByNegation
+            || (followingWord is not null && LooksLikeNumber(followingWord) && !followingWord.Contains('.')
+                && !hasOtherVerbSignal); // FollowedByBareIdentifier (e.g. "Block 0")
 
-        if (precedingWord is not null
-            && (PossessivePronouns.Contains(precedingWord)
-                || precedingWord.EndsWith("'s", StringComparison.OrdinalIgnoreCase)))
-        {
-            return true; // Possessive
-        }
+        var weakNoun =
+            (matchText.EndsWith('s') && !matchText.EndsWith("ss", StringComparison.OrdinalIgnoreCase)
+                && !ModalAuxiliaries.Contains(matchText) && !BeAuxiliaries.Contains(matchText)
+                && !OtherAuxiliaryVerbs.Contains(matchText)) // PluralNounSuffix (closed-class auxiliaries excluded,
+                                                             // e.g. "does"/"has"/"is" are never nouns despite
+                                                             // ending in "s")
+            || (!hasOtherVerbSignal && !HasAnyFiniteVerb(segmentText)); // VerblessSegment
 
-        if (precedingWord is not null && QuantifiersOrDemonstratives.Contains(precedingWord))
-        {
-            return true; // QuantifierOrDemonstrative
-        }
-
-        if (precedingWord is not null && Prepositions.Contains(precedingWord))
-        {
-            return true; // Preposition
-        }
-
-        if (governingWord is not null
-            && (Articles.Contains(governingWord)
-                || PossessivePronouns.Contains(governingWord)
-                || QuantifiersOrDemonstratives.Contains(governingWord)
-                || Prepositions.Contains(governingWord)))
-        {
-            return true; // DeterminerGovernsThroughModifiers
-        }
-
-        if (matchText.EndsWith('s') && !matchText.EndsWith("ss", StringComparison.OrdinalIgnoreCase))
-        {
-            return true; // PluralNounSuffix
-        }
-
-        if (string.Equals(followingWord, "of", StringComparison.OrdinalIgnoreCase))
-        {
-            return true; // NounPhraseContinuation
-        }
-
-        if (followingWord is not null && IsFiniteVerbForm(followingWord))
-        {
-            return true; // FollowedByFiniteVerb (match is the subject of the sentence)
-        }
-
-        if (followingWord is not null && LooksLikeCompoundNoun(followingWord) && !hasOtherVerbSignal)
-        {
-            return true; // NounCompoundModifier (match modifies a following noun, e.g. "test fixture")
-        }
-
-        if (!hasOtherVerbSignal && !HasAnyFiniteVerb(segmentText))
-        {
-            return true; // VerblessSegment (no finite verb anywhere: cannot be verb-only usage)
-        }
-
-        return false;
+        return (strongNoun, weakNoun);
     }
 
     /// <summary>
@@ -342,6 +475,13 @@ internal static class PartOfSpeechGuesser
             return false;
         }
 
+        if (CompoundNounHeadAllowList.Contains(followingWord))
+        {
+            // Explicit, curated allow-list: a vetted technical plural noun that overrides the
+            // general "ends in 's'" exclusion below (see that exclusion's remarks).
+            return true;
+        }
+
         if (Articles.Contains(followingWord)
             || PossessivePronouns.Contains(followingWord)
             || QuantifiersOrDemonstratives.Contains(followingWord)
@@ -349,7 +489,8 @@ internal static class PartOfSpeechGuesser
             || ClauseBreakingWords.Contains(followingWord)
             || ModalAuxiliaries.Contains(followingWord)
             || BeAuxiliaries.Contains(followingWord)
-            || NonCompoundHeadWords.Contains(followingWord))
+            || NonCompoundHeadWords.Contains(followingWord)
+            || ObjectPronouns.Contains(followingWord))
         {
             return false;
         }
@@ -493,19 +634,20 @@ internal static class PartOfSpeechGuesser
     }
 
     /// <summary>
-    ///     Extracts the first whitespace-delimited token strictly after <paramref name="afterIndex"/>,
-    ///     lower-cased and stripped of leading/trailing punctuation.
+    ///     Extracts up to <paramref name="count"/> whitespace-delimited tokens strictly after
+    ///     <paramref name="afterIndex"/>, each lower-cased and stripped of leading/trailing
+    ///     punctuation.
     /// </summary>
-    private static string? FollowingWord(string segmentText, int afterIndex)
+    private static string[] FollowingWords(string segmentText, int afterIndex, int count)
     {
         if (afterIndex >= segmentText.Length)
         {
-            return null;
+            return [];
         }
 
         var after = segmentText[afterIndex..];
         var tokens = after.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        return tokens.Length == 0 ? null : Normalize(tokens[0]);
+        return tokens.Take(count).Select(Normalize).ToArray();
     }
 
     /// <summary>
@@ -539,5 +681,110 @@ internal static class PartOfSpeechGuesser
 
         var before = segmentText[..matchIndex];
         return SentenceBoundaryRegex.IsMatch(before);
+    }
+
+    /// <summary>
+    ///     Catenative verbs that commonly take a gerund (noun-like <c>-ing</c> clause) as their
+    ///     complement, for example "continue" in "continue monitoring the gauge". When an
+    ///     <c>-ing</c> word immediately follows one of these, it is a gerund complement, not a
+    ///     finite verb in its own right.
+    /// </summary>
+    private static readonly HashSet<string> CatenativeVerbs =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "begin", "begins", "began", "continue", "continues", "continued", "stop", "stops",
+            "stopped", "keep", "keeps", "kept", "start", "starts", "started", "finish", "finishes",
+            "finished", "avoid", "avoids", "avoided", "resume", "resumes", "resumed", "delay",
+            "delays", "delayed", "cease", "ceases", "ceased"
+        };
+
+    /// <summary>
+    ///     Resolves whether a word matching STE100-ADV-INGFORM's <c>-ing</c> pattern is being used
+    ///     as a present-participle verb (should be flagged) or as a noun/adjective (gerund,
+    ///     material noun, or participial adjective - should not be flagged).
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///     This is deliberately a separate resolution path from <see cref="Guess"/>/
+    ///     <see cref="GuessEffective"/>: those general-purpose methods treat a bare <c>-ing</c>/
+    ///     <c>-ed</c> suffix as a strong verb signal in its own right (<c>VerbInflectionSuffix</c>),
+    ///     which is correct for most dictionary-term lookups but is circular when the very
+    ///     question being asked is "is this <c>-ing</c> word a verb" - every candidate the ing-form
+    ///     check considers ends in <c>-ing</c> by construction, so that signal would fire for every
+    ///     candidate and defeat noun/adjective recognition entirely.
+    ///     </para>
+    ///     <para>
+    ///     Decision rule: a confident <see cref="PartOfSpeech.Verb"/> result requires genuine
+    ///     progressive/catenative-complement evidence (preceded by a "to be" auxiliary, a modal, an
+    ///     infinitive marker, or a catenative verb) or a transitive-object follow-on (followed by
+    ///     an article, object pronoun, or qualified number) with no conflicting noun evidence.
+    ///     Everything else defaults to not-flagged (noun/adjective), matching this feature's intent
+    ///     of reducing false positives on gerunds and participial adjectives.
+    ///     </para>
+    /// </remarks>
+    internal static PartOfSpeech? GuessIngFormRole(string segmentText, int matchIndex, int matchLength)
+    {
+        ArgumentNullException.ThrowIfNull(segmentText);
+
+        var precedingWord = PrecedingWord(segmentText, matchIndex);
+        var governingWord = GoverningDeterminer(segmentText, matchIndex);
+        var followingWords = FollowingWords(segmentText, matchIndex + matchLength, 1);
+        var followingWord = followingWords.Length > 0 ? followingWords[0] : null;
+        var isSentenceStart = IsSentenceStart(segmentText, matchIndex);
+
+        var strongVerb =
+            (precedingWord is not null && BeAuxiliaries.Contains(precedingWord)) // progressive, e.g. "is closing"
+            || (precedingWord is not null && ModalAuxiliaries.Contains(precedingWord))
+            || string.Equals(precedingWord, "to", StringComparison.OrdinalIgnoreCase)
+            || (followingWord is not null && Articles.Contains(followingWord)) // transitive object, e.g. "closing the valve"
+            || (followingWord is not null && ObjectPronouns.Contains(followingWord))
+            || (followingWord is not null && LooksLikeNumber(followingWord));
+
+        if (strongVerb)
+        {
+            // Direct transitive-object/progressive/catenative-governed evidence wins outright: a
+            // gerund-phrase object of a preposition (e.g. "before testing.") has no following
+            // direct object, so it never reaches this branch - only a genuine verbal use does
+            // (e.g. "before closing the valve", "is checking the panel").
+            return PartOfSpeech.Verb;
+        }
+
+        var strongNoun =
+            (precedingWord is not null && Articles.Contains(precedingWord)) // "the fitting"
+            || (precedingWord is not null
+                && (PossessivePronouns.Contains(precedingWord)
+                    || precedingWord.EndsWith("'s", StringComparison.OrdinalIgnoreCase)))
+            || (precedingWord is not null && QuantifiersOrDemonstratives.Contains(precedingWord))
+            || (precedingWord is not null && Prepositions.Contains(precedingWord)) // object of a preposition
+            || (precedingWord is not null && CatenativeVerbs.Contains(precedingWord)) // gerund complement
+            || (governingWord is not null
+                && (Articles.Contains(governingWord)
+                    || PossessivePronouns.Contains(governingWord)
+                    || QuantifiersOrDemonstratives.Contains(governingWord)
+                    || Prepositions.Contains(governingWord)))
+            || string.Equals(followingWord, "of", StringComparison.OrdinalIgnoreCase)
+            || (followingWord is not null && followingWord.Length > 0
+                                           && followingWord.All(char.IsLetter)
+                                           && !Articles.Contains(followingWord)
+                                           && !ObjectPronouns.Contains(followingWord)
+                                           && !ClauseBreakingWords.Contains(followingWord)
+                                           && !ModalAuxiliaries.Contains(followingWord)
+                                           && !BeAuxiliaries.Contains(followingWord)
+                                           && !Prepositions.Contains(followingWord)
+                                           && !IsFiniteVerbForm(followingWord)
+                                           && !followingWord.EndsWith("ly", StringComparison.OrdinalIgnoreCase)); // followed by a noun it modifies, e.g. "moving structure"
+
+        var weakNoun =
+            isSentenceStart // sentence/list-item/heading-initial without verb evidence
+            || !HasAnyFiniteVerb(segmentText); // verbless segment (e.g. a table cell/title fragment)
+
+        if (strongNoun || weakNoun)
+        {
+            return PartOfSpeech.Noun;
+        }
+
+        // Inconclusive: default to not flagging (noun/adjective), consistent with this feature's
+        // goal of reducing -ing-form false positives.
+        return null;
     }
 }

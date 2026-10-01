@@ -867,7 +867,7 @@ public class DictionaryCheckerTests
     [Fact]
     public void Evaluate_TermInsideAllowedPhrase_NotFlaggedButSameTermElsewhereStillFlagged()
     {
-        // Arrange: "mix" is disallowed; "swish mix" is an approved phrase (the name of a thing),
+        // Arrange: "mix" is disallowed; "trail mix" is an approved phrase (the name of a thing),
         // while a bare "mix" elsewhere in the same segment must still be reported
         var config = new LintConfig
         {
@@ -877,18 +877,18 @@ public class DictionaryCheckerTests
                 {
                     ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
                 },
-                AllowInPhrase = ["swish mix"]
+                AllowInPhrase = ["trail mix"]
             }
         };
         var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
         IReadOnlyList<ProseSegment> segments =
-            [new ProseSegment("Fill the swish mix tank, then check the fuel mix.", 1, SegmentRole.Paragraph)];
+            [new ProseSegment("Fill the trail mix tank, then check the fuel mix.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["swish mix"]);
+            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["trail mix"]);
 
-        // Assert: only the "fuel mix" occurrence is reported, not the "swish mix" occurrence
+        // Assert: only the "fuel mix" occurrence is reported, not the "trail mix" occurrence
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("combination", diagnostic.Suggestion);
     }
@@ -909,15 +909,15 @@ public class DictionaryCheckerTests
                 {
                     ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
                 },
-                AllowInPhrase = ["swish mix"]
+                AllowInPhrase = ["trail mix"]
             }
         };
         var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
-        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Fill the Swish Mix tank.", 1, SegmentRole.Paragraph)];
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Fill the Trail Mix tank.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["swish mix"]);
+            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["trail mix"]);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -939,15 +939,15 @@ public class DictionaryCheckerTests
                 {
                     ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
                 },
-                AllowInPhrase = ["swish mix"]
+                AllowInPhrase = ["trail mix"]
             }
         };
         var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
-        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Fill the swish  mix tank.", 1, SegmentRole.Paragraph)];
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Fill the trail  mix tank.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["swish mix"]);
+            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["trail mix"]);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -995,7 +995,7 @@ public class DictionaryCheckerTests
     [Fact]
     public void Evaluate_AllowedPhrasesUnrelatedPhrase_StillFlagsDisallowedTerm()
     {
-        // Arrange: "swish mix" is an allowed phrase, but the prose never contains it
+        // Arrange: "trail mix" is an allowed phrase, but the prose never contains it
         var config = new LintConfig
         {
             Dictionary = new DictionaryConfig
@@ -1004,7 +1004,7 @@ public class DictionaryCheckerTests
                 {
                     ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
                 },
-                AllowInPhrase = ["swish mix"]
+                AllowInPhrase = ["trail mix"]
             }
         };
         var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
@@ -1012,7 +1012,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["swish mix"]);
+            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["trail mix"]);
 
         // Assert: verify expected behavior
         Assert.Single(diagnostics);
@@ -1035,11 +1035,11 @@ public class DictionaryCheckerTests
                 {
                     ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
                 },
-                AllowInPhrase = ["swish mix"]
+                AllowInPhrase = ["trail mix"]
             }
         };
         var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
-        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Fill the swish mix tank.", 1, SegmentRole.Paragraph)];
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Fill the trail mix tank.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested (allowedPhrases omitted)
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
@@ -1362,5 +1362,197 @@ public class DictionaryCheckerTests
 
         // Assert: verify expected behavior
         Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a suggestion never includes the exact flagged word itself (case-insensitive)
+    ///     as one of its own alternatives, even when a sense's alternatives list includes the
+    ///     entry's own headword alongside genuine other alternatives. Category F regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_SuggestionNeverIncludesFlaggedWordItself()
+    {
+        // Arrange: "check" (verb) lists its own headword "CHECK" alongside genuine alternatives
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["check"] =
+                        [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["MAKE SURE", "EXAMINE", "CHECK"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("You must check the gauge reading.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: "CHECK" is filtered out of the suggestion/citations, leaving the genuine alternatives
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("MAKE SURE, EXAMINE", diagnostic.Suggestion);
+        Assert.DoesNotContain("'CHECK'", diagnostic.Message);
+        Assert.NotNull(diagnostic.Citations);
+        Assert.DoesNotContain(diagnostic.Citations, c => string.Equals(c.Term, "CHECK", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    ///     Test that an ambiguous multi-sense term's self-filtered suggestion also excludes the
+    ///     exact flagged word from every candidate sense, not only the confident-sense path.
+    ///     Category F regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_AmbiguousSuggestionNeverIncludesFlaggedWordItself()
+    {
+        // Arrange: the noun sense of "mix" lists the headword "MIX" alongside a genuine
+        // alternative, while the verb sense has an unrelated alternative only (so the entry is
+        // not uniformly self-referential across every part of speech, and remains actionable),
+        // with no confidently-resolving context signal around the match
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["mix"] =
+                    [
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["BLEND", "MIX"] },
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["COMBINE"] }
+                    ]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("They discuss Mix sometimes. The team operates daily.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: "MIX" never appears as a suggested alternative for itself
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.NotNull(diagnostic.Suggestion);
+        Assert.DoesNotContain("MIX", diagnostic.Suggestion, StringComparison.Ordinal);
+        Assert.Contains("BLEND", diagnostic.Suggestion, StringComparison.Ordinal);
+        Assert.Contains("COMBINE", diagnostic.Suggestion, StringComparison.Ordinal);
+        Assert.NotNull(diagnostic.Citations);
+        Assert.DoesNotContain(diagnostic.Citations, c => string.Equals(c.Term, "MIX", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    ///     Test that a disallowed word that is part of a known multi-word compound/technical term
+    ///     (approved via the project's allow-in-phrase mechanism) is not flagged within that
+    ///     phrase, while the same bare word elsewhere in the segment is still flagged. Category C
+    ///     regression test, using an original compound term distinct from the existing "trail mix"
+    ///     fixtures elsewhere in this file.
+    /// </summary>
+    [Fact]
+    public void Evaluate_WordInsideApprovedCompoundPhrase_NotFlaggedButAloneElsewhereStillFlagged()
+    {
+        // Arrange: "power" is disallowed on its own, but approved within the compound "power supply"
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["power"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["ELECTRICITY"] }]
+                },
+                AllowInPhrase = ["power supply"]
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Connect the power supply, then check the power level separately.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["power supply"]);
+
+        // Assert: only the standalone "power" (not inside "power supply") is flagged
+        Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a disallowed word appearing only as a quoted mention (for example citing the
+    ///     exact word of a style guideline) rather than a genuine use in the document's own prose
+    ///     is not flagged. Category C regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_DisallowedTermInsideQuotedMention_NotFlagged()
+    {
+        // Arrange: "utilize" (embedded dictionary entry) appears only as a quoted mention
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("The old manual used the word \"utilize\" throughout its text.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a disallowed word appearing in a bold admonition label at the start of a block
+    ///     (for example <c>**Caution.**</c>) is recognized as a label, not prose, and is not run
+    ///     through the dictionary check. Category B regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_DisallowedTermInsideAdmonitionLabel_NotFlagged()
+    {
+        // Arrange: "caution" is disallowed, and appears only as the bold admonition label itself
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["caution"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["WARNING"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("**Caution.** Keep hands clear of the panel.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a table column header cell (for example "Use") is recognized as a label, not
+    ///     prose, and is not run through the dictionary check, while the same disallowed word in an
+    ///     ordinary table data cell is still flagged. Category B regression test.
+    /// </summary>
+    [Fact]
+    public void Evaluate_DisallowedTermInTableHeaderCell_NotFlaggedButSameTermInDataCellStillFlagged()
+    {
+        // Arrange: "use" is disallowed entirely
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["use"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["OPERATION"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> headerSegments = [new ProseSegment("Use", 1, SegmentRole.TableHeader)];
+        IReadOnlyList<ProseSegment> rowSegments = [new ProseSegment("Use", 2, SegmentRole.TableRow)];
+
+        // Act: execute the operation being tested
+        var headerDiagnostics = DictionaryChecker.Evaluate("file.md", headerSegments, dictionary, LintMode.Descriptive);
+        var rowDiagnostics = DictionaryChecker.Evaluate("file.md", rowSegments, dictionary, LintMode.Descriptive);
+
+        // Assert: the header cell is skipped, but the same word in a data cell is still flagged
+        Assert.Empty(headerDiagnostics);
+        Assert.Single(rowDiagnostics);
     }
 }

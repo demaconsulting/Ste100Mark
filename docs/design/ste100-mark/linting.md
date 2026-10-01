@@ -35,17 +35,52 @@ The source folder contains eleven primary behavioral units plus two supporting v
   carrying one or more part-of-speech-tagged senses.
 - `PartOfSpeechGuesser` - lightweight, deterministic regex/rule-based heuristic that
   guesses whether a matched term is used as a noun or a verb at its match site, used to
-  select the applicable sense(s) of a multi-sense dictionary entry.
+  select the applicable sense(s) of a multi-sense dictionary entry. Signals are split into
+  a *strong* tier (specific, local, hard-to-confuse evidence such as a preceding
+  article/possessive/modal, a following finite verb, a following bare numeral/identifier,
+  or a noun-modifier directly before another noun) and a *weak* tier (the broad
+  plural-noun-suffix and whole-segment-verbless fallbacks). `Guess` treats both tiers as a
+  plain OR; `GuessEffective` additionally resolves on strong-tier evidence alone when the
+  tiers disagree, and is the method `DictionaryChecker` and `StructuralRules`'s `-ing`-form
+  check call. A dedicated `GuessIngFormRole` variant applies the same strong/weak-signal
+  design to `-ing` words specifically, distinguishing a genuine present-participle verb
+  use from a gerund/process noun, a material noun (for example a substance or component
+  name ending in `-ing`), or a participial adjective modifying a following noun.
 - `MarkdownProseExtractor` - line-based Markdown extractor that keeps headings, list items,
   table cells, and paragraphs, removing fenced code blocks and link destinations while
-  retaining inline code spans verbatim.
+  retaining inline code spans verbatim. A table's header row (the row immediately followed
+  by its `---` separator row) is tagged with the distinct `SegmentRole.TableHeader`, rather
+  than `SegmentRole.TableRow`, so column-header label cells (for example "Hazard", "Use")
+  can be treated as labels, not prose. The extractor also exposes
+  `FindAdmonitionLabelSpans` (a bold label such as `**Caution.**`/`**Warning:**` at the
+  very start of a block) and `FindQuotedOrEmphasisSpans` (a double-quoted or
+  italicized/emphasized span, such as a cited document title) as span finders that
+  `StructuralRules` and `DictionaryChecker` use to exclude label text and mentioned-not-used
+  text from prose-oriented checks.
 - `SentenceAnalyzer` - sentence splitter and rule-aware word counter for Rules 4.1 and
   8.4-8.7.
 - `StructuralRules` - official Rule 4.1, Rule 8.1, and Rule 4.2 enforcement plus advisory
   paragraph-length, passive-voice, complex-verb (perfect/modal-perfect tense), and `-ing`
-  form heuristics.
+  form heuristics. The `-ing`-form check (`STE100-ADV-INGFORM`) delegates its role decision
+  to `PartOfSpeechGuesser.GuessIngFormRole` and skips `Heading`/`TableHeader` segments and
+  any admonition-label or quoted/emphasis span, so a heading, table header cell, label, or
+  cited title never triggers the advisory. The passive-voice check
+  (`STE100-ADV-PASSIVE`) treats an "is"/"are" + participle match as a predicate adjective,
+  not a passive construction, when the participle is one of a curated set of common
+  stative/adjectival participles (for example "energized", "closed", "seated",
+  "unobstructed") or when the sentence is led by a common imperative verb (for example
+  "Keep", "Confirm", "Stop") - unless an explicit "by \<agent\>" phrase immediately follows
+  the participle, which always overrides both exemptions back to a genuine passive finding.
+  This exemption is restricted to "is"/"are" auxiliary forms; "was"/"were"/"be"/"being"/
+  "been" constructions are always evaluated as passive voice.
 - `DictionaryChecker` - case-insensitive whole-term vocabulary checker using the effective
-  merged dictionary and `PartOfSpeechGuesser` sense selection.
+  merged dictionary and `PartOfSpeechGuesser` sense selection (via `GuessEffective`).
+  `TableHeader` segments are skipped entirely (column-header labels are not prose), and a
+  match that falls entirely inside an admonition-label or quoted/emphasis span (see
+  `MarkdownProseExtractor` above) is also skipped, alongside the pre-existing inline-code-
+  span and allowed-phrase exclusions. The flagged word's own text is always filtered
+  (case-insensitively) out of its reported suggestion/citations, so a diagnostic never
+  recommends the exact word it just flagged as one of its own alternatives.
 - `DiagnosticReporter` - formatter for text and JSON diagnostic output.
 - `Linter` - orchestration entry point that ties the subsystem together and drives the exit
   code.

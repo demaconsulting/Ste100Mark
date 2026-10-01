@@ -87,7 +87,39 @@ internal static class StructuralRules
     ///     since a modal-perfect like "will have written" does not use any of those forms.
     /// </summary>
     private static readonly Regex PassiveVoiceRegex =
-        new(@"\b(is|are|was|were|be|being|(?<!(?:has|have|had)\s+)been)\s+\w+(ed|en)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout);
+        new(@"\b(?<aux>is|are|was|were|be|being|(?<!(?:has|have|had)\s+)been)\s+(?<word>\w+(?:ed|en))\b",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout);
+
+    /// <summary>
+    ///     Common stative/adjectival past participles that, when following <c>is</c>/<c>are</c>, are
+    ///     almost always a predicate adjective describing a current state (for example "the valve
+    ///     is <c>closed</c>") rather than a true passive construction naming an action done to the
+    ///     subject by an implied agent. <see cref="EvaluatePassiveVoice"/> does not flag these unless
+    ///     an explicit "by &lt;agent&gt;" phrase immediately follows, since an explicit agent (for
+    ///     example "is closed <c>by</c> the latch") makes the construction a genuine passive again.
+    /// </summary>
+    private static readonly HashSet<string> StativeParticiples = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "energized", "de-energized", "deenergized", "powered", "unpowered", "closed", "open",
+        "seated", "unseated", "filled", "initialized", "uninitialized", "connected",
+        "disconnected", "unobstructed", "obstructed", "locked", "unlocked", "secured", "engaged",
+        "disengaged", "enabled", "disabled", "grounded", "isolated", "pressurized",
+        "depressurized", "charged", "discharged", "installed", "attached", "mounted",
+    };
+
+    /// <summary>
+    ///     Common imperative-mood lead verbs for Procedure-mode instruction sentences (for example
+    ///     "Keep the panel closed while it is energized."). When one of these starts a sentence,
+    ///     <see cref="EvaluatePassiveVoice"/> treats a later "is"/"are" + past-participle match in
+    ///     that same sentence as a predicate-adjective state the instruction asks the reader to
+    ///     verify or maintain, not a passive construction, as long as no explicit "by &lt;agent&gt;"
+    ///     phrase follows the participle.
+    /// </summary>
+    private static readonly HashSet<string> CommonImperativeLeadVerbs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "keep", "confirm", "stop", "open", "close", "check", "verify", "ensure", "wait",
+        "continue", "hold", "maintain", "leave", "make", "start", "do",
+    };
 
     /// <summary>
     ///     Heuristic perfect/modal-perfect tense pattern: <c>has</c>/<c>have</c>/<c>had</c>
@@ -315,7 +347,7 @@ internal static class StructuralRules
         }
 
         foreach (var sentence in sentences.Where(
-                     sentence => PassiveVoiceRegex.IsMatch(MarkdownProseExtractor.MaskInlineCodeSpans(sentence.Text))))
+                     sentence => HasGenuinePassiveMatch(MarkdownProseExtractor.MaskInlineCodeSpans(sentence.Text))))
         {
             diagnostics.Add(new Diagnostic(
                 file,
@@ -326,6 +358,78 @@ internal static class StructuralRules
                 $"Possible passive voice (advisory heuristic, not an official STE100 rule): \"{Truncate(sentence.Text)}\"",
                 "Consider rewriting in active voice."));
         }
+    }
+
+    /// <summary>
+    ///     Determines whether a sentence (masked text) contains at least one "to be" + past-
+    ///     participle match that is a genuine passive construction rather than a predicate
+    ///     adjective. A "is"/"are" + participle match is treated as adjectival, not passive - and
+    ///     so does not count - when either (a) the participle is in <see cref="StativeParticiples"/>
+    ///     (a common state-describing word, e.g. "closed", "energized"), or (b) the sentence is
+    ///     Procedure-style imperative (starts with a word in <see cref="CommonImperativeLeadVerbs"/>,
+    ///     e.g. "Keep", "Confirm") so the "is"/"are" clause reads as a state the instruction asks
+    ///     the reader to verify or maintain; either exemption is itself overridden - the match still
+    ///     counts as passive - when an explicit "by &lt;agent&gt;" phrase immediately follows the
+    ///     participle, since naming the agent makes the construction unambiguously passive again.
+    ///     "was"/"were"/"be"/"being"/"been" matches are never exempted by either rule, since the
+    ///     imperative/stative readings above only apply to present-tense "is"/"are".
+    /// </summary>
+    private static bool HasGenuinePassiveMatch(string sentenceText)
+    {
+        var isImperativeLead = IsImperativeLeadSentence(sentenceText);
+
+        foreach (Match match in PassiveVoiceRegex.Matches(sentenceText))
+        {
+            var aux = match.Groups["aux"].Value;
+            var participle = match.Groups["word"].Value;
+            var isPresentTenseAux =
+                aux.Equals("is", StringComparison.OrdinalIgnoreCase) ||
+                aux.Equals("are", StringComparison.OrdinalIgnoreCase);
+
+            if (isPresentTenseAux &&
+                (StativeParticiples.Contains(participle) || isImperativeLead) &&
+                !HasAgentPhraseAfter(sentenceText, match.Index + match.Length))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Determines whether a sentence opens with (after optionally skipping a Markdown list-item
+    ///     marker or leading ordinal) a word in <see cref="CommonImperativeLeadVerbs"/>, indicating
+    ///     an imperative-mood instruction sentence.
+    /// </summary>
+    private static bool IsImperativeLeadSentence(string sentenceText)
+    {
+        var match = Regex.Match(
+            sentenceText,
+            @"^\s*(?:[-*+]\s+|\d+[.)]\s+)?(?<verb>[A-Za-z]+)",
+            RegexOptions.None,
+            RegexTimeout);
+
+        return match.Success && CommonImperativeLeadVerbs.Contains(match.Groups["verb"].Value);
+    }
+
+    /// <summary>
+    ///     Determines whether the first word following <paramref name="index"/> in
+    ///     <paramref name="text"/> is "by", indicating an explicit agent phrase (for example "is
+    ///     closed <c>by</c> the latch") that makes a "to be" + participle match an unambiguous
+    ///     passive construction regardless of any adjectival/imperative exemption.
+    /// </summary>
+    private static bool HasAgentPhraseAfter(string text, int index)
+    {
+        var match = Regex.Match(
+            text[index..],
+            @"^\s*(?<word>[A-Za-z]+)",
+            RegexOptions.None,
+            RegexTimeout);
+
+        return match.Success && match.Groups["word"].Value.Equals("by", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -366,13 +470,16 @@ internal static class StructuralRules
 
     /// <summary>
     ///     Advisory heuristic (not an official STE100 rule), <see cref="RulesConfig.IngForm"/>
-    ///     severity (default <see cref="Severity.Warn"/>): flags <c>-ing</c> words, since
-    ///     ASD-STE100 restricts <c>-ing</c> forms to technical nouns/adjectives, not verb forms. A
-    ///     match that touches a sentence-ending period immediately before or after (i.e. the
-    ///     character immediately preceding or following the match is <c>.</c>) is skipped, since
-    ///     such a match is unlikely to be a present-participle verb form embedded mid-sentence. A
-    ///     match appearing only inside an inline code span is not flagged, since inline code
-    ///     content is excluded from grammar-sensitive checks. A match whose exact word is either in
+    ///     severity (default <see cref="Severity.Warn"/>): flags <c>-ing</c> words that
+    ///     <see cref="PartOfSpeechGuesser.GuessIngFormRole"/> resolves as a genuine present-
+    ///     participle verb use, since ASD-STE100 restricts <c>-ing</c> forms to technical
+    ///     nouns/adjectives, not verb forms; a gerund/participial-adjective use (for example a
+    ///     noun-phrase subject, object of a preposition, list item, or noun modifier) is not
+    ///     flagged. A match appearing only inside an inline code span, an admonition label (for
+    ///     example <c>**Caution.**</c>), or a quoted/emphasized span (a cited title or mention) is
+    ///     also skipped, as is any match in a <see cref="SegmentRole.Heading"/> or
+    ///     <see cref="SegmentRole.TableHeader"/> segment - headings and table column headers are
+    ///     short labels, not prose sentences. A match whose exact word is either in
     ///     <see cref="IngFormExclusions"/> (never a verb form, e.g. "during") or in
     ///     <paramref name="allowedTerms"/> (a project-approved dictionary term, e.g. "metering") is
     ///     also skipped, so approving a term once suppresses it from this advisory too, not only
@@ -385,15 +492,20 @@ internal static class StructuralRules
         IReadOnlyCollection<string>? allowedTerms,
         List<Diagnostic> diagnostics)
     {
-        if (rules.IngForm == Severity.Off)
+        if (rules.IngForm == Severity.Off || segment.Role is SegmentRole.Heading or SegmentRole.TableHeader)
         {
             return;
         }
 
         var codeSpans = MarkdownProseExtractor.FindInlineCodeSpans(segment.Text);
+        var admonitionSpans = MarkdownProseExtractor.FindAdmonitionLabelSpans(segment.Text);
+        var quotedSpans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(segment.Text);
+
         foreach (Match match in IngFormRegex.Matches(segment.Text))
         {
-            if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, codeSpans))
+            if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, codeSpans)
+                || MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, admonitionSpans)
+                || MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, quotedSpans))
             {
                 continue;
             }
@@ -404,10 +516,7 @@ internal static class StructuralRules
                 continue;
             }
 
-            var precedingIndex = match.Index - 1;
-            var followingIndex = match.Index + match.Length;
-            if ((precedingIndex >= 0 && segment.Text[precedingIndex] == '.') ||
-                (followingIndex < segment.Text.Length && segment.Text[followingIndex] == '.'))
+            if (PartOfSpeechGuesser.GuessIngFormRole(segment.Text, match.Index, match.Length) != PartOfSpeech.Verb)
             {
                 continue;
             }

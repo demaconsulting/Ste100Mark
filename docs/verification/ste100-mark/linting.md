@@ -62,7 +62,20 @@ off, and error-severity configurations, plus a case proving a simple (non-perfec
 passive construction is still flagged after the complex-verb precedence amendment. This
 scenario is tested by `Evaluate_PassiveVoicePattern_FlagsAdvisoryAtConfiguredSeverity`,
 `Evaluate_PassiveVoiceOff_NoDiagnostic`, `Evaluate_PassiveVoiceError_FlagsAtErrorSeverity`, and
-`Evaluate_WasOpened_StillFlagsPassiveVoice`.
+`Evaluate_WasOpened_StillFlagsPassiveVoice`. The imperative-subordinate-clause refinement -
+exempting an "is"/"are" + common stative/adjectival participle match from passive-voice
+reporting when the participle is one of a curated closed-class set (for example "energized",
+"closed", "seated", "unobstructed") or the sentence is led by a common imperative verb (for
+example "Keep", "Confirm", "Stop"), unless an explicit "by \<agent\>" phrase immediately
+follows the participle, which always restores the genuine-passive finding regardless of either
+exemption - is verified by `Evaluate_PassiveVoiceStativeParticiple_NotFlagged`,
+`Evaluate_PassiveVoiceImperativeMainClauseComplement_NotFlagged`,
+`Evaluate_PassiveVoiceIsUnobstructed_NeverFlagged` (confirming a pure adjective with no
+past-participle form is never matched at all),
+`Evaluate_PassiveVoiceImperativeWithExplicitAgent_StillFlagged`, and
+`Evaluate_PassiveVoiceDeclarativeSentence_StillFlagged` (a plain declarative "is/are +
+participle" sentence with no imperative lead and no stative participle is still flagged, as a
+recall-regression guard).
 
 **Ste100Mark-Linting-ComplexVerbAdvisory**: The complex-verb (perfect/modal-perfect tense)
 heuristic is verified for perfect-tense and modal-perfect-tense matches, off-configuration,
@@ -74,11 +87,23 @@ complex-verb finding and not also as a passive-voice finding. This scenario is t
 and `Evaluate_HasBeenOpened_FlagsComplexVerbOnlyNotPassiveVoice`.
 
 **Ste100Mark-Linting-IngFormAdvisory**: The "-ing" form heuristic is verified for a mid-sentence
-match, exclusion of a match touching a sentence-ending period before or after the word,
-off-configuration, and inline-code exclusion. This scenario is tested by
-`Evaluate_IngWordMidSentence_FlagsIngFormAdvisory`,
-`Evaluate_IngWordFollowedByPeriod_NotFlagged`, `Evaluate_IngWordPrecededByPeriod_NotFlagged`,
-`Evaluate_IngFormOff_NoDiagnostic`, and `Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic`.
+genuine verb match, off-configuration, and inline-code exclusion. This scenario is tested by
+`Evaluate_IngWordMidSentence_FlagsIngFormAdvisory`, `Evaluate_IngFormOff_NoDiagnostic`, and
+`Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic`. The heuristic's delegation to
+`PartOfSpeechGuesser.GuessIngFormRole` - so a gerund/process noun (sentence-initial subject,
+object of a preposition, a gerund complement directly after a catenative verb such as
+"continue"), a material noun ending in "-ing", a participial adjective directly before a noun,
+and an "-ing" word inside a `Heading`/`TableHeader` segment, an admonition label, or a
+quoted/cited title are never flagged, while a genuine present-participle verb use remains
+flagged - is verified by `Evaluate_IngWordFollowedByPeriod_NotFlagged` (gerund complement after
+a catenative verb), `Evaluate_IngWordPrecededByPeriod_NotFlagged` (sentence-initial subject
+gerund immediately after a preceding sentence's period),
+`Evaluate_IngWordAsSentenceInitialSubject_NotFlagged`,
+`Evaluate_IngWordAsObjectOfPreposition_NotFlagged`, `Evaluate_IngWordAsMaterialNoun_NotFlagged`,
+`Evaluate_IngWordAsParticipialAdjectiveBeforeNoun_NotFlagged`,
+`Evaluate_IngWordInHeading_NotFlagged`, `Evaluate_IngWordInTableHeader_NotFlagged`,
+`Evaluate_IngWordInQuotedCitedTitle_NotFlagged`, and
+`Evaluate_IngWordInsideAdmonitionLabel_NotFlagged`.
 
 **Ste100Mark-Linting-Dictionary**: Dictionary merge and lookup behavior is verified for the
 embedded baseline (including a multi-sense term), explicit project dictionaries, inline
@@ -253,6 +278,68 @@ by `Extract_ListItemWrappedAcrossLines_MergesIntoSingleListItemSegment`,
 `Extract_EmptyListMarkerThenSeparateItem_DoesNotLeakStaleLineOffset`,
 `Extract_NestedListItem_DoesNotMergeIntoParentListItem`, and
 `Evaluate_AllowedPhraseSplitAcrossListItemLineWrap_SuppressesDiagnostic`.
+
+**Extended POS Signal Coverage (supplementary regression scenario, no linked requirement)**:
+Additional part-of-speech heuristic signals are
+verified in isolation: a match immediately followed by a bare numeral/identifier (for example
+"Block 0") resolves as a noun, while a match followed by a decimal-qualified number (a measured
+value) still resolves as a verb; a match immediately followed by "not"/"never" resolves as a
+noun, except when the matched word is itself a modal, "to be", or "do"/"have"-family auxiliary
+verb (for example "shall not"/"does not"), which always remains verbal regardless of the
+following negation; and a noun modifier directly before an allow-listed plural compound-noun
+head (for example "cycles") resolves as a noun. This scenario is tested by
+`Guess_FollowedByBareIdentifierNumber_ReturnsNoun`, `Guess_FollowedByDecimalNumber_StillReturnsVerb`,
+`Guess_FollowedByNegationNot_ReturnsNoun`,
+`Guess_ModalAuxiliaryFollowedByNegation_DoesNotReturnNoun`, and
+`Guess_DoAuxiliaryFollowedByNegation_DoesNotReturnNoun`,
+`Guess_NounModifierBeforeAllowedPluralCompoundHead_ReturnsNoun`. Context-sensitive word-sense
+disambiguation for ambiguous technical terms - a noun-modifier position before another noun
+resolving the more plausible technical/compound sense rather than a verb reading - is verified
+by `Guess_AmbiguousWordMixBeforeNoun_ReturnsNoun` and
+`Guess_AmbiguousWordPortBeforeNoun_ReturnsNoun`. The idiom "in use" (the object of the
+preposition "in") resolving as a noun, rather than a bare verb-only match, is verified by
+`Guess_IdiomInUsePrecededByPreposition_ReturnsNoun`.
+
+**Suggestion Self-Filtering (supplementary regression scenario, no linked requirement)**: A
+diagnostic's suggestion/citations never
+recommend the exact word that was just flagged as one of its own alternatives, for both a
+confidently-resolved single candidate sense and an ambiguous multi-sense result with no
+confidently-resolving context. This scenario is tested by
+`Evaluate_SuggestionNeverIncludesFlaggedWordItself` and
+`Evaluate_AmbiguousSuggestionNeverIncludesFlaggedWordItself`.
+
+**Compound-Phrase and Quoted-Mention Exclusion (supplementary regression scenario, no linked
+requirement)**: A disallowed word that is part of a
+project-approved multi-word compound/technical term (via the existing `allow-in-phrase`
+mechanism) is not flagged within that phrase, while the same word used alone elsewhere in the
+same document is still flagged; and a disallowed word appearing only as a mention inside a
+quotation (not a use in the document's own prose) is not flagged. This scenario is tested by
+`Evaluate_WordInsideApprovedCompoundPhrase_NotFlaggedButAloneElsewhereStillFlagged` and
+`Evaluate_DisallowedTermInsideQuotedMention_NotFlagged`.
+
+**Admonition-Label and Table-Header Exclusion (supplementary regression scenario, no linked
+requirement)**: A bold admonition label at the start of a block
+(for example "**Caution.**") and a table column-header cell (for example "Hazard") are
+recognized as labels, not prose, and are excluded from the dictionary check entirely, while a
+disallowed term in an adjacent ordinary sentence or table data cell is still flagged. This
+scenario is tested by `Evaluate_DisallowedTermInsideAdmonitionLabel_NotFlagged` and
+`Evaluate_DisallowedTermInTableHeaderCell_NotFlaggedButSameTermInDataCellStillFlagged`.
+
+**Table-Header and Span-Detection Extraction (supplementary regression scenario, no linked
+requirement)**: `MarkdownProseExtractor` tags a table's
+header row (the row immediately followed by its `---` separator row) with the distinct
+`SegmentRole.TableHeader`, while its data rows remain `SegmentRole.TableRow`, and a table row
+with no following separator row (so its header-or-data status cannot be determined) remains
+`SegmentRole.TableRow` rather than being misclassified. The extractor's span finders -
+`FindAdmonitionLabelSpans` (a bold label at the very start of a block, not bold text appearing
+mid-sentence) and `FindQuotedOrEmphasisSpans` (a double-quoted span, and a single-asterisk
+emphasis span distinct from a double-asterisk bold span) - are verified directly. This scenario
+is tested by `Extract_TableWithSeparatorRow_FirstRowIsTableHeader`,
+`Extract_TableRowWithoutFollowingSeparator_RemainsTableRow`,
+`FindAdmonitionLabelSpans_LabelAtBlockStart_ReturnsOneSpan`,
+`FindAdmonitionLabelSpans_BoldTextMidSentence_ReturnsNoSpans`,
+`FindQuotedOrEmphasisSpans_QuotedTitle_ReturnsSpan`, and
+`FindQuotedOrEmphasisSpans_SingleAsteriskEmphasis_ReturnsSpanNotBold`.
 
 **Ste100Mark-Linting-Configuration**: YAML configuration loading and resolution are verified for
 defaults, malformed files, missing files, complete schemas, first-match-wins mode profiles,
