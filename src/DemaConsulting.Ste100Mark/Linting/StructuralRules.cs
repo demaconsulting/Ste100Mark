@@ -113,7 +113,10 @@ internal static class StructuralRules
     ///     <see cref="EvaluatePassiveVoice"/> treats a later "is"/"are" + past-participle match in
     ///     that same sentence as a predicate-adjective state the instruction asks the reader to
     ///     verify or maintain, not a passive construction, as long as no explicit "by &lt;agent&gt;"
-    ///     phrase follows the participle.
+    ///     phrase follows the participle. "do" is included here but is additionally constrained by
+    ///     <see cref="IsImperativeLeadSentence"/> to only count as an imperative lead when
+    ///     immediately followed by "not" - see that method's remarks for why ("do" alone is also
+    ///     the yes/no-question auxiliary, e.g. "Do the covers remain closed...?").
     /// </summary>
     private static readonly HashSet<string> CommonImperativeLeadVerbs = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -365,18 +368,24 @@ internal static class StructuralRules
     ///     participle match that is a genuine passive construction rather than a predicate
     ///     adjective. A "is"/"are" + participle match is treated as adjectival, not passive - and
     ///     so does not count - when either (a) the participle is in <see cref="StativeParticiples"/>
-    ///     (a common state-describing word, e.g. "closed", "energized"), or (b) the sentence is
-    ///     Procedure-style imperative (starts with a word in <see cref="CommonImperativeLeadVerbs"/>,
-    ///     e.g. "Keep", "Confirm") so the "is"/"are" clause reads as a state the instruction asks
-    ///     the reader to verify or maintain; either exemption is itself overridden - the match still
-    ///     counts as passive - when an explicit "by &lt;agent&gt;" phrase immediately follows the
-    ///     participle, since naming the agent makes the construction unambiguously passive again.
-    ///     "was"/"were"/"be"/"being"/"been" matches are never exempted by either rule, since the
+    ///     (a common state-describing word, e.g. "closed", "energized"), or (b) the match falls
+    ///     within the clause governed by a Procedure-style imperative lead (the sentence starts with
+    ///     a word in <see cref="CommonImperativeLeadVerbs"/>, e.g. "Keep", "Confirm") so that
+    ///     clause's "is"/"are" reads as a state the instruction asks the reader to verify or
+    ///     maintain, not a passive construction - see <see cref="ImperativeLeadClauseEnd"/> for how
+    ///     the governed clause's boundary is determined, so that a later, independent clause after a
+    ///     coordinating conjunction (for example the "but"-clause in "Keep the cover closed, but the
+    ///     report is reviewed weekly.") is still evaluated as an ordinary, non-exempted passive
+    ///     construction; either exemption is itself overridden - the match still counts as passive -
+    ///     when an explicit "by &lt;agent&gt;" phrase immediately follows the participle, since
+    ///     naming the agent makes the construction unambiguously passive again. "was"/"were"/
+    ///     "be"/"being"/"been" matches are never exempted by either rule, since the
     ///     imperative/stative readings above only apply to present-tense "is"/"are".
     /// </summary>
     private static bool HasGenuinePassiveMatch(string sentenceText)
     {
         var isImperativeLead = IsImperativeLeadSentence(sentenceText);
+        var imperativeLeadClauseEnd = isImperativeLead ? ImperativeLeadClauseEnd(sentenceText) : 0;
 
         foreach (Match match in PassiveVoiceRegex.Matches(sentenceText))
         {
@@ -385,9 +394,10 @@ internal static class StructuralRules
             var isPresentTenseAux =
                 aux.Equals("is", StringComparison.OrdinalIgnoreCase) ||
                 aux.Equals("are", StringComparison.OrdinalIgnoreCase);
+            var isWithinImperativeLeadClause = isImperativeLead && match.Index < imperativeLeadClauseEnd;
 
             if (isPresentTenseAux &&
-                (StativeParticiples.Contains(participle) || isImperativeLead) &&
+                (StativeParticiples.Contains(participle) || isWithinImperativeLeadClause) &&
                 !HasAgentPhraseAfter(sentenceText, match.Index + match.Length))
             {
                 continue;
@@ -404,15 +414,70 @@ internal static class StructuralRules
     ///     marker or leading ordinal) a word in <see cref="CommonImperativeLeadVerbs"/>, indicating
     ///     an imperative-mood instruction sentence.
     /// </summary>
+    /// <remarks>
+    ///     "do" is special-cased: unlike the other entries in <see cref="CommonImperativeLeadVerbs"/>,
+    ///     "do" is not an unambiguous imperative lead on its own, because it is also the auxiliary
+    ///     that opens a yes/no question (for example "Do the covers remain closed while they are
+    ///     inspected?"). Treating every sentence-initial "do" as imperative would wrongly exempt
+    ///     that question's genuine passive/state construction. "do" therefore only counts as an
+    ///     imperative lead when immediately followed by "not" (for example "Do not open the cover
+    ///     while it is energized."), which is unambiguously the negative-imperative construction and
+    ///     never the start of a question. "do" remains in <see cref="CommonImperativeLeadVerbs"/>
+    ///     itself (rather than being removed) because other logic/doc comments in this class
+    ///     reference that set as the full list of recognized imperative leads; this method is the
+    ///     sole place the extra condition is enforced.
+    /// </remarks>
     private static bool IsImperativeLeadSentence(string sentenceText)
     {
         var match = Regex.Match(
             sentenceText,
-            @"^\s*(?:[-*+]\s+|\d+[.)]\s+)?(?<verb>[A-Za-z]+)",
+            @"^\s*(?:[-*+]\s+|\d+[.)]\s+)?(?<verb>[A-Za-z]+)(?:\s+(?<next>[A-Za-z]+))?",
             RegexOptions.None,
             RegexTimeout);
 
-        return match.Success && CommonImperativeLeadVerbs.Contains(match.Groups["verb"].Value);
+        if (!match.Success || !CommonImperativeLeadVerbs.Contains(match.Groups["verb"].Value))
+        {
+            return false;
+        }
+
+        // "do" alone is ambiguous with a yes/no question's auxiliary "do" (see remarks); only
+        // "do not" is unambiguously imperative.
+        if (match.Groups["verb"].Value.Equals("do", StringComparison.OrdinalIgnoreCase))
+        {
+            return match.Groups["next"].Success
+                && match.Groups["next"].Value.Equals("not", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    ///     Matches a comma followed by a coordinating conjunction ("but"/"and"/"or"/"so"), used by
+    ///     <see cref="ImperativeLeadClauseEnd"/> to find where an independent clause begins after an
+    ///     imperative-lead clause. Deliberately only matches these four coordinating conjunctions,
+    ///     not subordinating conjunctions such as "while"/"when"/"if"/"because": a subordinating
+    ///     conjunction introduces a dependent clause that is still part of the same imperative
+    ///     instruction (for example the "while"-clause in "Keep the panel closed while it is
+    ///     energized."), whereas a coordinating conjunction after a comma joins a separate,
+    ///     independent clause that the imperative no longer governs (for example the "but"-clause in
+    ///     "Keep the cover closed, but the report is reviewed weekly.").
+    /// </summary>
+    private static readonly Regex CoordinatingConjunctionAfterCommaRegex =
+        new(@",\s*(?:but|and|or|so)\b", RegexOptions.IgnoreCase, RegexTimeout);
+
+    /// <summary>
+    ///     Determines the end boundary (exclusive character index) of the clause governed by an
+    ///     imperative-lead sentence's leading instruction, for use by
+    ///     <see cref="HasGenuinePassiveMatch"/> to limit its imperative-lead passive-voice exemption
+    ///     to that clause rather than applying it to the whole sentence. The governed clause ends at
+    ///     the first comma immediately followed by a coordinating conjunction ("but"/"and"/"or"/
+    ///     "so"), since that introduces a new, independent clause the imperative no longer governs;
+    ///     when no such boundary exists, the governed clause is the entire sentence.
+    /// </summary>
+    private static int ImperativeLeadClauseEnd(string sentenceText)
+    {
+        var match = CoordinatingConjunctionAfterCommaRegex.Match(sentenceText);
+        return match.Success ? match.Index : sentenceText.Length;
     }
 
     /// <summary>

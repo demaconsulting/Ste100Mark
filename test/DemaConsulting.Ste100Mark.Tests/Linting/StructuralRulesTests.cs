@@ -1027,4 +1027,85 @@ public class StructuralRulesTests
         // Assert: verify expected behavior
         Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
     }
+
+    /// <summary>
+    ///     Test that a sentence-initial "Do" is not treated as an imperative lead when it opens a
+    ///     yes/no question, so the question's genuine "are inspected" passive construction is still
+    ///     flagged rather than being wrongly exempted. Regression test for a reported bug where
+    ///     every sentence-initial "do" was treated as imperative, even though "do" is also the
+    ///     auxiliary that starts a yes/no question.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDoQuestionLead_StillFlagged()
+    {
+        // Arrange: "Do the covers...?" is a question, not an imperative instruction
+        var segments = Paragraph("Do the covers remain closed while they are inspected?");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a sentence-initial "Do not" is still treated as an imperative lead (consistent
+    ///     with other imperative leads such as "Keep"/"Confirm"), so its stative "is energized"
+    ///     complement remains exempted rather than being flagged as passive voice.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDoNotImperativeLead_NotFlagged()
+    {
+        // Arrange: "Do not open..." is a genuine negative-imperative instruction; "checked" is
+        // deliberately not in StativeParticiples, so only the imperative-lead exemption (not the
+        // stative-participle exemption) can explain this remaining unflagged
+        var segments = Paragraph("Do not open the cover while it is checked for damage.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that the imperative-lead passive-voice exemption is scoped to the clause the
+    ///     imperative actually governs, not the whole sentence, so a later independent clause
+    ///     introduced by a coordinating conjunction after a comma still gets a genuine passive-voice
+    ///     advisory. Regression test for a reported bug where the exemption was applied sentence-
+    ///     wide, suppressing the finding for the independent second clause.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeLeadWithCoordinatedIndependentClause_StillFlagged()
+    {
+        // Arrange: "Keep X closed, but Y is checked weekly." - the "but"-clause is independent of
+        // the imperative lead and names no stative participle, so it is a genuine passive
+        var segments = Paragraph("Keep the valve closed, but the gauge is checked weekly.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a subordinate clause introduced by "while" (not a coordinating conjunction)
+    ///     remains part of the imperative-governed clause and keeps its passive-voice exemption,
+    ///     confirming the clause-boundary fix does not regress the existing "while"-clause
+    ///     behavior.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeLeadWithSubordinateWhileClause_NotFlagged()
+    {
+        // Arrange: "Keep X closed while it is monitored." - "while" is subordinating, not
+        // coordinating, so the whole sentence remains the imperative-governed clause
+        var segments = Paragraph("Keep the valve closed while it is monitored.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
 }

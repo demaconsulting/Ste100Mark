@@ -190,6 +190,32 @@ public class PartOfSpeechGuesserTests
         Assert.Null(result);
     }
 
+    /// <summary>
+    ///     Test that an imperative verb at the start of a Procedure-mode sentence still resolves as
+    ///     a verb via <see cref="PartOfSpeechGuesser.GuessEffective"/> when its following word
+    ///     ("blocks") is also an ordinary finite verb in technical/procedural English, not just a
+    ///     plural noun. Regression test for a reported bug where
+    ///     <c>CompoundNounHeadAllowList</c> previously included words such as "blocks" that are
+    ///     themselves common finite verbs, so the strong noun-compound signal wrongly out-ranked
+    ///     the weak imperative-at-sentence-start signal and misclassified the leading imperative as
+    ///     a noun (see that list's own doc comment for the full exclusion rationale).
+    /// </summary>
+    [Fact]
+    public void Guess_ImperativeLeadWithAmbiguousVerbNounPluralFollows_ReturnsVerb()
+    {
+        // Arrange: "Test blocks daily." begins a Procedure-mode segment (weak imperative signal),
+        // and is immediately followed by "blocks", which used to be a noun-compound-head allow-list
+        // entry despite also being an ordinary finite verb. A trailing finite verb ("operates")
+        // elsewhere in the segment keeps the unrelated verbless-segment noun signal from firing.
+        const string text = "Test blocks daily. The system operates continuously.";
+        var index = text.IndexOf("Test", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.GuessEffective(text, index, "Test".Length, LintMode.Procedure);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
 
     /// <summary>
     ///     Test that the same sentence-start text in Descriptive mode does not trigger the
@@ -776,19 +802,22 @@ public class PartOfSpeechGuesserTests
 
     /// <summary>
     ///     Test that a noun modifier directly before another noun is recognized as a compound-noun
-    ///     component rather than a verb, for example "purge" in "purge cycles". Regression test for
-    ///     a reported false positive where a noun modifier before a plural technical noun was given
-    ///     verb-only dictionary suggestions.
+    ///     component rather than a verb, for example "backup" in "backup modules". Regression test
+    ///     for a reported false positive where a noun modifier before a plural technical noun was
+    ///     given verb-only dictionary suggestions. Uses "modules" (not "cycles") as the plural head
+    ///     noun because "cycles" is also an ordinary finite verb ("the valve cycles") and was
+    ///     removed from <see cref="PartOfSpeechGuesser"/>'s <c>CompoundNounHeadAllowList</c> for
+    ///     that reason; see <see cref="Guess_ImperativeLeadWithAmbiguousVerbNounPluralFollows_ReturnsVerb"/>.
     /// </summary>
     [Fact]
     public void Guess_NounModifierBeforeAllowedPluralCompoundHead_ReturnsNoun()
     {
-        // Arrange: "purge cycles" - "purge" modifies the plural head noun "cycles"
-        const string text = "Schedule the purge cycles for every shift.";
-        var index = text.IndexOf("purge", StringComparison.Ordinal);
+        // Arrange: "backup modules" - "backup" modifies the plural head noun "modules"
+        const string text = "Schedule the backup modules for every shift.";
+        var index = text.IndexOf("backup", StringComparison.Ordinal);
 
         // Act: execute the operation being tested
-        var result = PartOfSpeechGuesser.Guess(text, index, "purge".Length, LintMode.Descriptive);
+        var result = PartOfSpeechGuesser.Guess(text, index, "backup".Length, LintMode.Descriptive);
 
         // Assert: verify expected behavior
         Assert.Equal(PartOfSpeech.Noun, result);

@@ -121,21 +121,26 @@ internal static class PartOfSpeechGuesser
 
     /// <summary>
     ///     Common, unambiguous technical-writing plural nouns that are safe to recognize as the
-    ///     head of a noun-noun compound (for example "cycles" in "purge cycles") even though their
-    ///     spelling also ends in a bare "-s", which is otherwise deliberately excluded by
+    ///     head of a noun-noun compound (for example "units" in "calibration units") even though
+    ///     their spelling also ends in a bare "-s", which is otherwise deliberately excluded by
     ///     <see cref="LooksLikeCompoundNoun"/> as too ambiguous with 3rd-person-singular verb
     ///     forms (see that method's remarks). This is a closed, curated allow-list rather than a
-    ///     blanket relaxation, to avoid reintroducing that ambiguity.
+    ///     blanket relaxation, to avoid reintroducing that ambiguity. A second exclusion criterion
+    ///     applies on top of that general "-s" ambiguity, mirroring the rationale already
+    ///     documented on <see cref="FiniteVerbForms"/>: this list also deliberately omits any word
+    ///     that is also a common, ordinary finite verb in technical/procedural English (for
+    ///     example "blocks", "channels", "levels", "limits", "stages", "phases", "ports",
+    ///     "frames", "records", "pumps", "gauges", "displays", "switches", "relays", "cycles") -
+    ///     including one of those would let the strong noun-compound signal wrongly out-rank a
+    ///     genuine imperative/finite-verb use of the preceding match (for example misreading the
+    ///     imperative "Test" as a noun in "Test blocks daily.").
     /// </summary>
     private static readonly HashSet<string> CompoundNounHeadAllowList =
         new(StringComparer.OrdinalIgnoreCase)
         {
-            "cycles", "units", "blocks", "channels", "levels", "modules", "sensors", "components",
-            "parameters", "limits", "thresholds", "intervals", "stages", "phases", "segments",
-            "sections", "zones", "ports", "nodes", "frames", "cells", "records", "entries", "items",
-            "elements", "devices", "assemblies", "fittings", "connectors", "terminals", "circuits",
-            "valves", "pumps", "motors", "gauges", "displays", "panels", "switches", "relays",
-            "actuators"
+            "units", "modules", "sensors", "components", "parameters", "thresholds", "intervals",
+            "nodes", "cells", "entries", "items", "elements", "devices", "assemblies", "fittings",
+            "connectors", "terminals", "circuits", "valves", "motors", "panels", "actuators"
         };
 
     /// <summary>
