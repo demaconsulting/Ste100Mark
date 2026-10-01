@@ -606,7 +606,7 @@ public class StructuralRulesTests
     ///     heuristic, rather than as a verb.
     /// </summary>
     [Fact]
-    public void Evaluate_IngWordFollowedByPeriod_NotFlagged()
+    public void Evaluate_IngWordFollowedByCatenativeVerb_NotFlagged()
     {
         // Arrange: "reading" is the gerund complement of the catenative verb "continue"
         var segments = Paragraph("Continue reading.");
