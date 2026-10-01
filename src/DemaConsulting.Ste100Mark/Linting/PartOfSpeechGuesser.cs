@@ -247,9 +247,28 @@ internal static class PartOfSpeechGuesser
     ///     suffix/verbless-segment signals) that would otherwise have produced the conflict.
     /// </summary>
     /// <remarks>
+    ///     <para>
     ///     Use this overload (rather than <see cref="Guess"/>) wherever a confident role is
     ///     actionable even from a single strong signal category alone, for example
     ///     <see cref="DictionaryChecker"/>'s per-occurrence sense selection.
+    ///     </para>
+    ///     <para>
+    ///     <b>NounCompoundModifier-only precedence exception:</b> the
+    ///     <see cref="GuessSignals.StrongNoun"/>-wins tie-break below is deliberately narrowed by
+    ///     one case: when the weak, mode-dependent imperative-sentence-start signal
+    ///     (<see cref="GuessSignals.WeakVerb"/>) fired, and the <i>only</i> reason
+    ///     <see cref="GuessSignals.StrongNoun"/> fired is the <c>NounCompoundModifier</c> signal
+    ///     (a following word that merely looks like a plural technical noun - see
+    ///     <see cref="GuessSignals.StrongNounExcludingCompoundModifier"/>), the conflict is left
+    ///     inconclusive instead of resolving to <see cref="PartOfSpeech.Noun"/>. This is because a
+    ///     word that looks like a plural noun immediately after a sentence-initial word is just as
+    ///     consistent with "imperative verb + plural direct object" (for example "Check modules")
+    ///     as it is with "noun-compound modifier + noun head" (for example "check valve" as a
+    ///     two-word noun) - unlike the other <see cref="GuessSignals.StrongNoun"/> sources
+    ///     (article, possessive, preposition, etc.), which are never consistent with an imperative
+    ///     reading of the preceding word and so must continue to override the weak imperative
+    ///     signal exactly as before.
+    ///     </para>
     /// </remarks>
     public static PartOfSpeech? GuessEffective(string segmentText, int matchIndex, int matchLength, LintMode mode)
     {
@@ -275,6 +294,14 @@ internal static class PartOfSpeechGuesser
 
         if (signals.StrongNoun && !signals.StrongVerb)
         {
+            // NounCompoundModifier-only exception (see remarks above): a weak imperative lead is
+            // just as consistent with "imperative + plural object" as with "noun-compound
+            // modifier", so do not let that single ambiguous signal override it.
+            if (signals.WeakVerb && !signals.StrongNounExcludingCompoundModifier)
+            {
+                return null;
+            }
+
             return PartOfSpeech.Noun;
         }
 
@@ -288,7 +315,26 @@ internal static class PartOfSpeechGuesser
     ///     <see cref="Guess"/> (which treats all four as a simple two-way OR) and
     ///     <see cref="GuessEffective"/> (which can additionally resolve on strong-only evidence).
     /// </summary>
-    private readonly record struct GuessSignals(bool StrongVerb, bool StrongNoun, bool WeakVerb, bool WeakNoun);
+    /// <param name="StrongVerb">See <see cref="HasOtherVerbSignal"/>.</param>
+    /// <param name="StrongNoun">
+    ///     The full strong-noun evidence, including the <c>NounCompoundModifier</c> signal (see
+    ///     <see cref="HasNounSignal"/>).
+    /// </param>
+    /// <param name="StrongNounExcludingCompoundModifier">
+    ///     The same strong-noun evidence as <paramref name="StrongNoun"/>, but with the
+    ///     <c>NounCompoundModifier</c> signal excluded. <see cref="GuessEffective"/> uses this to
+    ///     detect when <paramref name="StrongNoun"/>'s only contributing signal was
+    ///     <c>NounCompoundModifier</c>, which is the one strong-noun source genuinely ambiguous
+    ///     with an imperative-sentence-start reading (see <see cref="GuessEffective"/>'s remarks).
+    /// </param>
+    /// <param name="WeakVerb">The mode-dependent imperative-sentence-start signal.</param>
+    /// <param name="WeakNoun">The plural-suffix/verbless-segment fallback signals.</param>
+    private readonly record struct GuessSignals(
+        bool StrongVerb,
+        bool StrongNoun,
+        bool StrongNounExcludingCompoundModifier,
+        bool WeakVerb,
+        bool WeakNoun);
 
     /// <summary>Computes every individual signal category for one match (see <see cref="GuessSignals"/>).</summary>
     private static GuessSignals ComputeSignals(string segmentText, int matchIndex, int matchLength, LintMode mode)
@@ -305,10 +351,10 @@ internal static class PartOfSpeechGuesser
 
         var weakVerb = isSentenceStart && mode == LintMode.Procedure;
         var strongVerb = HasOtherVerbSignal(matchText, precedingWord, followingWord, secondFollowingWord);
-        var (strongNoun, weakNoun) =
+        var (strongNoun, strongNounExcludingCompoundModifier, weakNoun) =
             HasNounSignal(matchText, precedingWord, governingWord, followingWord, segmentText, strongVerb);
 
-        return new GuessSignals(strongVerb, strongNoun, weakVerb, weakNoun);
+        return new GuessSignals(strongVerb, strongNoun, strongNounExcludingCompoundModifier, weakVerb, weakNoun);
     }
 
     /// <summary>
@@ -449,7 +495,19 @@ internal static class PartOfSpeechGuesser
     ///     (see <see cref="GuessSignals"/>). <see cref="Guess"/> treats both tiers identically (a
     ///     plain OR), preserving this method's previous, unsplit behavior exactly.
     /// </summary>
-    private static (bool StrongNoun, bool WeakNoun) HasNounSignal(
+    /// <remarks>
+    ///     The strong-noun tier is additionally returned with the <c>NounCompoundModifier</c> term
+    ///     excluded (<c>StrongNounExcludingCompoundModifier</c>), because that single term is not
+    ///     as unambiguous as the others: a following word that merely looks like a plural technical
+    ///     noun is equally consistent with "imperative verb + plural direct object" (for example
+    ///     "Check modules") as with "noun-compound modifier + noun head" (for example "check
+    ///     valve"). <see cref="GuessEffective"/> uses the excluding variant to decide whether that
+    ///     ambiguity alone should be allowed to override a weak imperative-sentence-start signal;
+    ///     every other strong-noun source (article, possessive, preposition, etc.) is never
+    ///     consistent with an imperative reading, so it is included in both return values and
+    ///     always overrides that weak signal exactly as before.
+    /// </remarks>
+    private static (bool StrongNoun, bool StrongNounExcludingCompoundModifier, bool WeakNoun) HasNounSignal(
         string matchText,
         string? precedingWord,
         string? governingWord,
@@ -457,7 +515,7 @@ internal static class PartOfSpeechGuesser
         string segmentText,
         bool hasOtherVerbSignal)
     {
-        var strongNoun =
+        var strongNounExcludingCompoundModifier =
             (precedingWord is not null && Articles.Contains(precedingWord)) // Article
             || (precedingWord is not null
                 && (PossessivePronouns.Contains(precedingWord) // Possessive
@@ -471,7 +529,6 @@ internal static class PartOfSpeechGuesser
                     || Prepositions.Contains(governingWord))) // DeterminerGovernsThroughModifiers
             || string.Equals(followingWord, "of", StringComparison.OrdinalIgnoreCase) // NounPhraseContinuation
             || (followingWord is not null && IsFiniteVerbForm(followingWord)) // FollowedByFiniteVerb (subject position)
-            || (followingWord is not null && LooksLikeCompoundNoun(followingWord) && !hasOtherVerbSignal) // NounCompoundModifier
             || (followingWord is not null
                 && (string.Equals(followingWord, "not", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(followingWord, "never", StringComparison.OrdinalIgnoreCase))
@@ -481,6 +538,11 @@ internal static class PartOfSpeechGuesser
             || (followingWord is not null && LooksLikeNumber(followingWord) && !followingWord.Contains('.')
                 && !hasOtherVerbSignal); // FollowedByBareIdentifier (e.g. "Block 0")
 
+        var nounCompoundModifier =
+            followingWord is not null && LooksLikeCompoundNoun(followingWord) && !hasOtherVerbSignal;
+
+        var strongNoun = strongNounExcludingCompoundModifier || nounCompoundModifier;
+
         var weakNoun =
             (matchText.EndsWith('s') && !matchText.EndsWith("ss", StringComparison.OrdinalIgnoreCase)
                 && !ModalAuxiliaries.Contains(matchText) && !BeAuxiliaries.Contains(matchText)
@@ -489,7 +551,7 @@ internal static class PartOfSpeechGuesser
                                                              // ending in "s")
             || (!hasOtherVerbSignal && !HasAnyFiniteVerb(segmentText)); // VerblessSegment
 
-        return (strongNoun, weakNoun);
+        return (strongNoun, strongNounExcludingCompoundModifier, weakNoun);
     }
 
     /// <summary>
@@ -748,11 +810,12 @@ internal static class PartOfSpeechGuesser
     ///     <para>
     ///     Decision rule: a confident <see cref="PartOfSpeech.Verb"/> result requires genuine
     ///     progressive/catenative-complement evidence (preceded by a "to be" auxiliary, a modal, or
-    ///     an infinitive marker) or - when the match is not itself sentence-initial and does not
-    ///     immediately follow a <see cref="CatenativeVerbs"/> entry - a transitive-object follow-on
-    ///     (followed by an article, object pronoun, or qualified number) with no conflicting noun
-    ///     evidence. Everything else defaults to not-flagged (noun/adjective), matching this
-    ///     feature's intent of reducing false positives on gerunds and participial adjectives.
+    ///     an infinitive marker) or - when the match is not itself sentence-initial, does not
+    ///     immediately follow a <see cref="CatenativeVerbs"/> entry, and does not immediately
+    ///     follow a <see cref="Prepositions"/> entry - a transitive-object follow-on (followed by
+    ///     an article, object pronoun, or qualified number) with no conflicting noun evidence.
+    ///     Everything else defaults to not-flagged (noun/adjective), matching this feature's intent
+    ///     of reducing false positives on gerunds and participial adjectives.
     ///     </para>
     ///     <para>
     ///     The sentence-initial and catenative-complement gate on the transitive-object follow-on
@@ -760,7 +823,13 @@ internal static class PartOfSpeechGuesser
     ///     catenative-verb gerund complement (e.g. "continue monitoring the gauge") is very often
     ///     itself followed by a direct object, so without this gate the transitive-object signal
     ///     alone would wrongly classify both as verbs before the sentence-initial/catenative noun
-    ///     evidence below ever gets a chance to fire.
+    ///     evidence below ever gets a chance to fire. The additional preposition gate exists for
+    ///     the same reason: a gerund that is itself the object of a preposition (e.g. "before
+    ///     <c>testing</c> the gauge") can still take its own direct object, so being preceded by a
+    ///     preposition does not imply there is no following word for the transitive-object
+    ///     follow-on to match against - without this explicit gate, that following direct object
+    ///     would wrongly trigger the transitive-object shortcut before the preposition-governed
+    ///     noun evidence below ever gets a chance to fire.
     ///     </para>
     /// </remarks>
     internal static PartOfSpeech? GuessIngFormRole(string segmentText, int matchIndex, int matchLength)
@@ -773,6 +842,7 @@ internal static class PartOfSpeechGuesser
         var followingWord = followingWords.Length > 0 ? followingWords[0] : null;
         var isSentenceStart = IsSentenceStart(segmentText, matchIndex);
         var precededByCatenativeVerb = precedingWord is not null && CatenativeVerbs.Contains(precedingWord);
+        var precededByPreposition = precedingWord is not null && Prepositions.Contains(precedingWord);
 
         var progressiveOrInfinitiveVerb =
             (precedingWord is not null && BeAuxiliaries.Contains(precedingWord)) // progressive, e.g. "is closing"
@@ -786,7 +856,7 @@ internal static class PartOfSpeechGuesser
             return PartOfSpeech.Verb;
         }
 
-        if (!isSentenceStart && !precededByCatenativeVerb)
+        if (!isSentenceStart && !precededByCatenativeVerb && !precededByPreposition)
         {
             var transitiveObjectVerb =
                 (followingWord is not null && Articles.Contains(followingWord)) // transitive object, e.g. "closing the valve"
@@ -796,11 +866,13 @@ internal static class PartOfSpeechGuesser
             if (transitiveObjectVerb)
             {
                 // Direct transitive-object evidence wins outright, but only once the
-                // sentence-initial/catenative-complement signals above have had the chance to be
-                // checked first (see remarks) - a gerund-phrase object of a preposition (e.g.
-                // "before testing.") has no following direct object, so it never reaches this
-                // branch - only a genuine verbal use does (e.g. "before closing the valve", "is
-                // checking the panel").
+                // sentence-initial/catenative-complement/preposition-object signals above have had
+                // the chance to be checked first (see remarks). A gerund that is itself the object
+                // of a preposition (e.g. "before testing the gauge") can still be immediately
+                // followed by its own direct object, so being preceded by a preposition does not
+                // imply there is nothing left for this follow-on to match against; the explicit
+                // "!precededByPreposition" gate above is what keeps that case from reaching this
+                // branch at all, regardless of whether it has a following object.
                 return PartOfSpeech.Verb;
             }
         }

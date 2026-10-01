@@ -218,6 +218,37 @@ public class PartOfSpeechGuesserTests
     }
 
     /// <summary>
+    ///     Test that an imperative verb at the start of a Procedure-mode sentence does NOT resolve
+    ///     as a noun via <see cref="PartOfSpeechGuesser.GuessEffective"/> merely because its
+    ///     following word ("modules") is an allow-listed plural technical noun
+    ///     (<c>NounCompoundModifier</c> signal). Regression test for a reported bug where that
+    ///     single, genuinely ambiguous signal (a following word that looks like a plural noun is
+    ///     just as consistent with "imperative verb + plural direct object" as with "noun-compound
+    ///     modifier + noun head") was treated as equally unambiguous as the other strong-noun
+    ///     sources, so it silently out-ranked the weak imperative-sentence-start signal and
+    ///     misclassified the leading imperative's direct object as a noun-compound head. The
+    ///     implementation resolves this conflict as inconclusive (<see langword="null"/>) rather
+    ///     than guessing either role.
+    /// </summary>
+    [Fact]
+    public void GuessEffective_ImperativeLeadWithAllowListedPluralObject_DoesNotReturnNoun()
+    {
+        // Arrange: "Check modules daily." begins a Procedure-mode segment (weak imperative
+        // signal), and is immediately followed by "modules", an allow-listed compound-noun head
+        // that is also a plausible plural direct object of the imperative "Check". A trailing
+        // finite verb ("operates") elsewhere in the segment keeps the unrelated verbless-segment
+        // noun signal from firing, isolating the NounCompoundModifier-only conflict under test.
+        const string text = "Check modules daily. The system operates continuously.";
+        var index = text.IndexOf("Check", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.GuessEffective(text, index, "Check".Length, LintMode.Procedure);
+
+        // Assert: verify expected behavior - the conflict must not resolve to Noun
+        Assert.NotEqual(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
     ///     Test that the same sentence-start text in Descriptive mode does not trigger the
     ///     imperative signal, resolving as inconclusive when no other signal fires.
     /// </summary>

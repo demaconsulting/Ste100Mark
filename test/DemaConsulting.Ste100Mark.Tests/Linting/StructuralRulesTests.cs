@@ -661,8 +661,12 @@ public class StructuralRulesTests
     [Fact]
     public void Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic()
     {
-        // Arrange: the -ing word appears only inside an inline code span
-        var segments = Paragraph("Run the `checking` command before closing the tool fully.");
+        // Arrange: the -ing word appears only inside an inline code span. "while" (not a
+        // preposition) precedes "closing" so the genuine verbal gerund-with-object reading is
+        // exercised without also tripping the preposition-object gate added for
+        // GuessIngFormRole's "before testing the gauge" fix (see
+        // Evaluate_IngWordAsObjectOfPrepositionWithDirectObject_NotFlagged).
+        var segments = Paragraph("Run the `checking` command while closing the tool fully.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
@@ -699,8 +703,12 @@ public class StructuralRulesTests
     [Fact]
     public void Evaluate_IngWordOnAllowedTermsList_NotFlagged()
     {
-        // Arrange: "metering" is approved via the file's resolved allow list
-        var segments = Paragraph("Check the metering system before closing the panel.");
+        // Arrange: "metering" is approved via the file's resolved allow list. "while" (not a
+        // preposition) precedes "closing" so the genuine verbal gerund-with-object reading is
+        // exercised without also tripping the preposition-object gate added for
+        // GuessIngFormRole's "before testing the gauge" fix (see
+        // Evaluate_IngWordAsObjectOfPrepositionWithDirectObject_NotFlagged).
+        var segments = Paragraph("Check the metering system while closing the panel.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate(
@@ -742,8 +750,12 @@ public class StructuralRulesTests
     [Fact]
     public void Evaluate_IngWordStringInExclusionList_NotFlagged()
     {
-        // Arrange: "string" ends in "-ing" but is a base-form noun/verb, not a verb form
-        var segments = Paragraph("String the cable before closing the panel.");
+        // Arrange: "string" ends in "-ing" but is a base-form noun/verb, not a verb form. "while"
+        // (not a preposition) precedes "closing" so the genuine verbal gerund-with-object reading
+        // is exercised without also tripping the preposition-object gate added for
+        // GuessIngFormRole's "before testing the gauge" fix (see
+        // Evaluate_IngWordAsObjectOfPrepositionWithDirectObject_NotFlagged).
+        var segments = Paragraph("String the cable while closing the panel.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
@@ -823,6 +835,30 @@ public class StructuralRulesTests
     {
         // Arrange: "testing" is the object of "before", with no direct object of its own
         var segments = Paragraph("Check the gauge reading before testing.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("testing"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word used as the object of a preposition is not flagged even
+    ///     when it is itself immediately followed by its own direct object. Regression test for a
+    ///     reported false positive where the transitive-object follow-on shortcut was gated only
+    ///     for sentence starts and catenative complements, not for a preceding preposition, so a
+    ///     gerund object of a preposition that itself took a direct object (e.g. "before
+    ///     <c>testing</c> the gauge") fell through to that shortcut and was wrongly classified as a
+    ///     verb.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordAsObjectOfPrepositionWithDirectObject_NotFlagged()
+    {
+        // Arrange: "testing" is the object of the preposition "before", but unlike the previous
+        // preposition-object test, it is also immediately followed by its own direct object ("the
+        // gauge"), which is the scenario that previously reached the transitive-object shortcut
+        var segments = Paragraph("Confirm the valve is closed before testing the gauge for leaks.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
@@ -1081,6 +1117,33 @@ public class StructuralRulesTests
         // Arrange: "Keep X closed, but Y is checked weekly." - the "but"-clause is independent of
         // the imperative lead and names no stative participle, so it is a genuine passive
         var segments = Paragraph("Keep the valve closed, but the gauge is checked weekly.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that the imperative-lead passive-voice exemption is scoped to the clause the
+    ///     imperative actually governs even when the two clauses are joined by a bare semicolon
+    ///     (not a comma plus coordinating conjunction), so a genuine passive construction in the
+    ///     second independent clause still gets flagged. Regression test for a reported bug where
+    ///     <see cref="StructuralRules"/>'s clause-boundary regex recognized only the comma plus
+    ///     coordinating-conjunction boundary, not a semicolon, even though
+    ///     <see cref="SentenceAnalyzer"/> keeps semicolon-separated clauses within a single
+    ///     sentence - so the exemption wrongly extended across the semicolon and suppressed the
+    ///     second clause's genuine passive construction as if it were still governed by the leading
+    ///     imperative.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeLeadWithSemicolonIndependentClause_StillFlagged()
+    {
+        // Arrange: "Keep X closed; Y is checked weekly." - the clause after the semicolon is
+        // independent of the imperative lead and names no stative participle, so it is a genuine
+        // passive construction that must not be exempted by the leading imperative
+        var segments = Paragraph("Keep the cover closed; the gauge is checked weekly.");
 
         // Act: execute the operation being tested
         var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());

@@ -374,9 +374,11 @@ internal static class StructuralRules
     ///     clause's "is"/"are" reads as a state the instruction asks the reader to verify or
     ///     maintain, not a passive construction - see <see cref="ImperativeLeadClauseEnd"/> for how
     ///     the governed clause's boundary is determined, so that a later, independent clause after a
-    ///     coordinating conjunction (for example the "but"-clause in "Keep the cover closed, but the
-    ///     report is reviewed weekly.") is still evaluated as an ordinary, non-exempted passive
-    ///     construction; either exemption is itself overridden - the match still counts as passive -
+    ///     bare semicolon or a coordinating conjunction (for example the second clause in "Keep the
+    ///     cover closed; the report is reviewed weekly." or the "but"-clause in "Keep the cover
+    ///     closed, but the report is reviewed weekly.") is still evaluated as an ordinary,
+    ///     non-exempted passive construction; either exemption is itself overridden - the match
+    ///     still counts as passive -
     ///     when an explicit "by &lt;agent&gt;" phrase immediately follows the participle, since
     ///     naming the agent makes the construction unambiguously passive again. "was"/"were"/
     ///     "be"/"being"/"been" matches are never exempted by either rule, since the
@@ -453,14 +455,15 @@ internal static class StructuralRules
 
     /// <summary>
     ///     Matches a comma followed by a coordinating conjunction ("but"/"and"/"or"/"so"), used by
-    ///     <see cref="ImperativeLeadClauseEnd"/> to find where an independent clause begins after an
-    ///     imperative-lead clause. Deliberately only matches these four coordinating conjunctions,
-    ///     not subordinating conjunctions such as "while"/"when"/"if"/"because": a subordinating
-    ///     conjunction introduces a dependent clause that is still part of the same imperative
-    ///     instruction (for example the "while"-clause in "Keep the panel closed while it is
-    ///     energized."), whereas a coordinating conjunction after a comma joins a separate,
-    ///     independent clause that the imperative no longer governs (for example the "but"-clause in
-    ///     "Keep the cover closed, but the report is reviewed weekly.").
+    ///     <see cref="ImperativeLeadClauseEnd"/> (together with a bare semicolon boundary - see that
+    ///     method's remarks) to find where an independent clause begins after an imperative-lead
+    ///     clause. Deliberately only matches these four coordinating conjunctions, not subordinating
+    ///     conjunctions such as "while"/"when"/"if"/"because": a subordinating conjunction
+    ///     introduces a dependent clause that is still part of the same imperative instruction (for
+    ///     example the "while"-clause in "Keep the panel closed while it is energized."), whereas a
+    ///     coordinating conjunction after a comma joins a separate, independent clause that the
+    ///     imperative no longer governs (for example the "but"-clause in "Keep the cover closed, but
+    ///     the report is reviewed weekly.").
     /// </summary>
     private static readonly Regex CoordinatingConjunctionAfterCommaRegex =
         new(@",\s*(?:but|and|or|so)\b", RegexOptions.IgnoreCase, RegexTimeout);
@@ -470,14 +473,39 @@ internal static class StructuralRules
     ///     imperative-lead sentence's leading instruction, for use by
     ///     <see cref="HasGenuinePassiveMatch"/> to limit its imperative-lead passive-voice exemption
     ///     to that clause rather than applying it to the whole sentence. The governed clause ends at
-    ///     the first comma immediately followed by a coordinating conjunction ("but"/"and"/"or"/
-    ///     "so"), since that introduces a new, independent clause the imperative no longer governs;
-    ///     when no such boundary exists, the governed clause is the entire sentence.
+    ///     whichever comes first: a bare semicolon, or a comma immediately followed by a
+    ///     coordinating conjunction ("but"/"and"/"or"/"so") - see
+    ///     <see cref="CoordinatingConjunctionAfterCommaRegex"/>; when neither boundary exists, the
+    ///     governed clause is the entire sentence.
     /// </summary>
+    /// <remarks>
+    ///     A semicolon is always treated as an independent-clause boundary, with no "governed"
+    ///     exception analogous to a subordinating conjunction: unlike "while"/"when"/"if"/"because",
+    ///     which can introduce a dependent clause the imperative still governs, there is no
+    ///     subordinating use of a semicolon in English - a semicolon always joins two independent
+    ///     clauses (see <see cref="SentenceAnalyzer"/>, which deliberately keeps semicolon-separated
+    ///     clauses within one sentence rather than splitting on them). Without this boundary, the
+    ///     imperative-lead exemption would wrongly extend across the semicolon and exempt a genuine
+    ///     passive construction in the second, unrelated independent clause (for example "the report
+    ///     is reviewed weekly" in "Keep the cover closed; the report is reviewed weekly.").
+    /// </remarks>
     private static int ImperativeLeadClauseEnd(string sentenceText)
     {
-        var match = CoordinatingConjunctionAfterCommaRegex.Match(sentenceText);
-        return match.Success ? match.Index : sentenceText.Length;
+        var semicolonIndex = sentenceText.IndexOf(';');
+        var conjunctionMatch = CoordinatingConjunctionAfterCommaRegex.Match(sentenceText);
+
+        var boundary = sentenceText.Length;
+        if (semicolonIndex >= 0)
+        {
+            boundary = Math.Min(boundary, semicolonIndex);
+        }
+
+        if (conjunctionMatch.Success)
+        {
+            boundary = Math.Min(boundary, conjunctionMatch.Index);
+        }
+
+        return boundary;
     }
 
     /// <summary>
