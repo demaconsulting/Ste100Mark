@@ -1268,11 +1268,11 @@ public class StructuralRulesTests
 
     /// <summary>
     ///     Test that a genuine imperative with a coordinated bare-plural object (here "bolts and
-    ///     nuts", with no later "to be" copula) is still correctly recognized as an imperative, not
-    ///     misread as a declarative sentence, now that "and"/"or" no longer unconditionally stop the
-    ///     subject-continuation scan. The scan continues past "and" looking for a copula, finds
-    ///     none before the sentence ends, and still correctly exempts this imperative's "closed"
-    ///     participle (not a passive-voice construction here).
+    ///     nuts", with no "to be" copula anywhere in the sentence) is still correctly recognized as
+    ///     an imperative, not misread as a declarative sentence, now that "and"/"or" no longer
+    ///     unconditionally stop the subject-continuation scan. The scan continues past "and"
+    ///     looking for a copula and finds none before the sentence ends, so this sentence (which
+    ///     has no "is"/"are" + participle match at all) still produces no passive-voice diagnostic.
     /// </summary>
     [Fact]
     public void Evaluate_PassiveVoiceImperativeCoordinatedBareObject_NotFlagged()
@@ -1285,6 +1285,59 @@ public class StructuralRulesTests
 
         // Assert: verify expected behavior
         Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a genuine imperative with a coordinated bare-plural object immediately followed
+    ///     by a non-stative "is"/"are" + participle state-check (here "Confirm gauges and valves
+    ///     are calibrated.") is still correctly exempted from the passive-voice advisory, the same
+    ///     way a single-noun object followed by a state check already is (see
+    ///     <see cref="Evaluate_PassiveVoiceImperativeWithDeterminerBeforeCopula_NotFlagged"/>).
+    ///     Regression test for a reported bug where letting the scan continue past "and"/"or"
+    ///     unconditionally would reach this genuine "are calibrated" match and misclassify the
+    ///     whole sentence as declarative, losing the imperative-lead exemption and producing a
+    ///     false-positive passive-voice diagnostic for this legitimate instruction. The guard that
+    ///     stops the scan when a coordinating conjunction is followed by a recognized verb (not
+    ///     reached here, since "valves" is a noun) must not trigger for this coordinated-object
+    ///     case either.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeCoordinatedObjectWithLaterStateCheck_NotFlagged()
+    {
+        // Arrange: gauges and valves form the imperative's coordinated bare-plural object; the
+        // participle calibrated is deliberately excluded from the stative-participle allow-list, so
+        // only a correctly-recognized imperative-lead exemption explains this not being flagged
+        var segments = Paragraph("Confirm gauges and valves are calibrated.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a coordinating conjunction joining the imperative's bare object to a <em>second
+    ///     coordinated instruction</em> (here "and verify" in "Confirm gauges and verify valves are
+    ///     calibrated.") correctly stops the subject-continuation scan rather than continuing on to
+    ///     the later "are calibrated" match. Regression test ensuring the verb-boundary guard on the
+    ///     coordinating-conjunction scan actually prevents treating a second coordinated verb phrase
+    ///     as more of the same noun phrase; "calibrated" is governed by the second instruction's own
+    ///     clause, not exempted by the first lead verb, and is deliberately excluded from the
+    ///     stative-participle allow-list so a missing exemption here would still be correctly
+    ///     flagged.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeSecondCoordinatedVerb_StillFlagged()
+    {
+        // Arrange: "and verify" coordinates a second instruction, not a second object noun
+        var segments = Paragraph("Confirm gauges and verify valves are calibrated.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
     }
 
     /// <summary>
