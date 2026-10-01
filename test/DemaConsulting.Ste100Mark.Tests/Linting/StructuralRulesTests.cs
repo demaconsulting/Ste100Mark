@@ -1341,6 +1341,30 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that a coordinating conjunction followed by a word that is both a recognized
+    ///     imperative lead verb and a prenominal-adjective candidate (here "and open" in "Confirm
+    ///     gauges and open valves are calibrated.") is not mistaken for a second coordinated
+    ///     instruction. Regression test for a reported bug where the verb-boundary guard treated
+    ///     every <see cref="StructuralRules"/>-recognized lead verb after "and"/"or" as starting a
+    ///     new clause, even when - as here - it is instead a prenominal adjective modifying the
+    ///     following noun ("open valves") within the first imperative's own coordinated object;
+    ///     "calibrated" is deliberately excluded from the stative-participle allow-list, so only a
+    ///     correctly-recognized imperative-lead exemption explains this not being flagged.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeCoordinatedObjectWithAdjectiveAmbiguousVerb_NotFlagged()
+    {
+        // Arrange: "open" coordinates an adjective+noun object, not a second instruction
+        var segments = Paragraph("Confirm gauges and open valves are calibrated.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
     ///     Test that an imperative lead whose captured lookahead includes a determiner before the
     ///     "to be" copula (here "Confirm the gasket is ...") correctly starts its
     ///     subject-continuation scan immediately after the lead verb, not after the regex's
