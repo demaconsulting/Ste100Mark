@@ -305,10 +305,10 @@ alternatives list alongside "operating", only "operating" is suggested, since su
 "running" as a replacement for "running" would be a meaningless no-op.
 
 The part-of-speech heuristic also recognizes a curated set of common technical plural nouns
-(for example "cycles", "units", "sensors") as the head of a noun-noun compound, even though
+(for example "modules", "units", "sensors") as the head of a noun-noun compound, even though
 each of these words ends in "-s", which is otherwise treated as ambiguous with a verb form.
-For example, in "Purge cycles are monitored.", "purge" is recognized as a noun modifier (not a
-verb) because it is immediately followed by the recognized compound-noun head "cycles".
+For example, in "Backup modules are monitored.", "backup" is recognized as a noun modifier (not
+a verb) because it is immediately followed by the recognized compound-noun head "modules".
 
 A table's column-header row (for example a "Hazard"/"Use" header above a table of data rows)
 and a bold admonition label at the very start of a block (for example `**Caution.**`) are

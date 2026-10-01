@@ -44,11 +44,13 @@ verb immediately followed by "not"/"never" (for example "shall not", "does not")
 verbal rather than being misread as a noun.
 
 **CompoundNounHeadAllowList**: `HashSet<string>` of common, unambiguous technical-writing
-plural nouns (for example `cycles`, `units`, `sensors`, `valves`) that are safe to recognize
-as the head of a noun-noun compound (for example "purge cycles") even though their spelling
+plural nouns (for example `modules`, `units`, `sensors`, `valves`) that are safe to recognize
+as the head of a noun-noun compound (for example "backup modules") even though their spelling
 also ends in a bare "-s" - otherwise deliberately excluded by `LooksLikeCompoundNoun` as too
 ambiguous with 3rd-person-singular verb forms. A closed, curated allow-list rather than a
-blanket relaxation.
+blanket relaxation; it also deliberately omits any word that, like `cycles`, is also an
+ordinary finite verb (see `FiniteVerbForms` below), to avoid overriding a genuine imperative
+verb use.
 
 **FiniteVerbForms**: `HashSet<string>` of closed-class, third-person-singular-present finite
 verb forms (for example "moves", "has", "operates") signaling the preceding match is the
@@ -141,7 +143,7 @@ a decimal point (e.g. "use 0.12") or a following unit abbreviation (e.g. "set 5 
 quantifier, or preposition; `FollowedByFiniteVerb` requires `followingWord` to be a modal/
 `"to be"` auxiliary or a `FiniteVerbForms` entry (subject position); `NounCompoundModifier`
 requires `followingWord` to look like a compound-noun head (see `LooksLikeCompoundNoun`) with no
-strong Verb signal fired (e.g. "test fixture", "purge cycles"); `FollowedByNegation` requires
+strong Verb signal fired (e.g. "test fixture", "backup modules"); `FollowedByNegation` requires
 `matchText` to not itself be a modal/`"to be"`/`OtherAuxiliaryVerbs` auxiliary (e.g. "Trigger not
 issued" but not "shall not"); `FollowedByBareIdentifier` requires no strong Verb signal fired
 (e.g. "Block 0").
