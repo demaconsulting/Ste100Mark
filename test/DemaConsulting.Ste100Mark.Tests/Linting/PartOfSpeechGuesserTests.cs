@@ -732,6 +732,28 @@ public class PartOfSpeechGuesserTests
     }
 
     /// <summary>
+    ///     Test that a bare-identifier number followed by an unrelated short word (here "test",
+    ///     four letters) still resolves as a noun, not a verb - the short word must not be
+    ///     mistaken for a unit-of-measure abbreviation just because it is short. Regression test
+    ///     for a reported bug where any alphabetic word of four or fewer letters was accepted as a
+    ///     unit, wrongly "qualifying" an unrelated bare-identifier number and selecting a verb
+    ///     reading over the correct noun-label reading.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByBareIdentifierNumberThenUnrelatedShortWord_ReturnsNoun()
+    {
+        // Arrange: "Block 0 test failed" - "test" is not a unit of measure
+        const string text = "Block 0 test failed.";
+        var index = text.IndexOf("Block", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "Block".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
     ///     Test that a decimal number following a match still resolves as a verb (the "bare
     ///     identifier" noun signal is restricted to whole numbers with no decimal point), so the
     ///     existing "use 0.12 ohms" verb behavior is unaffected by the new bare-identifier signal.

@@ -619,6 +619,29 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that an <c>-ing</c> word immediately following "consider" (a gerund-taking
+    ///     catenative verb) is treated as a noun, even when immediately followed by a direct
+    ///     object ("the gauge") that would otherwise trigger the transitive-object verb signal.
+    ///     Regression test for a reported bug where "consider" was missing from the catenative
+    ///     verb list used by <see cref="PartOfSpeechGuesser.GuessIngFormRole"/>, so "Consider
+    ///     testing the gauge." still resolved "testing" as a verb via the transitive-object
+    ///     signal.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordFollowedByConsiderCatenativeVerb_NotFlagged()
+    {
+        // Arrange: "testing" is the gerund complement of the catenative verb "consider", despite
+        // being immediately followed by the direct object "the gauge"
+        var segments = Paragraph("Consider testing the gauge.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: no ing-form diagnostic for the gerund complement
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM");
+    }
+
+    /// <summary>
     ///     Test that an <c>-ing</c> word touching a sentence-ending period (the last word before
     ///     the period, with no following word for the transitive-object/strong-noun evidence to
     ///     examine) is not flagged, since <see cref="PartOfSpeechGuesser.GuessIngFormRole"/>

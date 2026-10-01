@@ -451,13 +451,27 @@ internal static class PartOfSpeechGuesser
         };
 
     /// <summary>
+    ///     Short unit-of-measure abbreviations recognized by <see cref="LooksLikeUnitWord"/>, kept
+    ///     as a closed, curated list rather than accepting any short alphabetic word, so that an
+    ///     unrelated short word immediately after a qualified number (for example "test" in
+    ///     "Block 0 test failed", or "pins"/"unit") is never mistaken for a unit abbreviation -
+    ///     which would otherwise wrongly treat the bare-identifier number as "qualified" and select
+    ///     a verb reading over the correct noun-label reading.
+    /// </summary>
+    private static readonly HashSet<string> ShortUnitAbbreviations =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "ms", "kg", "psi", "hz", "khz", "mhz", "ghz", "kv", "mv", "ma", "kw", "mw",
+            "pa", "kpa", "mpa", "db", "ft", "cm", "mm", "km", "lb", "oz", "hr", "min",
+            "sec", "rpm", "bar", "atm",
+        };
+
+    /// <summary>
     ///     Determines whether a word looks like a unit-of-measure abbreviation or name (for
     ///     example "ohms", "volts", "watts", "ms", "kg", "psi") rather than an ordinary function
-    ///     word. A word in <see cref="NamedUnitWords"/> is recognized regardless of length;
-    ///     otherwise the word must be a short, plain-alphabetic token (an abbreviation such as
-    ///     "ms"/"kg"/"psi") that is not any closed-class function word already recognized
-    ///     elsewhere in this heuristic - the length cap stays narrow for the unlisted-abbreviation
-    ///     fallback so it does not start over-matching unrelated short words.
+    ///     word or unrelated short word. A word in <see cref="NamedUnitWords"/> is recognized
+    ///     regardless of length; otherwise the word must be an entry in the closed
+    ///     <see cref="ShortUnitAbbreviations"/> list.
     /// </summary>
     private static bool LooksLikeUnitWord(string word)
     {
@@ -466,26 +480,7 @@ internal static class PartOfSpeechGuesser
             return false;
         }
 
-        if (NamedUnitWords.Contains(word))
-        {
-            return true;
-        }
-
-        if (word.Length > 4)
-        {
-            return false;
-        }
-
-        if (Articles.Contains(word) || Prepositions.Contains(word) || ModalAuxiliaries.Contains(word)
-            || BeAuxiliaries.Contains(word) || QuantifiersOrDemonstratives.Contains(word)
-            || ClauseBreakingWords.Contains(word) || PossessivePronouns.Contains(word)
-            || NonCompoundHeadWords.Contains(word)
-            || string.Equals(word, "to", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return true;
+        return NamedUnitWords.Contains(word) || ShortUnitAbbreviations.Contains(word);
     }
 
     /// <summary>
@@ -789,7 +784,7 @@ internal static class PartOfSpeechGuesser
             "begin", "begins", "began", "continue", "continues", "continued", "stop", "stops",
             "stopped", "keep", "keeps", "kept", "start", "starts", "started", "finish", "finishes",
             "finished", "avoid", "avoids", "avoided", "resume", "resumes", "resumed", "delay",
-            "delays", "delayed", "cease", "ceases", "ceased"
+            "delays", "delayed", "cease", "ceases", "ceased", "consider", "considers", "considered",
         };
 
     /// <summary>
