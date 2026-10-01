@@ -645,4 +645,42 @@ public class MarkdownProseExtractorTests
         Assert.Contains(spans, s => text.Substring(s.Start, s.Length) == "*Closing Procedures*");
         Assert.DoesNotContain(spans, s => text.Substring(s.Start, s.Length).Contains("Warning"));
     }
+
+    /// <summary>
+    ///     Test that an underscore inside a snake_case identifier is not mistaken for emphasis
+    ///     delimiters, so a disallowed term embedded in the identifier (for example "queue" in
+    ///     "retry_queue_limit") remains visible to DICT/<c>-ing</c> checks instead of being hidden
+    ///     inside a false "_queue_" emphasis span.
+    /// </summary>
+    [Fact]
+    public void FindQuotedOrEmphasisSpans_UnderscoreInsideIdentifier_ReturnsNoSpan()
+    {
+        // Arrange: a snake_case identifier whose middle segment looks like an emphasis span
+        const string text = "Set the retry_queue_limit before restarting the service.";
+
+        // Act: execute the operation being tested
+        var spans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(text);
+
+        // Assert: no span is produced, because the underscores sit between word characters,
+        // not at a word boundary
+        Assert.Empty(spans);
+    }
+
+    /// <summary>
+    ///     Test that genuine underscore emphasis - delimiters sitting at word boundaries, not
+    ///     inside an identifier - is still detected as a span.
+    /// </summary>
+    [Fact]
+    public void FindQuotedOrEmphasisSpans_GenuineUnderscoreEmphasis_ReturnsSpan()
+    {
+        // Arrange: a sentence with genuine underscore emphasis around a standalone word
+        const string text = "Confirm the reading is _accurate_ before logging it.";
+
+        // Act: execute the operation being tested
+        var spans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(text);
+
+        // Assert: the emphasis span is detected
+        var span = Assert.Single(spans);
+        Assert.Equal("_accurate_", text.Substring(span.Start, span.Length));
+    }
 }

@@ -470,8 +470,19 @@ internal static class MarkdownProseExtractor
     ///     recognize a "mention" (for example a cited document title or a quoted term) rather than
     ///     a "use" of the enclosed word(s) in ordinary prose.
     /// </summary>
+    /// <remarks>
+    ///     The underscore alternative requires a non-word character (or start/end of string)
+    ///     immediately outside each delimiter, not merely "not another underscore" - Markdown
+    ///     itself only treats <c>_..._</c> as emphasis when its delimiters sit at a word
+    ///     boundary, so without this check an identifier such as <c>snake_case_value</c> would
+    ///     wrongly match as <c>_case_</c> emphasis and hide a disallowed term ("case") inside it
+    ///     from the DICT and <c>-ing</c> checks.
+    /// </remarks>
     private static readonly Regex QuotedOrEmphasisSpanRegex =
-        new("\"[^\"\\n]+\"|(?<!\\*)\\*[^*\\n]+\\*(?!\\*)|(?<!_)_[^_\\n]+_(?!_)", RegexOptions.Compiled, RegexTimeout);
+        new(
+            "\"[^\"\\n]+\"|(?<!\\*)\\*[^*\\n]+\\*(?!\\*)|(?<!\\w)_[^_\\n]+_(?!\\w)",
+            RegexOptions.Compiled,
+            RegexTimeout);
 
     /// <summary>
     ///     Locates every bold admonition-label span (see <see cref="AdmonitionLabelRegex"/>) that

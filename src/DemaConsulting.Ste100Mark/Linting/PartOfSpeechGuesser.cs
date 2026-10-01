@@ -386,14 +386,41 @@ internal static class PartOfSpeechGuesser
     }
 
     /// <summary>
-    ///     Determines whether a word looks like a short unit-of-measure abbreviation (for example
-    ///     "ohms", "volts", "ms", "kg", "psi") rather than an ordinary function word, by requiring
-    ///     a short, plain-alphabetic token that is not any closed-class function word already
-    ///     recognized elsewhere in this heuristic.
+    ///     Named units of measure that are recognized by <see cref="LooksLikeUnitWord"/>
+    ///     regardless of length (for example "volts" and "watts" are five letters), kept as an
+    ///     explicit list rather than widening the short-abbreviation length cap below, so that
+    ///     adding a genuine unit name never also admits an unrelated longer word. This mirrors the
+    ///     units already documented for this heuristic (see <see cref="IsVerbQualifiedNumber"/>'s
+    ///     and this method's remarks, and the design doc's "set 5 volts" example).
+    /// </summary>
+    private static readonly HashSet<string> NamedUnitWords =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "ohms", "amps", "volts", "watts"
+        };
+
+    /// <summary>
+    ///     Determines whether a word looks like a unit-of-measure abbreviation or name (for
+    ///     example "ohms", "volts", "watts", "ms", "kg", "psi") rather than an ordinary function
+    ///     word. A word in <see cref="NamedUnitWords"/> is recognized regardless of length;
+    ///     otherwise the word must be a short, plain-alphabetic token (an abbreviation such as
+    ///     "ms"/"kg"/"psi") that is not any closed-class function word already recognized
+    ///     elsewhere in this heuristic - the length cap stays narrow for the unlisted-abbreviation
+    ///     fallback so it does not start over-matching unrelated short words.
     /// </summary>
     private static bool LooksLikeUnitWord(string word)
     {
-        if (word.Length is 0 or > 4 || !word.All(char.IsLetter))
+        if (word.Length == 0 || !word.All(char.IsLetter))
+        {
+            return false;
+        }
+
+        if (NamedUnitWords.Contains(word))
+        {
+            return true;
+        }
+
+        if (word.Length > 4)
         {
             return false;
         }
@@ -715,11 +742,20 @@ internal static class PartOfSpeechGuesser
     ///     </para>
     ///     <para>
     ///     Decision rule: a confident <see cref="PartOfSpeech.Verb"/> result requires genuine
-    ///     progressive/catenative-complement evidence (preceded by a "to be" auxiliary, a modal, an
-    ///     infinitive marker, or a catenative verb) or a transitive-object follow-on (followed by
-    ///     an article, object pronoun, or qualified number) with no conflicting noun evidence.
-    ///     Everything else defaults to not-flagged (noun/adjective), matching this feature's intent
-    ///     of reducing false positives on gerunds and participial adjectives.
+    ///     progressive/catenative-complement evidence (preceded by a "to be" auxiliary, a modal, or
+    ///     an infinitive marker) or - when the match is not itself sentence-initial and does not
+    ///     immediately follow a <see cref="CatenativeVerbs"/> entry - a transitive-object follow-on
+    ///     (followed by an article, object pronoun, or qualified number) with no conflicting noun
+    ///     evidence. Everything else defaults to not-flagged (noun/adjective), matching this
+    ///     feature's intent of reducing false positives on gerunds and participial adjectives.
+    ///     </para>
+    ///     <para>
+    ///     The sentence-initial and catenative-complement gate on the transitive-object follow-on
+    ///     is load-bearing: a gerund subject (e.g. "Metering the flow is required.") or a
+    ///     catenative-verb gerund complement (e.g. "continue monitoring the gauge") is very often
+    ///     itself followed by a direct object, so without this gate the transitive-object signal
+    ///     alone would wrongly classify both as verbs before the sentence-initial/catenative noun
+    ///     evidence below ever gets a chance to fire.
     ///     </para>
     /// </remarks>
     internal static PartOfSpeech? GuessIngFormRole(string segmentText, int matchIndex, int matchLength)
@@ -731,22 +767,37 @@ internal static class PartOfSpeechGuesser
         var followingWords = FollowingWords(segmentText, matchIndex + matchLength, 1);
         var followingWord = followingWords.Length > 0 ? followingWords[0] : null;
         var isSentenceStart = IsSentenceStart(segmentText, matchIndex);
+        var precededByCatenativeVerb = precedingWord is not null && CatenativeVerbs.Contains(precedingWord);
 
-        var strongVerb =
+        var progressiveOrInfinitiveVerb =
             (precedingWord is not null && BeAuxiliaries.Contains(precedingWord)) // progressive, e.g. "is closing"
             || (precedingWord is not null && ModalAuxiliaries.Contains(precedingWord))
-            || string.Equals(precedingWord, "to", StringComparison.OrdinalIgnoreCase)
-            || (followingWord is not null && Articles.Contains(followingWord)) // transitive object, e.g. "closing the valve"
-            || (followingWord is not null && ObjectPronouns.Contains(followingWord))
-            || (followingWord is not null && LooksLikeNumber(followingWord));
+            || string.Equals(precedingWord, "to", StringComparison.OrdinalIgnoreCase);
 
-        if (strongVerb)
+        if (progressiveOrInfinitiveVerb)
         {
-            // Direct transitive-object/progressive/catenative-governed evidence wins outright: a
-            // gerund-phrase object of a preposition (e.g. "before testing.") has no following
-            // direct object, so it never reaches this branch - only a genuine verbal use does
-            // (e.g. "before closing the valve", "is checking the panel").
+            // This evidence is anchored to the preceding word, not the sentence-initial/catenative
+            // position, so it is always safe to resolve as a verb outright.
             return PartOfSpeech.Verb;
+        }
+
+        if (!isSentenceStart && !precededByCatenativeVerb)
+        {
+            var transitiveObjectVerb =
+                (followingWord is not null && Articles.Contains(followingWord)) // transitive object, e.g. "closing the valve"
+                || (followingWord is not null && ObjectPronouns.Contains(followingWord))
+                || (followingWord is not null && LooksLikeNumber(followingWord));
+
+            if (transitiveObjectVerb)
+            {
+                // Direct transitive-object evidence wins outright, but only once the
+                // sentence-initial/catenative-complement signals above have had the chance to be
+                // checked first (see remarks) - a gerund-phrase object of a preposition (e.g.
+                // "before testing.") has no following direct object, so it never reaches this
+                // branch - only a genuine verbal use does (e.g. "before closing the valve", "is
+                // checking the panel").
+                return PartOfSpeech.Verb;
+            }
         }
 
         var strongNoun =
@@ -756,7 +807,7 @@ internal static class PartOfSpeechGuesser
                     || precedingWord.EndsWith("'s", StringComparison.OrdinalIgnoreCase)))
             || (precedingWord is not null && QuantifiersOrDemonstratives.Contains(precedingWord))
             || (precedingWord is not null && Prepositions.Contains(precedingWord)) // object of a preposition
-            || (precedingWord is not null && CatenativeVerbs.Contains(precedingWord)) // gerund complement
+            || precededByCatenativeVerb // gerund complement
             || (governingWord is not null
                 && (Articles.Contains(governingWord)
                     || PossessivePronouns.Contains(governingWord)

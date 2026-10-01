@@ -771,6 +771,49 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that an <c>-ing</c> word used as a sentence-initial subject noun is still not
+    ///     flagged even when it is itself immediately followed by a direct object (e.g. "the
+    ///     flow"). Regression test for a reported false positive where the transitive-object
+    ///     follow-on signal was checked before the sentence-initial noun signal, wrongly
+    ///     classifying a gerund subject as a verb merely because the next word was an article.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordAsSentenceInitialSubjectWithDirectObject_NotFlagged()
+    {
+        // Arrange: "Metering" is the sentence-initial subject noun, even though "the flow"
+        // immediately follows it like a transitive verb's direct object would
+        var segments = Paragraph("Metering the flow is required.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("Metering"));
+    }
+
+    /// <summary>
+    ///     Test that an <c>-ing</c> word immediately following a catenative verb (a gerund
+    ///     complement) is still not flagged even when it is itself immediately followed by a
+    ///     direct object (e.g. "the gauge"). Regression test for a reported false positive where
+    ///     the transitive-object follow-on signal was checked before the catenative-complement
+    ///     noun signal, wrongly classifying a catenative gerund complement as a verb merely
+    ///     because the next word was an article.
+    /// </summary>
+    [Fact]
+    public void Evaluate_IngWordAsCatenativeComplementWithDirectObject_NotFlagged()
+    {
+        // Arrange: "monitoring" is the gerund complement of the catenative verb "continue", even
+        // though "the gauge" immediately follows it like a transitive verb's direct object would
+        var segments = Paragraph("Continue monitoring the gauge.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-INGFORM" && d.Message.Contains("monitoring"));
+    }
+
+    /// <summary>
     ///     Test that an <c>-ing</c> word used as the object of a preposition, with no direct object
     ///     of its own, is not flagged (a nominal gerund, not a verbal one). Category E regression
     ///     test.

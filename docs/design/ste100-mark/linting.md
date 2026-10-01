@@ -41,11 +41,14 @@ The source folder contains eleven primary behavioral units plus two supporting v
   or a noun-modifier directly before another noun) and a *weak* tier (the broad
   plural-noun-suffix and whole-segment-verbless fallbacks). `Guess` treats both tiers as a
   plain OR; `GuessEffective` additionally resolves on strong-tier evidence alone when the
-  tiers disagree, and is the method `DictionaryChecker` and `StructuralRules`'s `-ing`-form
-  check call. A dedicated `GuessIngFormRole` variant applies the same strong/weak-signal
-  design to `-ing` words specifically, distinguishing a genuine present-participle verb
-  use from a gerund/process noun, a material noun (for example a substance or component
-  name ending in `-ing`), or a participial adjective modifying a following noun.
+  tiers disagree, and is the method `DictionaryChecker` calls for general noun/verb sense
+  selection. A dedicated `GuessIngFormRole` variant applies the same strong/weak-signal
+  design to `-ing` words specifically - deliberately treating suffix evidence differently
+  from `GuessEffective`, since every `-ing`-form candidate ends in that suffix by
+  construction - and is the method `StructuralRules`'s `-ing`-form check calls, to
+  distinguish a genuine present-participle verb use from a gerund/process noun, a material
+  noun (for example a substance or component name ending in `-ing`), or a participial
+  adjective modifying a following noun.
 - `MarkdownProseExtractor` - line-based Markdown extractor that keeps headings, list items,
   table cells, and paragraphs, removing fenced code blocks and link destinations while
   retaining inline code spans verbatim. A table's header row (the row immediately followed

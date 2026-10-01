@@ -694,6 +694,27 @@ public class PartOfSpeechGuesserTests
     }
 
     /// <summary>
+    ///     Test that a word immediately followed by a whole number and a named unit-of-measure word
+    ///     longer than the short-abbreviation length cap (for example "volts", five letters) still
+    ///     resolves as a verb, not a bare-identifier noun. Regression test for a reported false
+    ///     negative where the unit-word check's four-character cap excluded real unit names such as
+    ///     "volts"/"watts", falling through to the bare-identifier noun signal instead.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByWholeNumberAndNamedUnit_ReturnsVerb()
+    {
+        // Arrange: "set 5 volts" - "volts" qualifies the number as a measured value, not a label
+        const string text = "Technicians set 5 volts across the terminals.";
+        var index = text.IndexOf("set", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "set".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
     ///     Test that a sentence-initial word immediately followed by "not" resolves as a noun, for
     ///     example a subject noun in "Trigger not issued", not a verb. Regression test for a
     ///     reported false positive where such a subject noun was given verb-only dictionary
