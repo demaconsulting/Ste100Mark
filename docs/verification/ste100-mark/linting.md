@@ -289,7 +289,7 @@ value) still resolves as a verb; a match immediately followed by "not"/"never" r
 noun, except when the matched word is itself a modal, "to be", or "do"/"have"-family auxiliary
 verb (for example "shall not"/"does not"), which always remains verbal regardless of the
 following negation; and a noun modifier directly before an allow-listed plural compound-noun
-head (for example "cycles") resolves as a noun. This scenario is tested by
+head (for example "modules") resolves as a noun. This scenario is tested by
 `Guess_FollowedByBareIdentifierNumber_ReturnsNoun`, `Guess_FollowedByDecimalNumber_StillReturnsVerb`,
 `Guess_FollowedByNegationNot_ReturnsNoun`,
 `Guess_ModalAuxiliaryFollowedByNegation_DoesNotReturnNoun`, and

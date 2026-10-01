@@ -56,10 +56,15 @@ internal static class StructuralRules
     /// <summary>
     ///     Maximum number of words <see cref="IsDeclarativeSubjectContinuation"/> scans forward past
     ///     a captured imperative-lead verb while looking for a "to be" copula before giving up and
-    ///     treating the sentence as a genuine imperative. Bounds the scan to a plausible noun-phrase
-    ///     length so it cannot run unbounded over very long sentences.
+    ///     treating the sentence as a genuine imperative. A technical noun-phrase subject can
+    ///     legitimately run to many words before its copula (for example "Open high pressure
+    ///     hydraulic control system components are inspected monthly.", where the copula is the
+    ///     seventh word after the lead verb), and the scan already stops as soon as it reaches a
+    ///     <see cref="SubjectContinuationStopWords"/> entry or runs out of sentence text, so this
+    ///     cap is not meant to limit realistic sentence/noun-phrase length - it is only a safety
+    ///     valve bounding the scan against pathological/adversarial input.
     /// </summary>
-    private const int MaxSubjectContinuationLookaheadWords = 6;
+    private const int MaxSubjectContinuationLookaheadWords = 60;
 
     /// <summary>
     ///     Matches common English contractions (Rule 4.2). The <c>'s</c> suffix is ambiguous between

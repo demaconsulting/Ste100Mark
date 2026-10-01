@@ -1222,6 +1222,29 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that a declarative subject noun phrase long enough to push the "to be" copula past
+    ///     the fixed word-lookahead cap previously used (here "Open high pressure hydraulic control
+    ///     system components", where the copula "are" is the seventh word after the lead verb) is
+    ///     still correctly disambiguated from an imperative lead. Regression test for a reported
+    ///     bug where the subject-continuation scan's cap was exhausted before reaching the copula,
+    ///     so the sentence was wrongly treated as an imperative and the genuine passive construction
+    ///     was suppressed.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeLongTechnicalNounPhraseLead_StillFlagged()
+    {
+        // Arrange: the copula "are" is the 7th word after the lead verb "Open", past the 6-word
+        // lookahead cap the previous fix used
+        var segments = Paragraph("Open high pressure hydraulic control system components are inspected.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
     ///     Test that an imperative lead whose captured lookahead includes a determiner before the
     ///     "to be" copula (here "Confirm the gasket is ...") correctly starts its
     ///     subject-continuation scan immediately after the lead verb, not after the regex's

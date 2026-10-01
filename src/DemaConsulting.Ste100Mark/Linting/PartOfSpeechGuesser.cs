@@ -464,6 +464,10 @@ internal static class PartOfSpeechGuesser
             "ms", "kg", "psi", "hz", "khz", "mhz", "ghz", "kv", "mv", "ma", "kw", "mw",
             "pa", "kpa", "mpa", "db", "ft", "cm", "mm", "km", "lb", "oz", "hr", "min",
             "sec", "rpm", "bar", "atm",
+            // Single-letter SI base/derived unit symbols (e.g. "5 V", "5 A"); matched
+            // case-insensitively like every other entry in this set, so both the
+            // conventional uppercase symbol and a lowercase typing of it are recognized.
+            "v", "a", "w", "n", "j", "k", "s", "m", "g", "l",
         };
 
     /// <summary>

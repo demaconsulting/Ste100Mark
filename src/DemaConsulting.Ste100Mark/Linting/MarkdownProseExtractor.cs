@@ -48,8 +48,11 @@ internal enum SegmentRole
     ///     The header row of a Markdown table - the single row immediately followed by the table's
     ///     separator row (for example <c>| --- | --- |</c>). Column header cells such as "Hazard"
     ///     or "Use" are short labels, not prose sentences, so <see cref="DictionaryChecker"/> and
-    ///     <see cref="StructuralRules"/> skip them entirely rather than running them through the
-    ///     same checks as an ordinary <see cref="TableRow"/> data cell. Always single-line.
+    ///     <see cref="StructuralRules"/>'s <c>-ing</c>-form evaluator skip them entirely rather than
+    ///     running them through the same checks as an ordinary <see cref="TableRow"/> data cell;
+    ///     <see cref="StructuralRules"/>'s other checks (word-limit, semicolon, contraction,
+    ///     complex-verb, and passive-voice) still evaluate this role like any other segment. Always
+    ///     single-line.
     /// </summary>
     TableHeader,
 

@@ -794,6 +794,28 @@ public class PartOfSpeechGuesserTests
     }
 
     /// <summary>
+    ///     Test that a word immediately followed by a whole number and a single-letter SI unit
+    ///     symbol (for example "V" for volts) still resolves as a verb, not a bare-identifier
+    ///     noun. Regression test for a reported false negative where the curated unit-abbreviation
+    ///     list omitted common one-letter SI symbols such as "V"/"A", so the bare-identifier noun
+    ///     signal could suppress a genuine verb-only dictionary finding for notation users actually
+    ///     write.
+    /// </summary>
+    [Fact]
+    public void Guess_FollowedByWholeNumberAndSingleLetterUnitSymbol_ReturnsVerb()
+    {
+        // Arrange: "set 5 V" - "V" (volts) qualifies the number as a measured value, not a label
+        const string text = "Technicians set 5 V across the terminals.";
+        var index = text.IndexOf("set", StringComparison.Ordinal);
+
+        // Act: execute the operation being tested
+        var result = PartOfSpeechGuesser.Guess(text, index, "set".Length, LintMode.Descriptive);
+
+        // Assert: verify expected behavior
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
     ///     Test that a sentence-initial word immediately followed by "not" resolves as a noun, for
     ///     example a subject noun in "Trigger not issued", not a verb. Regression test for a
     ///     reported false positive where such a subject noun was given verb-only dictionary
