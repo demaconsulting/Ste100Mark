@@ -1365,6 +1365,32 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that a coordinating conjunction followed by a prenominal-adjective-candidate word
+    ///     (here "and check" in "Open covers and check seals are calibrated.") is not mistaken for a
+    ///     second coordinated instruction, even when the sentence's own lead word ("Open") is also
+    ///     adjective-ambiguous and would otherwise allow the scan to continue past a coordinated
+    ///     bare noun looking for a copula. Regression test for a
+    ///     reported bug where that allowance let the scan reach the later "are calibrated" match and
+    ///     misclassify the sentence as declarative, even though "check" is at least as likely to be
+    ///     heading the coordinated object adjectivally ("check seals") as starting a new
+    ///     instruction; "calibrated" is deliberately excluded from the stative-participle allow-list,
+    ///     so only a correctly-recognized imperative-lead exemption explains this not being flagged.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeAmbiguousLeadCoordinatedWithAmbiguousVerb_NotFlagged()
+    {
+        // Arrange: both "Open" and "check" are adjective-ambiguous; "check seals" should still be
+        // read as part of the first imperative's coordinated object, not a second instruction
+        var segments = Paragraph("Open covers and check seals are calibrated.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
     ///     Test that an imperative lead whose captured lookahead includes a determiner before the
     ///     "to be" copula (here "Confirm the gasket is ...") correctly starts its
     ///     subject-continuation scan immediately after the lead verb, not after the regex's

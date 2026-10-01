@@ -185,18 +185,21 @@ internal static class StructuralRules
     ///     <see cref="IsDeclarativeSubjectContinuation"/> rather than being treated as an
     ///     immediate stop word (see <see cref="SubjectContinuationStopWords"/>'s remarks for why
     ///     they are excluded from that set). The word immediately following the conjunction decides
-    ///     the outcome: (a) if it is itself a recognized verb (see
-    ///     <see cref="CommonImperativeLeadVerbs"/>) that is not also a prenominal-adjective
-    ///     candidate (see <see cref="AmbiguousAdjectivalLeadVerbs"/>), the conjunction joins the
-    ///     imperative's own governed clause to a second, separately governed instruction (for
-    ///     example "and verify" in "Confirm gauges and verify valves are calibrated."), so the scan
-    ///     reports a declarative continuation to end the first instruction's exemption before that
-    ///     second clause's own "is"/"are"; otherwise (b) - including when the following word is in
-    ///     both sets, for example "open" in "Confirm gauges and open valves are calibrated.", which
-    ///     is at least as likely to be heading the coordinated object adjectivally - the conjunction
-    ///     is read as coordinating two bare nouns, and whether the scan may continue looking for a
-    ///     copula past them depends on whether the sentence's own lead word is in
-    ///     <see cref="AmbiguousAdjectivalLeadVerbs"/> - see that set's remarks.
+    ///     the outcome: (a) if it is itself a prenominal-adjective candidate (see
+    ///     <see cref="AmbiguousAdjectivalLeadVerbs"/>), it is at least as likely to be heading the
+    ///     first instruction's own coordinated object adjectivally (for example "open" in "Confirm
+    ///     gauges and open valves are calibrated.", or "check" in "Open covers and check seals are
+    ///     calibrated.") as starting a genuinely separate second instruction, so the scan
+    ///     conservatively treats it as the former and remains imperative rather than risk losing a
+    ///     real exemption; otherwise (b) if it is a recognized verb with no adjectival reading (see
+    ///     <see cref="CommonImperativeLeadVerbs"/>), the conjunction joins the imperative's own
+    ///     governed clause to a second, separately governed instruction (for example "and verify" in
+    ///     "Confirm gauges and verify valves are calibrated."), so the scan reports a declarative
+    ///     continuation to end the first instruction's exemption before that second clause's own
+    ///     "is"/"are"; otherwise (c) the conjunction is read as coordinating two bare nouns, and
+    ///     whether the scan may continue looking for a copula past them depends on whether the
+    ///     sentence's own lead word is in <see cref="AmbiguousAdjectivalLeadVerbs"/> - see that
+    ///     set's remarks.
     /// </summary>
     private static readonly HashSet<string> CoordinatingConjunctionsWithinSubject = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -589,12 +592,13 @@ internal static class StructuralRules
     ///     (imperative) as soon as a <see cref="SubjectContinuationStopWords"/> entry is found, or if
     ///     the lookahead is exhausted (words run out or the cap is reached) without finding either.
     ///     A <see cref="CoordinatingConjunctionsWithinSubject"/> entry (for example "and") is handled
-    ///     separately: if the following word is itself a recognized
-    ///     <see cref="CommonImperativeLeadVerbs"/> verb that is not also in
-    ///     <see cref="AmbiguousAdjectivalLeadVerbs"/>, this returns <see langword="true"/>
-    ///     immediately (the conjunction starts a second, separately governed instruction); otherwise
-    ///     the scan continues past the coordinated bare noun only when <paramref name="leadVerb"/> is
-    ///     in <see cref="AmbiguousAdjectivalLeadVerbs"/>, and stops (returning <see langword="false"/>)
+    ///     separately: if the following word is in <see cref="AmbiguousAdjectivalLeadVerbs"/>, this
+    ///     returns <see langword="false"/> (remains imperative) rather than risk losing a real
+    ///     exemption; otherwise, if it is a recognized <see cref="CommonImperativeLeadVerbs"/> verb,
+    ///     this returns <see langword="true"/> immediately (the conjunction starts a second,
+    ///     separately governed instruction); otherwise the scan continues past the coordinated bare
+    ///     noun only when <paramref name="leadVerb"/> is in
+    ///     <see cref="AmbiguousAdjectivalLeadVerbs"/>, and stops (returning <see langword="false"/>)
     ///     otherwise - see those sets' remarks for why.
     /// </summary>
     private static bool IsDeclarativeSubjectContinuation(string textAfterLeadVerb, string leadVerb)
@@ -629,18 +633,24 @@ internal static class StructuralRules
                 var nextWordMatch =
                     Regex.Match(remaining, @"^\s*(?<word>[A-Za-z]+)", RegexOptions.None, RegexTimeout);
                 var nextWord = nextWordMatch.Success ? nextWordMatch.Groups["word"].Value : null;
-                if (nextWord != null &&
-                    CommonImperativeLeadVerbs.Contains(nextWord) &&
-                    !AmbiguousAdjectivalLeadVerbs.Contains(nextWord))
+                if (nextWord != null && AmbiguousAdjectivalLeadVerbs.Contains(nextWord))
                 {
-                    // The word coordinated by "and"/"or" is itself a recognized verb that is not
-                    // also a prenominal-adjective candidate, so it cannot be read as an adjective
-                    // modifying the next noun - this is a second coordinated instruction/clause
-                    // with its own, separately governed copula, so the imperative-lead exemption
-                    // must not extend across it. A word in both sets (for example "open" in
-                    // "Confirm gauges and open valves are calibrated.") is left to the bare-noun
-                    // handling below instead, since it is at least as likely to be heading the
-                    // coordinated object adjectivally as starting a new instruction.
+                    // The word coordinated by "and"/"or" is itself a prenominal-adjective
+                    // candidate (for example "open" in "Confirm gauges and open valves are
+                    // calibrated.", or "check" in "Open covers and check seals are calibrated."),
+                    // so it is at least as likely to be heading the first instruction's own
+                    // coordinated object adjectivally as starting a genuinely separate second
+                    // instruction. Conservatively treat it as the former (remain imperative)
+                    // rather than risk losing the exemption on a real coordinated-object match.
+                    return false;
+                }
+
+                if (nextWord != null && CommonImperativeLeadVerbs.Contains(nextWord))
+                {
+                    // The word coordinated by "and"/"or" is a recognized verb with no
+                    // adjectival reading, so it cannot be an adjective modifying the next noun -
+                    // this is a second coordinated instruction/clause with its own, separately
+                    // governed copula, so the imperative-lead exemption must not extend across it.
                     return true;
                 }
 
