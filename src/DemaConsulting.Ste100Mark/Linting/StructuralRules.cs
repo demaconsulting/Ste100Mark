@@ -154,16 +154,31 @@ internal static class StructuralRules
     ///     Words that, if encountered while scanning forward from a captured lead verb (see
     ///     <see cref="IsImperativeLeadSentence"/>) before any <see cref="DeclarativeBeAuxiliaries"/>
     ///     entry is found, mean the scan has reached a determiner/complement boundary that starts
-    ///     the imperative's own direct object or a subordinate/coordinate clause (for example "the"
-    ///     in "Keep the panel closed..." or "while" in "...while it is energized."), rather than
-    ///     continuing a bare declarative subject noun phrase (for example "systems" in "Open systems
-    ///     are used..."). Reaching one of these words therefore means the sentence is a genuine
+    ///     the imperative's own direct object or a subordinate clause (for example "the" in "Keep
+    ///     the panel closed..." or "while" in "...while it is energized."), rather than continuing
+    ///     a bare declarative subject noun phrase (for example "systems" in "Open systems are
+    ///     used..."). Reaching one of these words therefore means the sentence is a genuine
     ///     imperative, not a declarative sentence.
-    /// </summary>
+    ///     </summary>
+    ///     <remarks>
+    ///     "and"/"or" are deliberately <em>not</em> included here, even though they can also begin a
+    ///     subordinate/coordinate clause after an imperative's object (see
+    ///     <see cref="CoordinatingConjunctionAfterCommaRegex"/>'s remarks). Unlike the words in this
+    ///     set, "and"/"or" are also routinely used to coordinate two bare nouns within a single
+    ///     declarative subject noun phrase (for example "systems and components" in "Open systems
+    ///     and components are inspected."), with no determiner or other unambiguous boundary marker
+    ///     in between. Treating them as a stop word would make that scan give up immediately after
+    ///     "and"/"or" and misclassify the sentence as imperative before ever reaching the real
+    ///     copula, wrongly exempting a genuine passive-voice finding. Letting the scan continue past
+    ///     "and"/"or" instead is safe for genuine imperatives with a coordinated bare-plural object
+    ///     (for example "Tighten bolts and nuts as required."): that sentence has no later copula
+    ///     either, so the scan still exhausts without finding one and correctly resolves as
+    ///     imperative.
+    /// </remarks>
     private static readonly HashSet<string> SubjectContinuationStopWords = new(StringComparer.OrdinalIgnoreCase)
     {
         "the", "a", "an", "that", "which", "who", "whom", "whose", "while", "when", "if",
-        "because", "before", "after", "since", "unless", "although", "and", "or", "but", "so",
+        "because", "before", "after", "since", "unless", "although", "but", "so",
     };
 
     /// <summary>

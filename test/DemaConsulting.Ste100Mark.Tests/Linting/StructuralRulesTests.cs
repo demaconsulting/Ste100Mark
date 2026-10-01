@@ -1245,6 +1245,49 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that a declarative subject noun phrase with two bare nouns coordinated by "and"
+    ///     (here "systems and components") is still correctly disambiguated from an imperative
+    ///     lead. Regression test for a reported bug where "and"/"or" were treated as unconditional
+    ///     subject-continuation stop words, so the scan gave up immediately after "and" and
+    ///     misclassified "Open systems and components are inspected." as an imperative, wrongly
+    ///     exempting the genuine passive construction.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeCoordinatedBareSubject_StillFlagged()
+    {
+        // Arrange: "systems and components" is a coordinated bare-noun declarative subject; "are"
+        // is the copula, past the "and" that previously stopped the scan
+        var segments = Paragraph("Open systems and components are inspected.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a genuine imperative with a coordinated bare-plural object (here "bolts and
+    ///     nuts", with no later "to be" copula) is still correctly recognized as an imperative, not
+    ///     misread as a declarative sentence, now that "and"/"or" no longer unconditionally stop the
+    ///     subject-continuation scan. The scan continues past "and" looking for a copula, finds
+    ///     none before the sentence ends, and still correctly exempts this imperative's "closed"
+    ///     participle (not a passive-voice construction here).
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeCoordinatedBareObject_NotFlagged()
+    {
+        // Arrange: genuine imperative with no copula anywhere in the sentence
+        var segments = Paragraph("Tighten bolts and nuts as required.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
     ///     Test that an imperative lead whose captured lookahead includes a determiner before the
     ///     "to be" copula (here "Confirm the gasket is ...") correctly starts its
     ///     subject-continuation scan immediately after the lead verb, not after the regex's
