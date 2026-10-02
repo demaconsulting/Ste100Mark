@@ -62,7 +62,20 @@ off, and error-severity configurations, plus a case proving a simple (non-perfec
 passive construction is still flagged after the complex-verb precedence amendment. This
 scenario is tested by `Evaluate_PassiveVoicePattern_FlagsAdvisoryAtConfiguredSeverity`,
 `Evaluate_PassiveVoiceOff_NoDiagnostic`, `Evaluate_PassiveVoiceError_FlagsAtErrorSeverity`, and
-`Evaluate_WasOpened_StillFlagsPassiveVoice`. The imperative-subordinate-clause refinement -
+`Evaluate_WasOpened_StillFlagsPassiveVoice`. The coordinated-subject/object disambiguation -
+distinguishing a genuine declarative sentence with a coordinated bare-noun subject (for example
+"systems and components") from a genuine imperative with a coordinated bare-noun object (for
+example "gauges and valves"), including when a later coordinated verb or state-check word
+follows, and a documented, intentionally-accepted false-negative limitation for the case where
+both the lead word and the word after the conjunction are adjective-ambiguous (for example
+"open") - is verified by `Evaluate_PassiveVoiceDeclarativeCoordinatedBareSubject_StillFlagged`,
+`Evaluate_PassiveVoiceImperativeCoordinatedBareObject_NotFlagged`,
+`Evaluate_PassiveVoiceImperativeCoordinatedObjectWithLaterStateCheck_NotFlagged`,
+`Evaluate_PassiveVoiceImperativeSecondCoordinatedVerb_StillFlagged`,
+`Evaluate_PassiveVoiceImperativeCoordinatedObjectWithAdjectiveAmbiguousVerb_NotFlagged`,
+`Evaluate_PassiveVoiceImperativeAmbiguousLeadCoordinatedWithAmbiguousVerb_NotFlagged`, and
+`Evaluate_PassiveVoiceDeclarativeCoordinatedAdjectivalSubject_KnownFalseNegative`. The
+imperative-subordinate-clause refinement -
 exempting an "is"/"are" + common stative/adjectival participle match from passive-voice
 reporting when the participle is one of a curated closed-class set (for example "energized",
 "closed", "seated", "unobstructed") or the sentence is led by a common imperative verb (for
