@@ -1245,6 +1245,203 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that a declarative subject noun phrase with two bare nouns coordinated by "and"
+    ///     (here "systems and components") is still correctly disambiguated from an imperative
+    ///     lead. Regression test for a reported bug where "and"/"or" were treated as unconditional
+    ///     subject-continuation stop words, so the scan gave up immediately after "and" and
+    ///     misclassified "Open systems and components are inspected." as an imperative, wrongly
+    ///     exempting the genuine passive construction.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeCoordinatedBareSubject_StillFlagged()
+    {
+        // Arrange: "systems and components" is a coordinated bare-noun declarative subject; "are"
+        // is the copula, past the "and" that previously stopped the scan
+        var segments = Paragraph("Open systems and components are inspected.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a genuine imperative with a coordinated bare-plural object (here "bolts and
+    ///     nuts", with no "to be" copula anywhere in the sentence) is still correctly recognized as
+    ///     an imperative, not misread as a declarative sentence, now that "and"/"or" no longer
+    ///     unconditionally stop the subject-continuation scan. The scan continues past "and"
+    ///     looking for a copula and finds none before the sentence ends, so this sentence (which
+    ///     has no "is"/"are" + participle match at all) still produces no passive-voice diagnostic.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeCoordinatedBareObject_NotFlagged()
+    {
+        // Arrange: genuine imperative with no copula anywhere in the sentence
+        var segments = Paragraph("Tighten bolts and nuts as required.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a genuine imperative with a coordinated bare-plural object immediately followed
+    ///     by a non-stative "is"/"are" + participle state-check (here "Confirm gauges and valves
+    ///     are calibrated.") is still correctly exempted from the passive-voice advisory, the same
+    ///     way a single-noun object followed by a state check already is (see
+    ///     <see cref="Evaluate_PassiveVoiceImperativeWithDeterminerBeforeCopula_NotFlagged"/>).
+    ///     Regression test for a reported bug where letting the scan continue past "and"/"or"
+    ///     unconditionally would reach this genuine "are calibrated" match and misclassify the
+    ///     whole sentence as declarative, losing the imperative-lead exemption and producing a
+    ///     false-positive passive-voice diagnostic for this legitimate instruction. The guard that
+    ///     stops the scan when a coordinating conjunction is followed by a recognized verb (not
+    ///     reached here, since "valves" is a noun) must not trigger for this coordinated-object
+    ///     case either.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeCoordinatedObjectWithLaterStateCheck_NotFlagged()
+    {
+        // Arrange: gauges and valves form the imperative's coordinated bare-plural object; the
+        // participle calibrated is deliberately excluded from the stative-participle allow-list, so
+        // only a correctly-recognized imperative-lead exemption explains this not being flagged
+        var segments = Paragraph("Confirm gauges and valves are calibrated.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a coordinating conjunction joining the imperative's bare object to a <em>second
+    ///     coordinated instruction</em> (here "and verify" in "Confirm gauges and verify valves are
+    ///     calibrated.") correctly stops the subject-continuation scan rather than continuing on to
+    ///     the later "are calibrated" match. Regression test ensuring the verb-boundary guard on the
+    ///     coordinating-conjunction scan actually prevents treating a second coordinated verb phrase
+    ///     as more of the same noun phrase; "calibrated" is governed by the second instruction's own
+    ///     clause, not exempted by the first lead verb, and is deliberately excluded from the
+    ///     stative-participle allow-list so a missing exemption here would still be correctly
+    ///     flagged.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeSecondCoordinatedVerb_StillFlagged()
+    {
+        // Arrange: "and verify" coordinates a second instruction, not a second object noun
+        var segments = Paragraph("Confirm gauges and verify valves are calibrated.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.Contains(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a coordinating conjunction followed by a word that is both a recognized
+    ///     imperative lead verb and a prenominal-adjective candidate (here "and open" in "Confirm
+    ///     gauges and open valves are calibrated.") is not mistaken for a second coordinated
+    ///     instruction. Regression test for a reported bug where the verb-boundary guard treated
+    ///     every <see cref="StructuralRules"/>-recognized lead verb after "and"/"or" as starting a
+    ///     new clause, even when - as here - it is instead a prenominal adjective modifying the
+    ///     following noun ("open valves") within the first imperative's own coordinated object;
+    ///     "calibrated" is deliberately excluded from the stative-participle allow-list, so only a
+    ///     correctly-recognized imperative-lead exemption explains this not being flagged.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeCoordinatedObjectWithAdjectiveAmbiguousVerb_NotFlagged()
+    {
+        // Arrange: "open" coordinates an adjective+noun object, not a second instruction
+        var segments = Paragraph("Confirm gauges and open valves are calibrated.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a coordinating conjunction followed by "stop" (here "and stop" in "Confirm
+    ///     gauges and stop valves are calibrated.") is not mistaken for a second coordinated
+    ///     instruction. Regression test for a reported bug where the verb-boundary guard treated
+    ///     "stop" after "and"/"or" as starting a new clause purely because it is a recognized
+    ///     imperative lead verb, even when - as here - it is instead a prenominal adjective
+    ///     describing a technical noun phrase ("stop valves") within the first imperative's own
+    ///     coordinated object; "calibrated" is deliberately excluded from the stative-participle
+    ///     allow-list, so only a correctly-recognized imperative-lead exemption explains this not
+    ///     being flagged.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeCoordinatedObjectWithStopAsAdjective_NotFlagged()
+    {
+        // Arrange: "stop" coordinates an adjective+noun object ("stop valves"), not a second instruction
+        var segments = Paragraph("Confirm gauges and stop valves are calibrated.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test that a coordinating conjunction followed by a prenominal-adjective-candidate word
+    ///     (here "and check" in "Open covers and check seals are calibrated.") is not mistaken for a
+    ///     second coordinated instruction, even when the sentence's own lead word ("Open") is also
+    ///     adjective-ambiguous and would otherwise allow the scan to continue past a coordinated
+    ///     bare noun looking for a copula. Regression test for a
+    ///     reported bug where that allowance let the scan reach the later "are calibrated" match and
+    ///     misclassify the sentence as declarative, even though "check" is at least as likely to be
+    ///     heading the coordinated object adjectivally ("check seals") as starting a new
+    ///     instruction; "calibrated" is deliberately excluded from the stative-participle allow-list,
+    ///     so only a correctly-recognized imperative-lead exemption explains this not being flagged.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeAmbiguousLeadCoordinatedWithAmbiguousVerb_NotFlagged()
+    {
+        // Arrange: both "Open" and "check" are adjective-ambiguous; "check seals" should still be
+        // read as part of the first imperative's coordinated object, not a second instruction
+        var segments = Paragraph("Open covers and check seals are calibrated.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
+    ///     Test documenting a known, accepted limitation: a genuine declarative sentence with a
+    ///     coordinated subject whose second noun is adjectivally modified by an
+    ///     adjective-ambiguous word (here "Open systems and open valves are inspected.") has the
+    ///     identical "[lead] N1 and [ambiguous-word] N2 are participle" shape as a genuine imperative
+    ///     with a coordinated object (see
+    ///     <see cref="Evaluate_PassiveVoiceImperativeAmbiguousLeadCoordinatedWithAmbiguousVerb_NotFlagged"/>),
+    ///     and the heuristic cannot tell them apart from local word patterns alone. It conservatively
+    ///     favors the imperative reading in both cases, so this genuine passive construction is a
+    ///     deliberate false negative rather than a bug - see the design document's rationale for this
+    ///     advisory's general bias toward avoiding false-positive noise over catching every true
+    ///     positive. If this tradeoff is ever revisited, this test's expectation should change to
+    ///     <c>Assert.Contains</c>.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeCoordinatedAdjectivalSubject_KnownFalseNegative()
+    {
+        // Arrange: a genuine declarative sentence, structurally identical to the imperative case
+        var segments = Paragraph("Open systems and open valves are inspected.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: documents the accepted false-negative tradeoff (see summary)
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
     ///     Test that an imperative lead whose captured lookahead includes a determiner before the
     ///     "to be" copula (here "Confirm the gasket is ...") correctly starts its
     ///     subject-continuation scan immediately after the lead verb, not after the regex's

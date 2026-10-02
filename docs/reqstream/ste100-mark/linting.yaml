@@ -85,6 +85,14 @@ sections:
           - Evaluate_PassiveVoiceOff_NoDiagnostic
           - Evaluate_PassiveVoiceError_FlagsAtErrorSeverity
           - Evaluate_WasOpened_StillFlagsPassiveVoice
+          - Evaluate_PassiveVoiceDeclarativeCoordinatedBareSubject_StillFlagged
+          - Evaluate_PassiveVoiceImperativeCoordinatedBareObject_NotFlagged
+          - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithLaterStateCheck_NotFlagged
+          - Evaluate_PassiveVoiceImperativeSecondCoordinatedVerb_StillFlagged
+          - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithAdjectiveAmbiguousVerb_NotFlagged
+          - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithStopAsAdjective_NotFlagged
+          - Evaluate_PassiveVoiceImperativeAmbiguousLeadCoordinatedWithAmbiguousVerb_NotFlagged
+          - Evaluate_PassiveVoiceDeclarativeCoordinatedAdjectivalSubject_KnownFalseNegative
 
       - id: Ste100Mark-Linting-ComplexVerbAdvisory
         title: >-
