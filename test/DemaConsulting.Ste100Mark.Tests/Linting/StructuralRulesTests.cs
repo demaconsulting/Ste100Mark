@@ -1391,6 +1391,33 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test documenting a known, accepted limitation: a genuine declarative sentence with a
+    ///     coordinated subject whose second noun is adjectivally modified by an
+    ///     adjective-ambiguous word (here "Open systems and open valves are inspected.") has the
+    ///     identical "[lead] N1 and [ambiguous-word] N2 are participle" shape as a genuine imperative
+    ///     with a coordinated object (see
+    ///     <see cref="Evaluate_PassiveVoiceImperativeAmbiguousLeadCoordinatedWithAmbiguousVerb_NotFlagged"/>),
+    ///     and the heuristic cannot tell them apart from local word patterns alone. It conservatively
+    ///     favors the imperative reading in both cases, so this genuine passive construction is a
+    ///     deliberate false negative rather than a bug - see the design document's rationale for this
+    ///     advisory's general bias toward avoiding false-positive noise over catching every true
+    ///     positive. If this tradeoff is ever revisited, this test's expectation should change to
+    ///     <c>Assert.Contains</c>.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceDeclarativeCoordinatedAdjectivalSubject_KnownFalseNegative()
+    {
+        // Arrange: a genuine declarative sentence, structurally identical to the imperative case
+        var segments = Paragraph("Open systems and open valves are inspected.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: documents the accepted false-negative tradeoff (see summary)
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
     ///     Test that an imperative lead whose captured lookahead includes a determiner before the
     ///     "to be" copula (here "Confirm the gasket is ...") correctly starts its
     ///     subject-continuation scan immediately after the lead verb, not after the regex's

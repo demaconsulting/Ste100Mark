@@ -217,6 +217,18 @@ internal static class StructuralRules
     ///     (for example "gauges and valves" in "Confirm gauges and valves are calibrated.") as a
     ///     declarative subject.
     /// </summary>
+    /// <remarks>
+    ///     Known, accepted limitation: when both the sentence's lead word and the word immediately
+    ///     following a coordinating conjunction are in this set, the heuristic cannot distinguish a
+    ///     genuine imperative with a coordinated object (for example "Open covers and check seals
+    ///     are calibrated.") from a genuine declarative sentence with a coordinated,
+    ///     adjectivally-modified subject (for example "Open systems and open valves are
+    ///     inspected.") - both have the identical "[lead] N1 and [ambiguous-word] N2 are participle"
+    ///     shape. The heuristic conservatively treats this shape as imperative (remaining exempt) in
+    ///     both cases, accepting a false negative on the declarative reading as the lesser cost -
+    ///     see the design document's rationale for this advisory's general bias toward avoiding
+    ///     false-positive noise.
+    /// </remarks>
     private static readonly HashSet<string> AmbiguousAdjectivalLeadVerbs = new(StringComparer.OrdinalIgnoreCase)
     {
         "open", "check",

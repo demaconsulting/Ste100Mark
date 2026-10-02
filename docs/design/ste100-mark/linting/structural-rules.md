@@ -48,6 +48,21 @@ match in that same sentence as a predicate-adjective state the instruction asks 
 verify or maintain, not a passive construction, subject to the same explicit-agent-phrase
 override as `StativeParticiples`.
 
+**AmbiguousAdjectivalLeadVerbs**: `HashSet<string>` (`open`, `check`) - the subset of
+`CommonImperativeLeadVerbs` also routinely used as prenominal adjectives describing
+equipment/system types (for example `open systems`, `check valves`). `IsDeclarativeSubjectContinuation`
+uses this set to decide whether a coordinated bare-noun object/subject continuation past
+`and`/`or` (see `CoordinatingConjunctionsWithinSubject`) is plausible. **Known, accepted
+limitation**: when both the sentence's lead word and the word immediately following a
+coordinating conjunction are in this set, the heuristic cannot distinguish a genuine
+imperative with a coordinated object (for example `Open covers and check seals are
+calibrated.`) from a genuine declarative sentence with a coordinated, adjectivally-modified
+subject (for example `Open systems and open valves are inspected.`) - both have the identical
+`[lead] N1 and [ambiguous-word] N2 are participle` shape. The heuristic conservatively treats
+this shape as imperative (remaining exempt from the passive-voice advisory) in both cases,
+accepting a false negative on the declarative reading as the lesser cost, consistent with this
+advisory's general bias toward avoiding false-positive noise over catching every true positive.
+
 **Rule codes**:
 
 - `STE100-4.1` - sentence word-count limit.
