@@ -73,6 +73,7 @@ both the lead word and the word after the conjunction are adjective-ambiguous (f
 `Evaluate_PassiveVoiceImperativeCoordinatedObjectWithLaterStateCheck_NotFlagged`,
 `Evaluate_PassiveVoiceImperativeSecondCoordinatedVerb_StillFlagged`,
 `Evaluate_PassiveVoiceImperativeCoordinatedObjectWithAdjectiveAmbiguousVerb_NotFlagged`,
+`Evaluate_PassiveVoiceImperativeCoordinatedObjectWithStopAsAdjective_NotFlagged`,
 `Evaluate_PassiveVoiceImperativeAmbiguousLeadCoordinatedWithAmbiguousVerb_NotFlagged`, and
 `Evaluate_PassiveVoiceDeclarativeCoordinatedAdjectivalSubject_KnownFalseNegative`. The
 imperative-subordinate-clause refinement -

@@ -209,7 +209,8 @@ internal static class StructuralRules
     /// <summary>
     ///     The subset of <see cref="CommonImperativeLeadVerbs"/> that are also routinely used as
     ///     prenominal adjectives describing equipment/system types in STE100 technical prose (for
-    ///     example "open systems", "check valves"), rather than purely as action verbs. Used by
+    ///     example "open systems", "check valves", "stop valves"), rather than purely as action
+    ///     verbs. Used by
     ///     <see cref="IsDeclarativeSubjectContinuation"/> to decide whether a coordinated bare-noun
     ///     continuation past "and"/"or" (see <see cref="CoordinatingConjunctionsWithinSubject"/>'s
     ///     remarks) is plausible for a given sentence's lead word - restricting that continuation to
@@ -231,7 +232,7 @@ internal static class StructuralRules
     /// </remarks>
     private static readonly HashSet<string> AmbiguousAdjectivalLeadVerbs = new(StringComparer.OrdinalIgnoreCase)
     {
-        "open", "check",
+        "open", "check", "stop",
     };
 
     /// <summary>

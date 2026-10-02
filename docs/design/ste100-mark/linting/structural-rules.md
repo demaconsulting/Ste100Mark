@@ -48,9 +48,10 @@ match in that same sentence as a predicate-adjective state the instruction asks 
 verify or maintain, not a passive construction, subject to the same explicit-agent-phrase
 override as `StativeParticiples`.
 
-**AmbiguousAdjectivalLeadVerbs**: `HashSet<string>` (`open`, `check`) - the subset of
+**AmbiguousAdjectivalLeadVerbs**: `HashSet<string>` (`open`, `check`, `stop`) - the subset of
 `CommonImperativeLeadVerbs` also routinely used as prenominal adjectives describing
-equipment/system types (for example `open systems`, `check valves`). `IsDeclarativeSubjectContinuation`
+equipment/system types (for example `open systems`, `check valves`, `stop valves`).
+`IsDeclarativeSubjectContinuation`
 uses this set to decide whether a coordinated bare-noun object/subject continuation past
 `and`/`or` (see `CoordinatingConjunctionsWithinSubject`) is plausible. **Known, accepted
 limitation**: when both the sentence's lead word and the word immediately following a

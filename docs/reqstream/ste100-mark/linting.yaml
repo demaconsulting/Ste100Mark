@@ -90,6 +90,7 @@ sections:
           - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithLaterStateCheck_NotFlagged
           - Evaluate_PassiveVoiceImperativeSecondCoordinatedVerb_StillFlagged
           - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithAdjectiveAmbiguousVerb_NotFlagged
+          - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithStopAsAdjective_NotFlagged
           - Evaluate_PassiveVoiceImperativeAmbiguousLeadCoordinatedWithAmbiguousVerb_NotFlagged
           - Evaluate_PassiveVoiceDeclarativeCoordinatedAdjectivalSubject_KnownFalseNegative
 

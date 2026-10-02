@@ -1365,6 +1365,30 @@ public class StructuralRulesTests
     }
 
     /// <summary>
+    ///     Test that a coordinating conjunction followed by "stop" (here "and stop" in "Confirm
+    ///     gauges and stop valves are calibrated.") is not mistaken for a second coordinated
+    ///     instruction. Regression test for a reported bug where the verb-boundary guard treated
+    ///     "stop" after "and"/"or" as starting a new clause purely because it is a recognized
+    ///     imperative lead verb, even when - as here - it is instead a prenominal adjective
+    ///     describing a technical noun phrase ("stop valves") within the first imperative's own
+    ///     coordinated object; "calibrated" is deliberately excluded from the stative-participle
+    ///     allow-list, so only a correctly-recognized imperative-lead exemption explains this not
+    ///     being flagged.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PassiveVoiceImperativeCoordinatedObjectWithStopAsAdjective_NotFlagged()
+    {
+        // Arrange: "stop" coordinates an adjective+noun object ("stop valves"), not a second instruction
+        var segments = Paragraph("Confirm gauges and stop valves are calibrated.");
+
+        // Act: execute the operation being tested
+        var diagnostics = StructuralRules.Evaluate("file.md", segments, LintMode.Descriptive, new RulesConfig());
+
+        // Assert: verify expected behavior
+        Assert.DoesNotContain(diagnostics, d => d.RuleCode == "STE100-ADV-PASSIVE");
+    }
+
+    /// <summary>
     ///     Test that a coordinating conjunction followed by a prenominal-adjective-candidate word
     ///     (here "and check" in "Open covers and check seals are calibrated.") is not mistaken for a
     ///     second coordinated instruction, even when the sentence's own lead word ("Open") is also
