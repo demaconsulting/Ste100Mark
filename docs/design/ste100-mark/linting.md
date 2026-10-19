@@ -16,13 +16,13 @@ through `Linter.Run`.
 The subsystem contains one orchestration unit (`Linter`), one reporting unit
 (`DiagnosticReporter`), four analysis units (`MarkdownProseExtractor`, `SentenceAnalyzer`,
 `StructuralRules`, and `DictionaryChecker`), two configuration/data units (`LintConfig` and
-`LintDictionary`), one heuristic helper (`PartOfSpeechGuesser`), two rule metadata units
+`LintDictionary`), two part-of-speech units (`PartOfSpeechResolver` and `PartOfSpeechGuesser`), two rule metadata units
 (`RuleCodes` and `RuleCatalog`), and two supporting value
 types (`Diagnostic` and `Severity`). Together they convert raw Markdown input into
 deterministic lint findings aligned with the tool's official STE100 rule checks and
 advisory heuristics.
 
-The source folder contains eleven primary behavioral units plus two supporting value types:
+The source folder contains twelve primary behavioral units plus two supporting value types:
 
 - `Severity` - closed severity set (`Off`, `Warn`, `Error`) shared by configuration and
   diagnostics.
@@ -33,22 +33,20 @@ The source folder contains eleven primary behavioral units plus two supporting v
 - `LintDictionary` - merged effective dictionary built from the embedded baseline,
   project-supplied dictionary file, and inline allow/disallow/ignore lists, with each term
   carrying one or more part-of-speech-tagged senses.
-- `PartOfSpeechGuesser` - lightweight, deterministic regex/rule-based heuristic that
-  guesses whether a matched term is used as a noun or a verb at its match site, used to
-  select the applicable sense(s) of a multi-sense dictionary entry. Signals are split into
-  a *strong* tier (specific, local, hard-to-confuse evidence such as a preceding
-  article/possessive/modal, a following finite verb, a following bare numeral/identifier,
-  or a noun-modifier directly before another noun) and a *weak* tier (the broad
-  plural-noun-suffix and whole-segment-verbless fallbacks). `Guess` treats both tiers as a
-  plain OR; `GuessEffective` additionally resolves on strong-tier evidence alone when the
-  tiers disagree, and is the method `DictionaryChecker` calls for general noun/verb sense
-  selection. A dedicated `GuessIngFormRole` variant applies the same strong/weak-signal
-  design to `-ing` words specifically - deliberately treating suffix evidence differently
-  from `GuessEffective`, since every `-ing`-form candidate ends in that suffix by
-  construction - and is the method `StructuralRules`'s `-ing`-form check calls, to
-  distinguish a genuine present-participle verb use from a gerund/process noun, a material
-  noun (for example a substance or component name ending in `-ing`), or a participial
-  adjective modifying a following noun.
+- `PartOfSpeechResolver` - resolves whether a matched term is used as a noun or a verb at its
+  match site, used to select the applicable sense(s) of a multi-sense dictionary entry. It
+  implements the internal `IPartOfSpeechResolver` interface and delegates to the
+  `DemaConsulting.WordSense` OTS tagger (`BasicWordSenseModel`): the sentence containing the
+  match is tokenized and classified in one call, and a noun or verb answer at or above a
+  documented minimum confidence (0.45) is accepted, while every other outcome is
+  inconclusive. `DictionaryChecker` calls it for general noun/verb sense selection.
+- `PartOfSpeechGuesser` - lightweight, deterministic regex/rule-based heuristic retained
+  solely for the `-ing`-form advisory. Its `GuessIngFormRole` method is called by
+  `StructuralRules`'s `-ing`-form check to distinguish a genuine present-participle verb use
+  from a gerund/process noun, a material noun (for example a substance or component name
+  ending in `-ing`), or a participial adjective modifying a following noun. A word-level
+  tagger cannot make that distinction (it tags a gerund with a direct object as a verb), so
+  the heuristic was kept for this purpose only.
 - `MarkdownProseExtractor` - line-based Markdown extractor that keeps headings, list items,
   table cells, and paragraphs, removing fenced code blocks and link destinations while
   retaining inline code spans verbatim. A table's header row (the row immediately followed
@@ -77,7 +75,7 @@ The source folder contains eleven primary behavioral units plus two supporting v
   This exemption is restricted to "is"/"are" auxiliary forms; "was"/"were"/"be"/"being"/
   "been" constructions are always evaluated as passive voice.
 - `DictionaryChecker` - case-insensitive whole-term vocabulary checker using the effective
-  merged dictionary and `PartOfSpeechGuesser` sense selection (via `GuessEffective`).
+  merged dictionary and `PartOfSpeechResolver` sense selection (via `Resolve`).
   `TableHeader` segments are skipped entirely (column-header labels are not prose), and a
   match that falls entirely inside an admonition-label or quoted/emphasis span (see
   `MarkdownProseExtractor` above) is also skipped, alongside the pre-existing inline-code-
@@ -97,15 +95,16 @@ The source folder contains eleven primary behavioral units plus two supporting v
 The unit design details for the subsystem are documented in the companion unit files in
 this folder: *Diagnostic Design*, *DiagnosticReporter Design*, *DictionaryChecker Design*,
 *LintConfig Design*, *LintDictionary Design*, *Linter Design*, *MarkdownProseExtractor
-Design*, *PartOfSpeechGuesser Design*, *RuleCatalog Design*, *RuleCodes Design*,
+Design*, *PartOfSpeechGuesser Design*, *PartOfSpeechResolver Design*, *RuleCatalog Design*, *RuleCodes Design*,
 *SentenceAnalyzer Design*, *Severity Design*, and *StructuralRules Design*.
 
 > **Dictionary notice:** The embedded default dictionary in
 > `src/DemaConsulting.Ste100Mark/Linting/DefaultDictionary.yaml` is a small,
 > originally-authored, representative example. It is **not** the official ASD-STE100 Part 2
 > Dictionary. Each term carries one or more part-of-speech-tagged senses (noun/verb/
-> adjective/adverb/any); a term with a single sense is always reported directly, while a
-> multi-sense term is disambiguated by `PartOfSpeechGuesser` at lint time. Projects that
+> adjective/adverb/any); a term with a single sense is reported unless the resolved role is
+> confidently incompatible with its part of speech, while a multi-sense term is disambiguated
+> by `PartOfSpeechResolver` at lint time. Projects that
 > require true ASD-STE100 Issue 9 compliance must supply your organization's licensed
 > ASD-STE100 dictionary through `dictionary.file`, and should set
 > `dictionary.use-embedded: false` to avoid mixing illustrative content with licensed
@@ -122,7 +121,8 @@ flowchart TD
     LintConfig --> StructuralRules
     LintConfig --> LintDictionary
     LintDictionary --> DictionaryChecker
-    DictionaryChecker --> PartOfSpeechGuesser
+    DictionaryChecker --> PartOfSpeechResolver
+    StructuralRules --> PartOfSpeechGuesser
     StructuralRules --> DiagnosticReporter
     DictionaryChecker --> DiagnosticReporter
     Severity --> Diagnostic

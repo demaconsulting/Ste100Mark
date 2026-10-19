@@ -41,6 +41,10 @@ combinations. Temporary files and directories are created and cleaned up within 
   scope for these tests. Unsupported result-file extensions are verified separately by
   `Ste100Mark_ValidateWithBadExtension_ExtensionInvalid_ReturnsNonZero`.
 - Silent mode (`--silent`) produces empty combined output.
+- Dictionary-term lint results depend on resolved part of speech: a legal noun usage of a
+  verb-only term is not reported, a disallowed usage is reported with its alternative, and an
+  unresolvable usage is reported as ambiguous, as asserted by
+  `Ste100Mark_LintDictionaryTermWithWordSenseResolution_ReportsOnlyDisallowedOrAmbiguousUsage`.
 
 ## Test Scenarios
 
@@ -111,3 +115,9 @@ with `--config missing.yaml` in a directory where that file does not exist; the 
 non-zero code and the combined output includes the missing file name, demonstrating the explicit
 missing-configuration failure path. This scenario is tested by
 `Ste100Mark_LintWithMissingConfigFile_ReturnsNonZeroWithErrorMessage`.
+
+**Ste100Mark_LintDictionaryTermWithWordSenseResolution_ReportsOnlyDisallowedOrAmbiguousUsage**:
+Lint mode runs against a dictionary term whose sense is restricted to one part of speech; a legal
+noun usage is not reported, a disallowed verb usage is reported with its alternative, and a
+usage of a word the classifier does not know is reported as ambiguous. This scenario is tested by
+`Ste100Mark_LintDictionaryTermWithWordSenseResolution_ReportsOnlyDisallowedOrAmbiguousUsage`.

@@ -24,6 +24,7 @@ The following OTS items have integration design documentation:
 - SysML2Tools (_sysml2tools.md_) - architecture model validation and diagram rendering tool
 - VersionMark (_versionmark.md_) - tool-version documentation tool
 - WeasyPrint (_weasyprint.md_) - HTML-to-PDF conversion tool
+- WordSense (_wordsense.md_) - part-of-speech tagging library
 - xUnit (_xunit.md_) - unit-testing framework
 - YamlDotNet (_yamldotnet.md_) - YAML parsing library
 

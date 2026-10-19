@@ -21,6 +21,8 @@ This document covers the verification design for the following software items:
   - **Program** — entry point and execution orchestrator
   - **Cli** subsystem
     - **Context** — argument parser and I/O owner
+  - **Linting** subsystem
+    - **PartOfSpeechResolver** — WordSense-based noun/verb resolution
   - **SelfTest** subsystem
     - **Validation** — self-validation test runner
   - **Utilities** subsystem
@@ -30,6 +32,7 @@ This document covers the verification design for the following software items:
 
 - **BuildMark** — build-notes documentation tool
 - **FileAssert** — document assertion tool
+- **Microsoft.Extensions.FileSystemGlobbing** — glob pattern matching library
 - **Pandoc** — Markdown-to-HTML conversion tool
 - **ReqStream** — requirements traceability tool
 - **ReviewMark** — file review enforcement tool
@@ -38,7 +41,9 @@ This document covers the verification design for the following software items:
 - **SysML2Tools** — architecture model validation and diagram rendering tool
 - **VersionMark** — tool-version documentation tool
 - **WeasyPrint** — HTML-to-PDF conversion tool
+- **WordSense** — part-of-speech classification library (runtime dependency)
 - **xUnit** — unit-testing framework
+- **YamlDotNet** — YAML parsing library
 
 The following topics are out of scope:
 

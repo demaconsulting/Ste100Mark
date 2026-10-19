@@ -4,7 +4,8 @@
 
 The `Linting` subsystem is verified by a combination of unit tests and end-to-end integration
  tests. The unit tests exercise `MarkdownProseExtractor`, `SentenceAnalyzer`, `StructuralRules`,
-`LintConfig`, `LintDictionary`, `PartOfSpeechGuesser`, `DictionaryChecker`, `DiagnosticReporter`,
+`LintConfig`, `LintDictionary`, `PartOfSpeechResolver`, `PartOfSpeechGuesser`,
+`DictionaryChecker`, `DiagnosticReporter`,
 and `Linter` directly with controlled inputs. Integration tests invoke the published tool
 assembly through `Runner.RunInDirectory`, confirming that command-line parsing, dispatch,
 reporting, and exit-code behavior all work together.
@@ -179,33 +180,15 @@ is tested by `Extract_LeadingFrontMatter_ExcludedFromProse`,
 `Extract_HyphenLineNotOnFirstLine_NotTreatedAsFrontMatterStart`, and
 `Run_FrontMatter_ExcludedFromDictionaryCheck`.
 
-**Ste100Mark-Linting-DictionaryPos**: Part-of-speech sense selection is verified for every
-heuristic signal in isolation (infinitive marker, modal auxiliary, progressive auxiliary,
-verb-inflection suffix, imperative sentence start in both Procedure and Descriptive mode,
-article, possessive, quantifier/demonstrative, preposition, plural-noun suffix, noun-phrase
-continuation, a determiner governing through a participle/adjective/proper-noun modifier
-bounded by a maximum scan distance, and a match followed by a finite verb form), plus the
-conflicting-signal and no-signal ambiguous fallbacks, and end-to-end through
-`DictionaryChecker` for single-sense terms, confident noun/verb contexts, an ambiguous
-context, and a single-sense `pos: any` connector phrase. This scenario is tested
-by `Guess_PrecededByTo_ReturnsVerb`, `Guess_PrecededByModal_ReturnsVerb`,
-`Guess_PrecededByBeAuxiliaryWithIngSuffix_ReturnsVerb`, `Guess_InflectionSuffixAlone_ReturnsVerb`,
-`Guess_ImperativeSentenceStartInProcedureMode_ReturnsVerb`,
-`Guess_SentenceStartInDescriptiveMode_ReturnsNull`, `Guess_PrecededByArticle_ReturnsNoun`,
-`Guess_PrecededByPossessive_ReturnsNoun`, `Guess_PrecededByQuantifier_ReturnsNoun`,
-`Guess_PrecededByPreposition_ReturnsNoun`, `Guess_PluralSuffix_ReturnsNoun`,
-`Guess_FollowedByOf_ReturnsNoun`, `Guess_ConflictingSignals_ReturnsNull`,
-`Guess_NoSignals_ReturnsNull`, `Guess_ArticleThenParticipleModifier_ReturnsNoun`,
-`Guess_ArticleThenProperNounModifier_ReturnsNoun`,
-`Guess_ArticleThenAdjectiveModifier_ReturnsNoun`,
-`Guess_DeterminerBeyondMaxScanDistance_DoesNotGovern`,
-`Guess_FollowedByFiniteVerb_ReturnsNoun`,
-`Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel`,
-`Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged`,
+**Ste100Mark-Linting-DictionaryPos**: Selection of the sense that matches a confidently resolved
+role is verified through `DictionaryChecker` with an injected resolver and with the default
+resolver: a confident verb in a multi-sense entry reports only the verb sense, a confident noun
+reports only the noun sense, and a single-sense `pos: any` connector phrase is always reported.
+The resolver itself is verified by the unit scenarios below
+(`Ste100Mark-PartOfSpeechResolver-*`). This scenario is tested by
+`Evaluate_InjectedResolverConfidentVerb_ReportsOnlyVerbSense`,
 `Evaluate_MultiSenseTerm_NounContext_ReportsNounSense`,
-`Evaluate_MultiSenseTerm_VerbContext_ReportsVerbSense`,
-`Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous`,
-`Evaluate_MultiSenseTerm_ConfidentGuessMatchesNoSense_NotFlagged`, and
+`Evaluate_MultiSenseTerm_VerbContext_ReportsVerbSense`, and
 `Evaluate_AnyPosSingleSenseTerm_AlwaysReported`. Natural "or"/Oxford-comma phrasing of a
 sense's alternatives within the diagnostic message, for both the confident and ambiguous
 paths, is additionally verified by `Evaluate_ConfidentSenseSingleAlternative_NoOrInMessage`,
@@ -241,21 +224,72 @@ Per-file dictionary allowances supplied via a matching `Profile`'s `dictionary.a
 `Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic`, and
 `Evaluate_ExtraAllowedTermsUnrelatedTerm_StillFlagsOtherDisallowedTerm`.
 
-**Ste100Mark-Linting-DictionaryPosVerblessSegment**: The whole-segment "no finite verb anywhere"
-noun signal is verified in isolation for a verbless table cell, a verbless list-item fragment, a
-verbless comma-separated list fragment, and a verbless heading fragment, plus its correct
-interaction with stronger and weaker verb signals: it does not out-vote a strong match-local verb
-signal (preceded by the infinitive marker "to"), it correctly leaves the mode-dependent imperative
-signal to resolve confidently rather than being silently overridden, and it does not fire when a
-recognized finite verb form is present elsewhere in the segment. This scenario is tested by
-`Guess_VerblessTableCellFragment_ReturnsNoun`, `Guess_VerblessListItemFragment_ReturnsNoun`,
-`Guess_VerblessCommaSeparatedList_ReturnsNoun`, `Guess_VerblessHeadingFragment_ReturnsNoun`,
-`Guess_VerblessSegmentButPrecededByTo_ReturnsVerb`,
-`Guess_ImperativeInVerblessSegment_ReturnsVerb`, and
-`Guess_SegmentHasFiniteVerbElsewhere_MatchStillAmbiguous`. End-to-end behavior through
+**Ste100Mark-Linting-DictionaryPos-Suppression**: A match is not reported when a confident
+resolution does not fit any sense. The 100-sentence false-positive corpus (run with the real
+tagger) confirms that legal noun usages of verb-only entries and legal verb usages of noun-only
+entries are not flagged; a single-sense verb-only entry in a confident noun context (fixed
+resolver) and a multi-sense entry with no noun sense in a confident noun context are likewise
+not flagged. This scenario is tested by
+`Evaluate_LegalNounUsage_VerbOnlyDisallowedEntry_NotFlagged`,
+`Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged`,
+`Evaluate_DefaultResolver_NounUsageOfVerbOnlyEntry_NotFlagged`,
+`Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged`, and
+`Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged`.
+
+**Ste100Mark-Linting-DictionaryPos-Ambiguous**: When the resolver is inconclusive, every
+remaining sense is reported. A single-sense term is reported with its one sense and no
+part-of-speech label, and a multi-sense term is reported once, labeled ambiguous, with every
+sense's alternatives grouped per sense. This scenario is tested by
+`Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel`,
+`Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous`,
+`Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin`,
+`Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment`, and
+`Evaluate_PureSelfReferentialCandidate_WithinAmbiguousResult_UsesRoleRestrictionClause`.
+
+**Ste100Mark-PartOfSpeechResolver-\* (unit requirements)**: `PartOfSpeechResolver` is verified in
+two layers. Scenarios that depend on the tagger's real answers use the real
+`DemaConsulting.WordSense.Basic` model: noun and verb usage (articles, possessives,
+quantifiers, prepositions, modals, the infinitive marker, progressive auxiliaries, plural
+nouns, noun-phrase modifiers, and a finite verb following the match), the 26 hard cases
+(imperatives, noun-noun compounds, and modals), the requested sentence of a multi-sentence
+segment, and an unknown word. Scenarios that verify the resolver's own mapping logic use a
+scripted model so the tagger's answer is controlled: one classification call per sentence with
+word and punctuation tokens, the requested occurrence of a repeated word, the inclusive
+confidence boundary at 0.45, the rejection of parts of speech other than noun and verb, a
+word with no details, multi-word matches, a model returning a wrong result count,
+per-sentence caching, argument validation, and the shared instance. These scenarios are tested
+by `Resolve_NounUsage_ReturnsNoun`, `Resolve_VerbUsage_ReturnsVerb`,
+`Resolve_HardCase_ReturnsExpectedRole`, `HardCases_ContainsTwentySixCases`,
+`Resolve_MatchInSecondSentence_UsesThatSentenceOnly`,
+`Resolve_LowercaseContinuationAfterPeriod_StaysInSameSentence`,
+`Resolve_UnknownWordWithRealModel_ReturnsNull` (real model), and, with a scripted model,
+`Resolve_Tokenization_SendsOneSentenceWithWordAndPunctuationTokens`,
+`Resolve_RepeatedWord_ResolvesRequestedOccurrence`,
+`Resolve_ConfidenceThreshold_BoundaryIsInclusive`,
+`MinimumConfidence_IsBelowLowestObservedCorrectConfidence`,
+`Resolve_NonNounVerbPartOfSpeech_ReturnsNull`, `Resolve_UnknownWord_ReturnsNull`,
+`Resolve_MultiWordMatch_ReturnsNull`, `Resolve_ModelReturnsWrongResultCount_ReturnsNull`,
+`Resolve_SameSentenceTwice_ClassifiesOnce`, `Resolve_ConcurrentSameSentence_ClassifiesOnce`,
+`Resolve_EvictionWhileInFlight_ClassifiesInFlightSentenceOnce`,
+`Resolve_NullSegmentText_ThrowsArgumentNullException`,
+`Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException`,
+`Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException`,
+`Constructor_NullModel_ThrowsArgumentNullException`, and `Shared_ReturnsSameInstance`.
+
+**System-level WordSense resolution (Ste100Mark-System-Lint)**: The published tool assembly is
+run against a configuration with a verb-only entry ("check") and a two-sense entry for a
+made-up word the tagger cannot know. The document holds a noun usage, a verb usage, and an
+unresolvable usage on separate lines. The noun usage is not reported, the verb usage is
+reported with its alternative, and the unresolvable usage is reported as ambiguous. This
+scenario is tested by
+`Ste100Mark_LintDictionaryTermWithWordSenseResolution_ReportsOnlyDisallowedOrAmbiguousUsage`.
+
+**Ste100Mark-Linting-DictionaryPosVerblessSegment**: End-to-end behavior through
 `DictionaryChecker`, using a fixture dictionary matching the reported ASD-STE100 corpus shape
 (verb-only entries for "wash"/"pump"/"probe"/"function", and noun-sense entries for
-"arrangement"/"state"), is verified by `Evaluate_VerblessTableCellNounPhrase_NotFlagged`,
+"arrangement"/"state"), is verified for verbless table cells, table header cells, list items,
+comma-separated list fragments, and heading fragments, where a verb-only term used as a noun
+is not flagged. This scenario is tested by `Evaluate_VerblessTableCellNounPhrase_NotFlagged`,
 `Evaluate_VerblessTableHeaderCell_NotFlagged`, `Evaluate_VerblessListItemNounPhrase_NotFlagged`,
 `Evaluate_VerblessCommaSeparatedListFragment_NotFlagged`,
 `Evaluate_VerblessHeadingFragment_NotFlagged`,
@@ -295,26 +329,14 @@ by `Extract_ListItemWrappedAcrossLines_MergesIntoSingleListItemSegment`,
 `Extract_NestedListItem_DoesNotMergeIntoParentListItem`, and
 `Evaluate_AllowedPhraseSplitAcrossListItemLineWrap_SuppressesDiagnostic`.
 
-**Extended POS Signal Coverage (supplementary regression scenario, no linked requirement)**:
-Additional part-of-speech heuristic signals are
-verified in isolation: a match immediately followed by a bare numeral/identifier (for example
-"Block 0") resolves as a noun, while a match followed by a decimal-qualified number (a measured
-value) still resolves as a verb; a match immediately followed by "not"/"never" resolves as a
-noun, except when the matched word is itself a modal, "to be", or "do"/"have"-family auxiliary
-verb (for example "shall not"/"does not"), which always remains verbal regardless of the
-following negation; and a noun modifier directly before an allow-listed plural compound-noun
-head (for example "modules") resolves as a noun. This scenario is tested by
-`Guess_FollowedByBareIdentifierNumber_ReturnsNoun`, `Guess_FollowedByDecimalNumber_StillReturnsVerb`,
-`Guess_FollowedByNegationNot_ReturnsNoun`,
-`Guess_ModalAuxiliaryFollowedByNegation_DoesNotReturnNoun`, and
-`Guess_DoAuxiliaryFollowedByNegation_DoesNotReturnNoun`,
-`Guess_NounModifierBeforeAllowedPluralCompoundHead_ReturnsNoun`. Context-sensitive word-sense
-disambiguation for ambiguous technical terms - a noun-modifier position before another noun
-resolving the more plausible technical/compound sense rather than a verb reading - is verified
-by `Guess_AmbiguousWordMixBeforeNoun_ReturnsNoun` and
-`Guess_AmbiguousWordPortBeforeNoun_ReturnsNoun`. The idiom "in use" (the object of the
-preposition "in") resolving as a noun, rather than a bare verb-only match, is verified by
-`Guess_IdiomInUsePrecededByPreposition_ReturnsNoun`.
+**Resolver Limitations (supplementary regression scenario, no linked requirement)**: The
+tagger's known weaknesses are documented rather than hidden. Scenarios the tagger misreads
+(for example an imperative such as "Test results daily", or a verb followed by a number as in
+"Blocks 1 to 5 use 0.12 ohms") are not asserted as correct role resolutions. The interaction of
+the resolver with `DictionaryChecker` for a verb followed by a number is verified with an
+injected resolver by `Evaluate_TermFollowedByNumber_ConfidentVerbUsage_NotFlagged`, and the
+conservative fallback when the tagger is inconclusive is verified by
+`Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous`.
 
 **Suggestion Self-Filtering (supplementary regression scenario, no linked requirement)**: A
 diagnostic's suggestion/citations never
