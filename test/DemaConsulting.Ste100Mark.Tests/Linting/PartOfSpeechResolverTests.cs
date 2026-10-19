@@ -50,7 +50,11 @@ public class PartOfSpeechResolverTests
             IEnumerable<string> words, CancellationToken cancellationToken = default)
         {
             var tokens = words.ToArray();
-            Calls.Add(tokens);
+            lock (Calls)
+            {
+                Calls.Add(tokens);
+            }
+
             return Task.FromResult(answer(tokens));
         }
 
@@ -492,16 +496,119 @@ public class PartOfSpeechResolverTests
         entered.Wait(TestContext.Current.CancellationToken);
         resolver.Resolve("Delta four.", 0, 5);
         resolver.Resolve("Echo five.", 0, 4);
-        var second = Task.Factory.StartNew(
-            () => resolver.Resolve("Gate one.", 0, 4),
-            TaskCreationOptions.LongRunning);
-        await Task.Delay(100, TestContext.Current.CancellationToken);
+        Assert.True(resolver.IsSentenceCached("Gate one."));
         release.Set();
-        var results = await Task.WhenAll(first, second);
+        var firstResult = await first;
+        var secondResult = resolver.Resolve("Gate one.", 0, 4);
 
-        // Assert: the in-flight sentence was classified once and both callers got its answer
+        // Assert: the in-flight entry survived eviction, so the later lookup reused it
         Assert.Equal(1, gateCalls);
-        Assert.All(results, r => Assert.Equal(PartOfSpeech.Noun, r));
+        Assert.Equal(PartOfSpeech.Noun, firstResult);
+        Assert.Equal(PartOfSpeech.Noun, secondResult);
+    }
+
+    /// <summary>
+    ///     Test that exceeding capacity by one evicts a single completed entry and keeps the rest cached.
+    /// </summary>
+    [Fact]
+    public void Resolve_CapacityExceededByOne_EvictsOnlyOneEntry()
+    {
+        // Arrange: capacity 3, filled with three sentences
+        var model = Uniform(WsPos.Noun, 0.9);
+        var resolver = new PartOfSpeechResolver(model, 3);
+        string[] sentences = ["Alpha one.", "Beta two.", "Gamma three."];
+        foreach (var s in sentences)
+        {
+            resolver.Resolve(s, 0, 4);
+        }
+
+        // Act: add a fourth sentence
+        resolver.Resolve("Delta four.", 0, 5);
+
+        // Assert: only one earlier entry was dropped; the new one and the other two are still cached
+        Assert.Equal(3, resolver.CachedSentenceCount);
+        Assert.True(resolver.IsSentenceCached("Delta four."));
+        var survivors = sentences.Where(resolver.IsSentenceCached).ToArray();
+        Assert.Equal(2, survivors.Length);
+
+        // Act: resolve the survivors again
+        var callsBefore = model.Calls.Count;
+        foreach (var s in survivors)
+        {
+            resolver.Resolve(s, 0, 4);
+        }
+
+        // Assert: they were served from the cache without reclassification
+        Assert.Equal(callsBefore, model.Calls.Count);
+    }
+
+    /// <summary>
+    ///     Test that concurrent misses of distinct sentences keep the cache within its capacity plus the
+    ///     number of in-flight entries (in-flight entries are never evicted).
+    /// </summary>
+    [Fact]
+    public async Task Resolve_ConcurrentMisses_CacheStaysWithinCapacityPlusInFlight()
+    {
+        // Arrange: capacity 2, pre-filled with completed entries; many threads released together
+        const int capacity = 2;
+        const int threads = 16;
+        using var entered = new CountdownEvent(threads);
+        var blocking = false;
+        var countWhileInFlight = 0;
+        PartOfSpeechResolver resolver = null!;
+        var model = new ScriptedModel(tokens =>
+        {
+            // Hold every classification in flight until all workers have entered the model
+            if (Volatile.Read(ref blocking))
+            {
+                entered.Signal();
+                entered.Wait(TimeSpan.FromSeconds(10));
+                var observed = resolver.CachedSentenceCount;
+                lock (entered)
+                {
+                    countWhileInFlight = Math.Max(countWhileInFlight, observed);
+                }
+            }
+
+            return tokens.Select(t => Tag(t, WsPos.Noun, 0.9)).ToArray();
+        });
+        resolver = new PartOfSpeechResolver(model, capacity);
+        resolver.Resolve("Alpha one.", 0, 5);
+        resolver.Resolve("Beta two.", 0, 4);
+        Volatile.Write(ref blocking, true);
+        using var barrier = new Barrier(threads);
+        var active = 0;
+        var peak = 0;
+
+        // Act: every thread resolves its own new sentence at the same moment
+        var tasks = Enumerable.Range(0, threads).Select(i => Task.Factory.StartNew(
+            () =>
+            {
+                barrier.SignalAndWait(TimeSpan.FromSeconds(10));
+                lock (barrier)
+                {
+                    active++;
+                    peak = Math.Max(peak, active);
+                }
+
+                resolver.Resolve($"Word{i} text.", 0, 4);
+                lock (barrier)
+                {
+                    active--;
+                }
+            },
+            TaskCreationOptions.LongRunning)).ToArray();
+        await Task.WhenAll(tasks);
+
+        // Assert: in-flight entries may transiently exceed capacity, but once all classifications
+        // have completed the cache has been trimmed back to its capacity
+        Assert.True(peak >= 1);
+        Assert.True(
+            countWhileInFlight > capacity,
+            $"Cache held {countWhileInFlight} entries while all calls were in flight; expected more than {capacity}.");
+        Assert.True(
+            resolver.CachedSentenceCount <= capacity,
+            $"Cache holds {resolver.CachedSentenceCount} entries; capacity is {capacity}.");
     }
 
     /// <summary>

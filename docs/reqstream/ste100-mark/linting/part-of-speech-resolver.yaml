@@ -122,6 +122,8 @@ sections:
           - Resolve_SameSentenceTwice_ClassifiesOnce
           - Resolve_ConcurrentSameSentence_ClassifiesOnce
           - Resolve_EvictionWhileInFlight_ClassifiesInFlightSentenceOnce
+          - Resolve_CapacityExceededByOne_EvictsOnlyOneEntry
+          - Resolve_ConcurrentMisses_CacheStaysWithinCapacityPlusInFlight
 
       - id: Ste100Mark-PartOfSpeechResolver-SharedInstance
         title: >-
