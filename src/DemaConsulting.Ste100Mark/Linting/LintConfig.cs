@@ -217,7 +217,7 @@ internal sealed class DictionaryOverride
 internal sealed class Profile
 {
     /// <summary>
-    ///     Glob pattern (relative to the configuration file's directory) identifying the files this
+    ///     Glob pattern (relative to the current working directory) identifying the files this
     ///     profile applies to, for example <c>docs/user_guide/procedures/**/*.md</c>.
     /// </summary>
     public string Glob { get; set; } = string.Empty;

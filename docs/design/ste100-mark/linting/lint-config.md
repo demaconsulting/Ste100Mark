@@ -63,7 +63,7 @@ files it matches.
 
 **Profile**: glob-scoped mode/rules/dictionary tuning entry (the `profiles:` list item type).
 
-- `Glob`: `string` - glob pattern relative to the configuration directory.
+- `Glob`: `string` - glob pattern relative to the current working directory.
 - `Mode`: `LintMode?` - writing mode to apply when `Glob` matches, or `null` to leave mode
   resolution to `DefaultMode` or another matching profile.
 - `Rules`: `RulesOverride?` - partial rule-tuning delta applied for files matching `Glob`, or
@@ -117,7 +117,7 @@ Uses YamlDotNet with the hyphenated naming convention and `IgnoreUnmatchedProper
 
 **ResolveMode**: Resolves the effective mode for one file path.
 
-- *Parameters*: `string relativeFilePath` - file path relative to the profile glob base,
+- *Parameters*: `string relativeFilePath` - file path relative to the current working directory,
   using forward slashes.
 - *Returns*: `LintMode` - the first matching profile's mode, or `DefaultMode`.
 - *Preconditions*: `relativeFilePath` is not null.
@@ -129,7 +129,7 @@ Uses YamlDotNet with the hyphenated naming convention and `IgnoreUnmatchedProper
 
 **ResolveRules**: Resolves the effective `RulesConfig` for one file path.
 
-- *Parameters*: `string relativeFilePath` - file path relative to the profile glob base.
+- *Parameters*: `string relativeFilePath` - file path relative to the current working directory.
 - *Returns*: `RulesConfig` - the global `Rules`, layered with every matching profile's
   `Rules` delta.
 - *Preconditions*: `relativeFilePath` is not null.
@@ -143,7 +143,7 @@ Uses YamlDotNet with the hyphenated naming convention and `IgnoreUnmatchedProper
 **ResolveAllowedTerms**: Resolves the additional dictionary allow/ignore terms for one file
 path.
 
-- *Parameters*: `string relativeFilePath` - file path relative to the profile glob base.
+- *Parameters*: `string relativeFilePath` - file path relative to the current working directory.
 - *Returns*: `IReadOnlyCollection<string>` - the global `Dictionary.Allow`/`Dictionary.Ignore`
   terms, unioned with the `Dictionary.Allow`/`Dictionary.Ignore` terms of every matching
   profile, case-insensitively de-duplicated.
@@ -154,7 +154,7 @@ path.
 
 **ResolveAllowedPhrases**: Resolves the phrase-scoped dictionary allowances for one file path.
 
-- *Parameters*: `string relativeFilePath` - file path relative to the profile glob base.
+- *Parameters*: `string relativeFilePath` - file path relative to the current working directory.
 - *Returns*: `IReadOnlyCollection<string>` - the global `Dictionary.AllowInPhrase` phrases,
   unioned with the `Dictionary.AllowInPhrase` phrases of every matching profile,
   case-insensitively de-duplicated.

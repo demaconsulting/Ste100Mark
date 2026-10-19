@@ -86,6 +86,9 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// </remarks>
     private readonly ConcurrentDictionary<string, Lazy<SentenceTags>> _cache = new(StringComparer.Ordinal);
 
+    /// <summary>Serializes cache miss management (lookup-or-insert and eviction).</summary>
+    private readonly object _cacheLock = new();
+
     /// <summary>
     ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class using the
     ///     <see cref="BasicWordSenseModel"/>.
@@ -117,6 +120,16 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
         _model = model;
         _maxCacheEntries = maxCacheEntries;
     }
+
+    /// <summary>Gets the number of cached sentence entries (for tests).</summary>
+    internal int CachedSentenceCount => _cache.Count;
+
+    /// <summary>
+    ///     Reports whether the given sentence currently has a cache entry (for tests).
+    /// </summary>
+    /// <param name="sentence">The sentence text.</param>
+    /// <returns><see langword="true"/> when the sentence is cached.</returns>
+    internal bool IsSentenceCached(string sentence) => _cache.ContainsKey(sentence);
 
     /// <summary>
     ///     Gets the process-wide default resolver, created on first use and kept for the process lifetime.
@@ -185,22 +198,35 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     private SentenceTags GetTags(string sentence)
     {
         // Only a new key can grow the cache, so only a miss may evict. Eviction removes completed
-        // entries only: an in-flight Lazy stays reachable so concurrent callers keep sharing it.
-        if (!_cache.ContainsKey(sentence) && _cache.Count >= _maxCacheEntries)
+        // entries only (an in-flight Lazy stays reachable so concurrent callers keep sharing it), and
+        // only as many as needed to make room for the new key: the first completed entry found.
+        // The lookup-or-insert and eviction run under a lock so the capacity check, eviction and
+        // insertion are atomic; the classification itself (Lazy.Value) runs outside the lock.
+        if (!_cache.TryGetValue(sentence, out var entry))
         {
-            foreach (var pair in _cache)
+            lock (_cacheLock)
             {
-                if (pair.Value.IsValueCreated)
+                if (!_cache.TryGetValue(sentence, out entry))
                 {
-                    _cache.TryRemove(pair);
+                    if (_cache.Count >= _maxCacheEntries)
+                    {
+                        foreach (var pair in _cache)
+                        {
+                            if (pair.Value.IsValueCreated && _cache.TryRemove(pair))
+                            {
+                                break;
+                            }
+                        }
+                    }
+
+                    // One Lazy per sentence: concurrent callers block on the same computation.
+                    var key = sentence;
+                    entry = new Lazy<SentenceTags>(() => Classify(key), LazyThreadSafetyMode.ExecutionAndPublication);
+                    _cache[sentence] = entry;
                 }
             }
         }
 
-        // One Lazy per sentence: concurrent callers block on the same computation, so it runs once.
-        var entry = _cache.GetOrAdd(
-            sentence,
-            key => new Lazy<SentenceTags>(() => Classify(key), LazyThreadSafetyMode.ExecutionAndPublication));
         try
         {
             return entry.Value;

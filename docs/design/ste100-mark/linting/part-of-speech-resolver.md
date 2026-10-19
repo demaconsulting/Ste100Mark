@@ -39,8 +39,14 @@ in-memory and thread-safe and needs no download.
 **Shared**: lazily created process-wide instance, so the model is built once per process.
 
 **Cache**: a `ConcurrentDictionary` of per-sentence `Lazy` token spans and roles (thread-safe
-`ExecutionAndPublication`), keyed by sentence text. When a new sentence would be added at 4096 entries, only completed
-entries are evicted; in-flight entries are kept so single-flight is preserved.
+`ExecutionAndPublication`), keyed by sentence text. Hits are served without a lock. Miss management (re-check,
+capacity check, eviction and insertion) is serialized by a private lock, so completed entries never exceed the
+capacity and ordinary growth stops at it. The one exception is in-flight entries, which are never evicted, so under
+concurrent misses the total can temporarily exceed the capacity by at most the number of in-flight entries. When a
+new sentence would be added at 4096 entries, a single completed entry
+(the first one found, never an in-flight one) is evicted to make room and the rest stay cached for reuse. The
+classification itself (`Lazy.Value`) runs outside the lock, so different sentences classify in parallel and
+single-flight is preserved.
 One sentence is therefore classified only once however many dictionary terms it contains and
 however many threads ask at the same time. A computation that throws is removed from the cache
 so a later call retries.
