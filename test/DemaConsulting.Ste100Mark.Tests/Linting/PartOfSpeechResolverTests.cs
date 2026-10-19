@@ -50,7 +50,11 @@ public class PartOfSpeechResolverTests
             IEnumerable<string> words, CancellationToken cancellationToken = default)
         {
             var tokens = words.ToArray();
-            Calls.Add(tokens);
+            lock (Calls)
+            {
+                Calls.Add(tokens);
+            }
+
             return Task.FromResult(answer(tokens));
         }
 
@@ -576,12 +580,12 @@ public class PartOfSpeechResolverTests
             TaskCreationOptions.LongRunning)).ToArray();
         await Task.WhenAll(tasks);
 
-        // Assert: in-flight entries are never evicted, so the cache may only exceed its capacity by
-        // entries that were still unfinished when inserted; it is never above max(capacity, peak)
-        var bound = Math.Max(capacity, peak);
+        // Assert: in-flight entries may transiently exceed capacity, but once all classifications
+        // have completed the cache has been trimmed back to its capacity
+        Assert.True(peak >= 1);
         Assert.True(
-            resolver.CachedSentenceCount <= bound,
-            $"Cache holds {resolver.CachedSentenceCount} entries; bound is {bound}.");
+            resolver.CachedSentenceCount <= capacity,
+            $"Cache holds {resolver.CachedSentenceCount} entries; capacity is {capacity}.");
     }
 
     /// <summary>

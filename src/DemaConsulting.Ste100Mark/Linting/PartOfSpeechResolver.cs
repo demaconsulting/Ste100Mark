@@ -227,15 +227,47 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
             }
         }
 
+        SentenceTags tags;
         try
         {
-            return entry.Value;
+            tags = entry.Value;
         }
         catch
         {
             // A failed classification must not poison the cache; remove exactly this entry.
             _cache.TryRemove(new KeyValuePair<string, Lazy<SentenceTags>>(sentence, entry));
             throw;
+        }
+
+        TrimCompleted(entry);
+        return tags;
+    }
+
+    /// <summary>
+    ///     Evicts completed entries (other than the one just used) while the cache is over capacity,
+    ///     so entries that were in flight when the cache filled do not leave it permanently oversized.
+    /// </summary>
+    private void TrimCompleted(Lazy<SentenceTags> keep)
+    {
+        if (_cache.Count <= _maxCacheEntries)
+        {
+            return;
+        }
+
+        lock (_cacheLock)
+        {
+            foreach (var pair in _cache)
+            {
+                if (_cache.Count <= _maxCacheEntries)
+                {
+                    break;
+                }
+
+                if (!ReferenceEquals(pair.Value, keep) && pair.Value.IsValueCreated)
+                {
+                    _cache.TryRemove(pair);
+                }
+            }
         }
     }
 

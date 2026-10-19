@@ -40,9 +40,10 @@ in-memory and thread-safe and needs no download.
 
 **Cache**: a `ConcurrentDictionary` of per-sentence `Lazy` token spans and roles (thread-safe
 `ExecutionAndPublication`), keyed by sentence text. Hits are served without a lock. Miss management (re-check,
-capacity check, eviction and insertion) is serialized by a private lock, so completed entries never exceed the
-capacity and ordinary growth stops at it. The one exception is in-flight entries, which are never evicted, so under
-concurrent misses the total can temporarily exceed the capacity by at most the number of in-flight entries. When a
+capacity check, eviction and insertion) is serialized by a private lock. In-flight entries are never evicted, so
+under concurrent misses the total can temporarily exceed the capacity by at most the number of in-flight entries;
+as each classification completes, completed entries other than the one just used are trimmed until the cache is
+back within capacity. When a
 new sentence would be added at 4096 entries, a single completed entry
 (the first one found, never an in-flight one) is evicted to make room and the rest stay cached for reuse. The
 classification itself (`Lazy.Value`) runs outside the lock, so different sentences classify in parallel and
