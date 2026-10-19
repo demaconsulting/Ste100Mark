@@ -10,6 +10,7 @@ package Ste100Mark {
         part diagnostic : Diagnostic;
         part lintConfig : LintConfig;
         part lintDictionary : LintDictionary;
+        part partOfSpeechResolver : PartOfSpeechResolver;
         part partOfSpeechGuesser : PartOfSpeechGuesser;
         part markdownProseExtractor : MarkdownProseExtractor;
         part sentenceAnalyzer : SentenceAnalyzer;

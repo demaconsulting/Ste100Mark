@@ -1,0 +1,157 @@
+---
+# Software Unit Requirements for the PartOfSpeechResolver Class
+#
+# The PartOfSpeechResolver class decides whether a matched dictionary term is used as a noun
+# or a verb at a specific point in prose. A resolution is "confident" only when the part-of-speech
+# classifier chose a noun or verb for the matched word, in the context of its own sentence, with a
+# confidence of at least 0.45 (the minimum confidence, set by the MinimumConfidence requirement).
+# Every other outcome is "inconclusive". The unit has no OTS child requirement: the OTS WordSense
+# requirement is a child of the Linting subsystem requirement Ste100Mark-Linting-DictionaryPos.
+
+sections:
+  - title: PartOfSpeechResolver Unit Requirements
+    requirements:
+      - id: Ste100Mark-PartOfSpeechResolver-NounVerbResolution
+        title: >-
+          The PartOfSpeechResolver class shall resolve a single-word dictionary-term match as a
+          noun or a verb when the part-of-speech classifier classifies the word, in the context of
+          its sentence, as a noun or verb with at least the minimum confidence.
+        justification: |
+          Dictionary senses are restricted to a grammatical role, so the checker needs a
+          trustworthy noun or verb answer for the matched word. The classifier classifies the
+          word using its sentence context, which recognizes noun phrases built from modifiers
+          and imperative verbs that adjacent-word rules miss. A noun or verb answer at or
+          above the minimum confidence is "confident" and is the only kind of answer the
+          checker may use to select or suppress a sense.
+        tests:
+          - Resolve_NounUsage_ReturnsNoun
+          - Resolve_VerbUsage_ReturnsVerb
+          - Resolve_HardCase_ReturnsExpectedRole
+          - HardCases_ContainsTwentySixCases
+
+      - id: Ste100Mark-PartOfSpeechResolver-SentenceScope
+        title: >-
+          The PartOfSpeechResolver class shall classify a match using only the sentence that
+          contains it.
+        justification: |
+          A segment can hold several sentences in which the same word has different roles.
+          Classifying the wrong sentence would select the wrong sense and report or suppress
+          the wrong finding.
+        tests:
+          - Resolve_MatchInSecondSentence_UsesThatSentenceOnly
+          - Resolve_Tokenization_SendsOneSentenceWithWordAndPunctuationTokens
+
+      - id: Ste100Mark-PartOfSpeechResolver-RepeatedWord
+        title: >-
+          The PartOfSpeechResolver class shall resolve the requested occurrence when the same
+          word occurs more than once in a sentence.
+        justification: |
+          Resolving the wrong occurrence of a repeated word would report or suppress the wrong
+          finding.
+        tests:
+          - Resolve_RepeatedWord_ResolvesRequestedOccurrence
+
+      - id: Ste100Mark-PartOfSpeechResolver-MinimumConfidence
+        title: >-
+          The PartOfSpeechResolver class shall treat a classifier answer with a confidence below 0.45
+          as inconclusive and a classifier answer with a confidence of exactly 0.45 as confident.
+        justification: |
+          The threshold separates trustworthy answers from near-random ones. Every correct
+          noun or verb answer observed for the project corpus has a confidence above 0.45, so
+          no correct answer is lost, and the inclusive boundary must be exact so the documented
+          value behaves as documented.
+        tests:
+          - Resolve_ConfidenceThreshold_BoundaryIsInclusive
+          - MinimumConfidence_IsBelowLowestObservedCorrectConfidence
+
+      - id: Ste100Mark-PartOfSpeechResolver-UnknownWord
+        title: >-
+          The PartOfSpeechResolver class shall report a match as inconclusive when the
+          part-of-speech classifier does not know the matched word.
+        justification: |
+          A word the classifier does not know has no chosen sense, so any noun or verb answer
+          would be a guess. The checker must fall back to reporting every sense as ambiguous.
+        tests:
+          - Resolve_UnknownWordWithRealModel_ReturnsNull
+          - Resolve_UnknownWord_ReturnsNull
+
+      - id: Ste100Mark-PartOfSpeechResolver-OtherPartOfSpeech
+        title: >-
+          The PartOfSpeechResolver class shall report a match as inconclusive when the
+          part-of-speech classifier classifies the matched word as any part of speech other than a
+          noun or a verb.
+        justification: |
+          Dictionary senses restrict only the noun and verb roles that the checker resolves.
+          An adjective, adverb, or other answer cannot select or rule out a noun or verb
+          sense, so the conservative ambiguous report applies.
+        tests:
+          - Resolve_NonNounVerbPartOfSpeech_ReturnsNull
+
+      - id: Ste100Mark-PartOfSpeechResolver-MultiWordMatch
+        title: >-
+          The PartOfSpeechResolver class shall report a match that covers more than one word as
+          inconclusive.
+        justification: |
+          The classifier classifies single words, so it has no answer for a multi-word dictionary
+          phrase as a whole. Using the answer for one word of the phrase would be misleading.
+        tests:
+          - Resolve_MultiWordMatch_ReturnsNull
+
+      - id: Ste100Mark-PartOfSpeechResolver-UnusableTaggerResult
+        title: >-
+          The PartOfSpeechResolver class shall report a match as inconclusive when the
+          part-of-speech classifier returns a different number of results than the number of words
+          sent.
+        justification: |
+          A result list that does not line up with the words cannot be mapped back to the
+          matched word safely. Reporting the match as inconclusive keeps the linter from
+          using a misaligned answer.
+        tests:
+          - Resolve_ModelReturnsWrongResultCount_ReturnsNull
+
+      - id: Ste100Mark-PartOfSpeechResolver-SentenceReuse
+        title: >-
+          The PartOfSpeechResolver class shall classify a given sentence only once, however many
+          dictionary-term matches the sentence contains.
+        justification: |
+          Prose commonly holds several dictionary-term matches in one sentence, and classifying
+          a sentence is costly. Reusing the classification keeps lint runs fast on large
+          document sets.
+        tests:
+          - Resolve_SameSentenceTwice_ClassifiesOnce
+
+      - id: Ste100Mark-PartOfSpeechResolver-SharedInstance
+        title: >-
+          The PartOfSpeechResolver class shall provide a single shared default instance.
+        justification: |
+          Creating the classifier model is costly. One shared default instance lets every lint run
+          in the process pay that cost only once.
+        tests:
+          - Shared_ReturnsSameInstance
+
+      - id: Ste100Mark-PartOfSpeechResolver-NullSegmentText
+        title: >-
+          The PartOfSpeechResolver class shall reject a null segment text.
+        justification: |
+          A null segment text indicates a programming error in the caller. Failing fast with a
+          clear exception prevents a misleading resolution.
+        tests:
+          - Resolve_NullSegmentText_ThrowsArgumentNullException
+
+      - id: Ste100Mark-PartOfSpeechResolver-MatchOutsideText
+        title: >-
+          The PartOfSpeechResolver class shall reject a match that lies outside the segment text.
+        justification: |
+          A match outside the segment text indicates a programming error in the caller. Failing
+          fast with a clear exception prevents a misleading resolution from an invalid position.
+        tests:
+          - Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException
+
+      - id: Ste100Mark-PartOfSpeechResolver-NullModel
+        title: >-
+          The PartOfSpeechResolver class shall reject a null classifier model at construction.
+        justification: |
+          A resolver without a classifier model cannot resolve anything. Failing fast at
+          construction exposes the programming error immediately instead of at first use.
+        tests:
+          - Constructor_NullModel_ThrowsArgumentNullException

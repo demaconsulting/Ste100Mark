@@ -234,8 +234,9 @@ step-by-step guides need the shorter Rule 4.1 sentence limit, while a requiremen
 legitimately uses the word "shall" in every entry and would otherwise trip a project's
 dictionary. Each entry in `profiles` may set:
 
-- `glob` (required) - the pattern (relative to the configuration file's directory)
-  identifying the files the profile applies to.
+- `glob` (required) - the pattern identifying the files the profile applies to. It is
+  matched against each file's path relative to the directory where you run the tool (the
+  current working directory), not the configuration file's directory.
 - `mode` (optional) - sets the writing mode for matching files. When a file matches more
   than one profile, the **first** declared profile that specifies a `mode` wins; a
   profile with no `mode` is skipped for mode resolution and falls through to
@@ -289,14 +290,24 @@ prior to:
 
 A term with exactly one sense is always reported using that sense, regardless of context, so
 no ambiguity is possible when only one sense exists. When a term has more than one sense,
-Ste100Mark applies a lightweight, deterministic part-of-speech heuristic to the surrounding
-sentence context to decide which sense applies. A confident noun-versus-verb decision reports
+Ste100Mark uses the `DemaConsulting.WordSense` part-of-speech tagger on the sentence that
+contains the term to decide which sense applies. A confident noun-versus-verb decision reports
 only the matching sense, whose alternatives are joined with natural "or"/Oxford-comma
 phrasing, and the diagnostic message notes the grammatical role, for example
-`Avoid 'impact'; use 'effect' instead (used as a noun).` When the heuristic cannot decide,
+`Avoid 'impact'; use 'effect' instead (used as a noun).` When the tagger cannot decide (an
+unknown word, a low-confidence answer, a part of speech other than noun or verb, or a
+multi-word term),
 every sense is reported, grouped per part of speech and clearly labeled as ambiguous, for
 example `Ambiguous part of speech for 'impact' — possible corrections: as a noun, use
 'effect'; as a verb, use 'affect'.`
+
+The tagger is statistical, so it is not always right. An answer is accepted only when its
+confidence is at least 0.45, a threshold chosen from a corpus of 100 sentences plus 26 hard
+cases, all of which the tagger classified correctly. Known weak spots include a sentence-initial
+imperative that reads like a noun phrase (for example "Test results daily") and a verb followed
+by a number. In those cases a term can be reported with the wrong sense, or not be reported at
+all. The writing mode does not influence the decision. Add an `allow` entry or an
+`allow-in-phrase` entry to suppress a finding that you judge to be wrong.
 
 A reported suggestion never includes the exact word that was just flagged as one of its own
 alternatives, for both a confidently-resolved sense and an ambiguous, multi-sense result. For
@@ -304,11 +315,9 @@ example, if a matched inflected form such as "running" also appears in its sense
 alternatives list alongside "operating", only "operating" is suggested, since suggesting
 "running" as a replacement for "running" would be a meaningless no-op.
 
-The part-of-speech heuristic also recognizes a curated set of common technical plural nouns
-(for example "modules", "units", "sensors") as the head of a noun-noun compound, even though
-each of these words ends in "-s", which is otherwise treated as ambiguous with a verb form.
-For example, in "Backup modules are monitored.", "backup" is recognized as a noun modifier (not
-a verb) because it is immediately followed by the recognized compound-noun head "modules".
+The part-of-speech tagger also recognizes common technical plural nouns as the head of a
+noun-noun compound. For example, in "Backup modules are monitored.", "backup" is tagged as a
+noun modifier (not a verb) because the sentence context supports the noun reading.
 
 A table's column-header row (for example a "Hazard"/"Use" header above a table of data rows)
 and a bold admonition label at the very start of a block (for example `**Caution.**`) are

@@ -134,7 +134,7 @@ internal static class Linter
             if (dictionary is not null)
             {
                 var allowedPhrases = config.ResolveAllowedPhrases(relativePath);
-                diagnostics.AddRange(DictionaryChecker.Evaluate(relativePath, segments, dictionary, mode, allowedTerms, allowedPhrases));
+                diagnostics.AddRange(DictionaryChecker.Evaluate(relativePath, segments, dictionary, allowedTerms, allowedPhrases));
             }
         }
 

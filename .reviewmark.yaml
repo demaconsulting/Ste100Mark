@@ -186,6 +186,7 @@ reviews:
       - docs/reqstream/ste100-mark.yaml
     paths:
       - "docs/reqstream/ste100-mark/linting.yaml"
+      - "docs/reqstream/ste100-mark/linting/**/*.yaml"
       - "docs/design/ste100-mark/linting.md"
       - "docs/design/ste100-mark/linting/**/*.md"
       - "docs/verification/ste100-mark/linting.md"
@@ -269,6 +270,13 @@ reviews:
       - "docs/reqstream/ots/weasyprint.yaml"
       - "docs/design/ots/weasyprint.md"
       - "docs/verification/ots/weasyprint.md"
+
+  - id: OTS-WordSense
+    title: Review of WordSense OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/wordsense.yaml"
+      - "docs/design/ots/wordsense.md"
+      - "docs/verification/ots/wordsense.md"
 
   - id: OTS-xUnit
     title: Review of xUnit OTS verification evidence

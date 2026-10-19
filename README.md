@@ -171,8 +171,9 @@ profiles:
 
 Each profile entry supports:
 
-- `glob` (required): the pattern (relative to the configuration file's directory)
-  identifying the files the profile applies to.
+- `glob` (required): the pattern identifying the files the profile applies to. It is matched
+  against each file's path relative to the directory where you run the tool (the current
+  working directory), not the configuration file's directory.
 - `mode` (optional): sets the writing mode (`procedure` or `descriptive`) for matching
   files. When more than one profile matches a file, the **first** declared profile that
   specifies a `mode` wins; profiles without a `mode` are skipped for this resolution step
@@ -223,14 +224,16 @@ prior to:
 
 A term with exactly one sense (any `pos` value) is always reported using that sense,
 regardless of context — no ambiguity is possible when only one sense exists. When a term has
-more than one sense, Ste100Mark applies a lightweight, deterministic part-of-speech heuristic
-to the surrounding sentence context to decide which sense applies. When the heuristic can
-confidently tell noun from verb usage apart, only the matching sense is reported, its
-alternatives are joined with natural "or"/Oxford-comma phrasing, and the diagnostic message
-notes the grammatical role, for example: `Avoid 'impact'; use 'effect' instead (used as a
-noun).` When the heuristic cannot decide, every sense is reported, grouped per part of speech
-and clearly labeled as ambiguous, for example: `Ambiguous part of speech for 'impact' —
-possible corrections: as a noun, use 'effect'; as a verb, use 'affect'.`
+more than one sense, Ste100Mark uses the `DemaConsulting.WordSense` part-of-speech tagger on
+the sentence that contains the term to decide which sense applies. When the tagger can
+confidently tell noun from verb usage apart (confidence of at least 0.45), only the matching
+sense is reported, its alternatives are joined with natural "or"/Oxford-comma phrasing, and
+the diagnostic message notes the grammatical role, for example: `Avoid 'impact'; use
+'effect' instead (used as a noun).` When the tagger cannot decide, every sense is reported,
+grouped per part of speech and clearly labeled as ambiguous, for example: `Ambiguous part of
+speech for 'impact' — possible corrections: as a noun, use 'effect'; as a verb, use
+'affect'.` The tagger is statistical and can be wrong, for example for a sentence-initial
+imperative that reads like a noun phrase.
 
 **Why the real ASD-STE100 dictionary is not included:** The official ASD-STE100 Part 2
 Dictionary is commercially-licensed, copyrighted content owned by ASD (Aerospace, Security

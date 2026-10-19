@@ -7,7 +7,7 @@
 `DictionaryChecker` enforces the effective disallow list built by `LintDictionary`. Its
 single responsibility is to scan extracted prose segments for case-insensitive whole-term and
 whole-phrase matches, select the applicable POS-tagged sense(s) of each matched entry using
-`PartOfSpeechGuesser`, and emit `STE100-DICT` diagnostics.
+`IPartOfSpeechResolver` (implemented by `PartOfSpeechResolver`), and emit `STE100-DICT` diagnostics.
 
 #### Data Model
 
@@ -32,11 +32,11 @@ role-restriction prose rather than a word list.
 negative lookbehind/lookahead for `\w` and `-`, with spaces widened to `\s+`.
 
 **Sense selection**: every match (including single-sense terms) is resolved by calling
-`PartOfSpeechGuesser.GuessEffective` with the segment text and match position. A confident
-`Noun` or `Verb` guess narrows the candidate senses to those matching that role (plus any
-`Any`-pos sense); when the guess is confident but matches no sense in the schema, the term is
+`IPartOfSpeechResolver.Resolve` with the segment text and match position. A confident
+`Noun` or `Verb` resolution narrows the candidate senses to those matching that role (plus any
+`Any`-pos sense); when the resolution is confident but matches no sense in the schema, the term is
 not being used in a role ASD-STE100 restricts here, and no diagnostic is reported at all. An
-inconclusive guess keeps every sense as a candidate. Exactly one surviving candidate is
+inconclusive resolution keeps every sense as a candidate. Exactly one surviving candidate is
 reported confidently (labeled with the sense's `Pos` in the message only when the entry has
 more than one sense, so a single-sense entry's message stays unqualified; `Any` renders as
 "general"); more than one surviving candidate is reported as one ambiguous diagnostic listing
@@ -93,15 +93,16 @@ differ from the entry's headword (for example "run"), so both comparisons are ne
 **Evaluate**: Scans every extracted prose segment against the merged dictionary.
 
 - *Parameters*: `string file` - file path for diagnostics; `IReadOnlyList<ProseSegment> segments`
-  - prose segments; `LintDictionary dictionary` - merged dictionary; `LintMode mode` - the
-  file's resolved writing mode, forwarded to `PartOfSpeechGuesser.GuessEffective`;
+  - prose segments; `LintDictionary dictionary` - merged dictionary;
+  `IPartOfSpeechResolver? resolver` - optional resolver used for sense selection, defaulting
+  to `PartOfSpeechResolver.Shared` (the writing mode no longer influences the part of speech);
   `IReadOnlyCollection<string>? extraAllowedTerms` - optional additional per-file allowed
   terms (typically `LintConfig.ResolveAllowedTerms`), defaulting to `null` (no per-file
   allowance); `IReadOnlyCollection<string>? allowedPhrases` - optional phrase-scoped
   allowances (typically `LintConfig.ResolveAllowedPhrases`), defaulting to `null` (no
   phrase-scoped allowance).
 - *Returns*: `IReadOnlyList<Diagnostic>` - one diagnostic per matched occurrence, excluding
-  matches suppressed by a confident-but-non-matching POS guess, by `extraAllowedTerms`, or by
+  matches suppressed by a confident-but-non-matching part-of-speech resolution, by `extraAllowedTerms`, or by
   falling wholly inside an `allowedPhrases`, admonition-label, or quoted/emphasis span
   occurrence.
 - *Preconditions*: `file`, `segments`, and `dictionary` are non-null.
@@ -117,7 +118,7 @@ a multi-word `Disallow` term, returning the spans `Evaluate` tests each dictiona
 against.
 
 **BuildDiagnostic**: Selects the applicable sense(s) for one match and builds its diagnostic,
-or returns `null` when a confident POS guess rules out every sense (the term is not
+or returns `null` when a confident part-of-speech resolution rules out every sense (the term is not
 disallowed in the grammatical role it is being used in here).
 
 **FilterSelfAlternatives**: Removes the exact matched surface form (case-insensitive) from a
@@ -152,7 +153,7 @@ leaves `Citations` `null`. The separate `Suggestion` field for the non-self-refe
 unaffected and remains a plain, comma-separated list of alternatives.
 
 **AmbiguousDiagnostic**: Builds a diagnostic listing every candidate sense, labeled as
-ambiguous, when the heuristic could not confidently resolve one sense. The message has the
+ambiguous, when the resolver could not confidently resolve one sense. The message has the
 shape `"Ambiguous part of speech for '{term}' — possible corrections: {clauses}."`, where each
 candidate sense's clause is produced by `CorrectionClause` (see below), joined across senses
 with `"; "`. Both the `Suggestion` string and `Citations` list are built from the same filtered
@@ -189,13 +190,12 @@ one-second timeout and no local exception handling.
 #### Dependencies
 
 - **LintDictionary** - supplies the effective dictionary entries.
-- **PartOfSpeechGuesser** - `GuessEffective` selects the applicable sense(s) of a multi-sense
-  entry.
+- **PartOfSpeechResolver** - `Resolve` (through `IPartOfSpeechResolver`) selects the applicable
+  sense(s) of a multi-sense entry.
 - **MarkdownProseExtractor** - supplies segment text, line numbers, and the `TableHeader`
   segment role, plus the `FindInlineCodeSpans`/`OverlapsInlineCodeSpan`,
   `FindAdmonitionLabelSpans`, and `FindQuotedOrEmphasisSpans` helpers used to exclude matches.
-- **LintConfig** - supplies the `LintMode` forwarded to `PartOfSpeechGuesser`, and the
-  per-file `extraAllowedTerms`/`allowedPhrases` via `ResolveAllowedTerms`/`ResolveAllowedPhrases`.
+- **LintConfig** - supplies the per-file `extraAllowedTerms`/`allowedPhrases` via `ResolveAllowedTerms`/`ResolveAllowedPhrases`.
 - **Diagnostic** and **Severity** - encode the reported finding.
 - **.NET BCL** - regex construction and matching.
 

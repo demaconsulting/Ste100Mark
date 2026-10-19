@@ -23,6 +23,7 @@ OTS items:
 
 - **BuildMark**: integration and usage design.
 - **FileAssert**: integration and usage design.
+- **Microsoft.Extensions.FileSystemGlobbing**: integration and usage design.
 - **Pandoc**: integration and usage design.
 - **ReqStream**: integration and usage design.
 - **ReviewMark**: integration and usage design.
@@ -31,7 +32,9 @@ OTS items:
 - **SysML2Tools**: integration and usage design.
 - **VersionMark**: integration and usage design.
 - **WeasyPrint**: integration and usage design.
+- **WordSense**: integration and usage design.
 - **xUnit**: integration and usage design.
+- **YamlDotNet**: integration and usage design.
 
 The following topics are out of scope:
 
@@ -46,9 +49,11 @@ for the system, subsystem, and unit hierarchy. AI agents should query the SysML2
 (see the `sysml2tools-query` skill) rather than parsing this diagram or the prose elsewhere in
 this document. Any hand-maintained prose in this introduction that describes structure or item
 relationships is illustrative and explanatory only; if it differs from the model, the model takes
-precedence. The model captures the shipped system's runtime composition only; the OTS items listed
-in Scope above are build-time/pipeline tooling, documented separately (see `docs/design/ots.md`)
-rather than modeled as SysML2 parts.
+precedence. The model captures the shipped system's runtime composition, including the OTS runtime
+dependencies (WordSense, YamlDotNet, and FileSystemGlobbing), which are modeled as OTS parts in
+`docs/sysml2/model/ots.sysml`. The remaining OTS items listed in Scope above are build-time or
+pipeline tooling and are not modeled as SysML2 parts; all OTS items are documented in
+`docs/design/ots.md`.
 
 ![Software Structure](SoftwareStructureView.svg)
 
@@ -57,6 +62,7 @@ rather than modeled as SysML2 parts.
 - **src/** - source files and projects
   - **DemaConsulting.Ste100Mark/** - main application source
     - **Cli/** - command-line interface subsystem
+    - **Linting/** - Markdown linting subsystem
     - **SelfTest/** - self-validation subsystem
     - **Utilities/** - shared utilities subsystem
 

@@ -27,6 +27,9 @@ namespace DemaConsulting.Ste100Mark.Tests.Linting;
 /// </summary>
 public class DictionaryCheckerTests
 {
+    /// <summary>A resolver that is always inconclusive, so every sense is reported as ambiguous.</summary>
+    private static readonly IPartOfSpeechResolver Inconclusive = new FixedPartOfSpeechResolver(null);
+
     /// <summary>
     ///     Test that a disallowed embedded term is flagged with the correct rule code and suggestion.
     /// </summary>
@@ -38,7 +41,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         var diagnostic = Assert.Single(diagnostics);
@@ -69,7 +72,7 @@ public class DictionaryCheckerTests
         var segments = MarkdownProseExtractor.Extract(markdown);
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: the diagnostic reports line 4 (where "utilize" appears), not line 1 (the
         // paragraph's start line).
@@ -88,7 +91,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Check the oil prior to driving.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         var diagnostic = Assert.Single(diagnostics);
@@ -106,7 +109,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("UTILIZE the tool.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Single(diagnostics);
@@ -124,7 +127,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("The tool was utilized yesterday.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -141,7 +144,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Open the panel and check the display.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -168,7 +171,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         var diagnostic = Assert.Single(diagnostics);
@@ -187,7 +190,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -209,7 +212,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, extraAllowedTerms: ["utilize"]);
+            "file.md", segments, dictionary, extraAllowedTerms: ["utilize"]);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -228,7 +231,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, extraAllowedTerms: ["UTILIZE"]);
+            "file.md", segments, dictionary, extraAllowedTerms: ["UTILIZE"]);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -247,27 +250,28 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, extraAllowedTerms: ["shall"]);
+            "file.md", segments, dictionary, extraAllowedTerms: ["shall"]);
 
         // Assert: "utilize" is still reported since it was not in the extra-allowed set
         Assert.Single(diagnostics);
     }
 
     /// <summary>
-    ///     Test that a single-sense term is still reported using its one sense when the guesser
-    ///     is inconclusive (no confident signal either way), and that a single-sense entry's
+    ///     Test that a single-sense term is still reported using its one sense when the resolver
+    ///     is inconclusive (no confident noun or verb answer), and that a single-sense entry's
     ///     message is never POS-labeled.
     /// </summary>
     [Fact]
     public void Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel()
     {
-        // Arrange: "utilize" is a single-sense, verb-only embedded entry; "Please" triggers no
-        // noun or verb signal, so the guesser is inconclusive and the sole sense is reported.
+        // Arrange: "utilize" is a single-sense, verb-only embedded entry; "Please" gives the
+        // tagger no confident noun or verb answer for it, so the resolver is inconclusive and the
+        // sole sense is reported.
         var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: reported with its one sense's suggestion, no POS label
         var diagnostic = Assert.Single(diagnostics);
@@ -280,36 +284,36 @@ public class DictionaryCheckerTests
     }
 
     /// <summary>
-    ///     Test that a single-sense term is suppressed (no diagnostic) when the guesser
+    ///     Test that a single-sense term is suppressed (no diagnostic) when the resolver
     ///     confidently resolves a grammatical role that the term's one sense does not restrict -
     ///     the regression case for the "POS fallback never runs for single-sense entries" bug.
     /// </summary>
     [Fact]
     public void Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged()
     {
-        // Arrange: "utilize" is a single-sense, verb-only embedded entry. Preceded by "the" (an
-        // article, a confident noun signal) and followed by a noun, the guesser confidently
-        // resolves Noun, which the verb-only entry does not restrict.
+        // Arrange: "utilize" is a single-sense, verb-only embedded entry. The resolver is fixed
+        // to a confident Noun, which the verb-only entry does not restrict.
         var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Check the utilize option.", 1, SegmentRole.Paragraph)];
 
-        // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        // Act: the resolver is fixed to Noun so that this test exercises the checker's sense
+        // selection independently of tagger accuracy ("utilize" is not a real noun)
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: new FixedPartOfSpeechResolver(PartOfSpeech.Noun));
 
         // Assert: not disallowed in this (noun) role, so no diagnostic is reported
         Assert.Empty(diagnostics);
     }
 
     /// <summary>
-    ///     Test that a multi-sense term is suppressed (no diagnostic) when the guesser confidently
+    ///     Test that a multi-sense term is suppressed (no diagnostic) when the resolver confidently
     ///     resolves a grammatical role that none of the term's senses cover (for example, an
     ///     entry with only adjective/verb senses matched in a confident noun context).
     /// </summary>
     [Fact]
-    public void Evaluate_MultiSenseTerm_ConfidentGuessMatchesNoSense_NotFlagged()
+    public void Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged()
     {
         // Arrange: a project-supplied entry with adjective and verb senses only (no noun sense).
-        // "The reverse" is preceded by an article, a confident noun signal that matches neither.
+        // In "Set the reverse to neutral." the tagger confidently resolves a noun, which matches neither.
         var config = new LintConfig
         {
             Dictionary = new DictionaryConfig
@@ -328,9 +332,9 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Set the reverse to neutral.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
-        // Assert: the confident noun guess matches neither the adjective nor verb sense
+        // Assert: the confident noun role matches neither the adjective nor verb sense
         Assert.Empty(diagnostics);
     }
 
@@ -346,7 +350,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("The impact was clear.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: only the noun sense is reported
         var diagnostic = Assert.Single(diagnostics);
@@ -369,7 +373,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("This will impact the results.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: only the verb sense is reported
         var diagnostic = Assert.Single(diagnostics);
@@ -393,7 +397,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("They discuss Impact sometimes. The team operates daily.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: Inconclusive);
 
         // Assert: both senses are reported, clearly labeled as ambiguous
         var diagnostic = Assert.Single(diagnostics);
@@ -421,7 +425,7 @@ public class DictionaryCheckerTests
     {
         // Arrange: a project-supplied entry with a noun sense offering a real alternative, and an
         // adjective sense that is simply disallowed with no suggested replacement word. Ambiguous
-        // context (no confident guess) reports both candidates together.
+        // context (no confident noun or verb answer) reports both candidates together.
         var config = new LintConfig
         {
             Dictionary = new DictionaryConfig
@@ -440,7 +444,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("They discuss Gauge sometimes. The team operates daily.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: Inconclusive);
 
         // Assert: the alternatives-less candidate contributes no leading-space/empty-term
         // fragment to the suggestion, but its role restriction is still preserved in the message.
@@ -482,7 +486,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("The widget failed during the test.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: the generic no-alternatives wording is used, and neither Suggestion nor
         // Citations offers a (nonexistent) replacement word.
@@ -504,7 +508,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: the single alternative is embedded with no "or" joining word
         var diagnostic = Assert.Single(diagnostics);
@@ -534,7 +538,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: the two alternatives are joined with "or" and no Oxford comma
         var diagnostic = Assert.Single(diagnostics);
@@ -554,7 +558,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("They produce a lot of heat.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: the message uses an Oxford comma before "or"; the suggestion stays a plain list
         var diagnostic = Assert.Single(diagnostics);
@@ -590,7 +594,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Deploy happens soon. The team operates daily.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: Inconclusive);
 
         // Assert: both senses are grouped and joined per the natural-language join rules
         var diagnostic = Assert.Single(diagnostics);
@@ -611,7 +615,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Check the oil prior to driving.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Procedure);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: reported unconditionally with its one sense's suggestion
         var diagnostic = Assert.Single(diagnostics);
@@ -631,7 +635,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Run the `utilize` flag.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -652,7 +656,7 @@ public class DictionaryCheckerTests
         ];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: exactly one diagnostic, for the prose occurrence
         Assert.Single(diagnostics);
@@ -697,7 +701,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Wash pump", 1, SegmentRole.TableRow)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -715,7 +719,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Function", 1, SegmentRole.TableRow)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -733,7 +737,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Probe geometry and diameter.", 1, SegmentRole.ListItem)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -752,7 +756,7 @@ public class DictionaryCheckerTests
             [new ProseSegment("Holds. Metering device, probe, coupling, fluid.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -770,7 +774,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Wash Tower", 1, SegmentRole.Heading)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -791,7 +795,7 @@ public class DictionaryCheckerTests
             [new ProseSegment("Drive arrangement for the wash pump", 1, SegmentRole.TableRow)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: only "arrangement" is reported
         var diagnostic = Assert.Single(diagnostics);
@@ -810,7 +814,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("State", 1, SegmentRole.TableRow)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         var diagnostic = Assert.Single(diagnostics);
@@ -832,7 +836,7 @@ public class DictionaryCheckerTests
             [new ProseSegment("Wash the probe before each run.", 1, SegmentRole.ListItem)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Procedure);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: "wash" (imperative verb usage) is flagged
         Assert.Contains(diagnostics, d => d.Suggestion == "clean");
@@ -853,7 +857,7 @@ public class DictionaryCheckerTests
             [new ProseSegment("The pump moves fluid to the tower.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -886,7 +890,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["trail mix"]);
+            "file.md", segments, dictionary, allowedPhrases: ["trail mix"]);
 
         // Assert: only the "fuel mix" occurrence is reported, not the "trail mix" occurrence
         var diagnostic = Assert.Single(diagnostics);
@@ -917,7 +921,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["trail mix"]);
+            "file.md", segments, dictionary, allowedPhrases: ["trail mix"]);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -947,7 +951,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["trail mix"]);
+            "file.md", segments, dictionary, allowedPhrases: ["trail mix"]);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -982,7 +986,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["process error"]);
+            "file.md", segments, dictionary, allowedPhrases: ["process error"]);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -1012,7 +1016,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["trail mix"]);
+            "file.md", segments, dictionary, allowedPhrases: ["trail mix"]);
 
         // Assert: verify expected behavior
         Assert.Single(diagnostics);
@@ -1042,7 +1046,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Fill the trail mix tank.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested (allowedPhrases omitted)
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Single(diagnostics);
@@ -1051,20 +1055,17 @@ public class DictionaryCheckerTests
     /// <summary>
     ///     Test that a self-referential entry (its alternatives list includes its own headword,
     ///     ASD-STE100's convention for "approved in the other part of speech") is not flagged when
-    ///     the guesser cannot confidently resolve a role but the usage is a noun-noun compound the
+    ///     the resolver cannot confidently resolve a role but the usage is a noun-noun compound the
     ///     dictionary term modifies.
     /// </summary>
     [Fact]
     public void Evaluate_SelfReferentialEntry_NounCompoundUsage_NotFlagged()
     {
         // Arrange: "check" is verb-only, but self-referential (alternatives include "CHECK" - the
-        // noun form is approved). No noun or verb signal fires locally for "check" here (the
-        // determiner "the" does not reach past the ordinary noun "system", "status" is excluded
-        // from the compound-noun signal because it ends in "s", and "operates" elsewhere is a
-        // recognized finite verb so the whole-segment verbless signal does not fire either), so
-        // the guesser is genuinely inconclusive (null) - this exercises the new
-        // `guess is null && IsSelfReferential(entry)` suppression path directly, rather than the
-        // pre-existing "confident guess matches no sense" rule.
+        // noun form is approved). In this noun-noun compound the tagger gives no confident noun
+        // or verb answer for "check", so the resolver is inconclusive (null) - this exercises the
+        // `role is null && IsSelfReferential(entry)` suppression path directly, rather than the
+        // "confident role matches no sense" rule.
         var config = new LintConfig
         {
             Dictionary = new DictionaryConfig
@@ -1085,14 +1086,14 @@ public class DictionaryCheckerTests
         ];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
     }
 
     /// <summary>
-    ///     Test that a self-referential entry still reports a diagnostic when the guesser
+    ///     Test that a self-referential entry still reports a diagnostic when the resolver
     ///     confidently resolves the disallowed grammatical role (an imperative verb usage).
     /// </summary>
     [Fact]
@@ -1114,7 +1115,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Check the supply level.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Procedure);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Single(diagnostics);
@@ -1124,7 +1125,7 @@ public class DictionaryCheckerTests
     ///     Test that a purely self-referential entry (its only alternative is its own headword,
     ///     for example <c>test (v) -&gt; TEST</c>) is reported with role-restriction wording rather
     ///     than a nonsensical "avoid 'test'; use 'test' instead" word-swap message, when the
-    ///     guesser confidently resolves the disallowed grammatical role.
+    ///     resolver confidently resolves the disallowed grammatical role.
     /// </summary>
     [Fact]
     public void Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage()
@@ -1144,7 +1145,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Test the pump before installation.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Procedure);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: the message explains the role restriction instead of suggesting the same word
         var diagnostic = Assert.Single(diagnostics);
@@ -1182,7 +1183,7 @@ public class DictionaryCheckerTests
             [new ProseSegment("Reports test findings daily readers. The system operates continuously.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: Inconclusive);
 
         // Assert: the verb clause explains the role restriction; the noun clause still offers
         // its real alternatives.
@@ -1219,8 +1220,10 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments =
             [new ProseSegment("Blocks 1 to 5 use 0.12 ohms of resistance.", 1, SegmentRole.Paragraph)];
 
-        // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        // Act: the resolver is fixed to Verb (the role this scenario describes) so that this test
+        // exercises the checker's sense selection independently of tagger accuracy; the real
+        // tagger reads "use" here as a noun (see the design document's limitations).
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: new FixedPartOfSpeechResolver(PartOfSpeech.Verb));
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -1230,7 +1233,7 @@ public class DictionaryCheckerTests
     ///     Test that an entry whose senses collectively cover more than one part of speech, and
     ///     every one of those senses lists only its own headword among its alternatives, is never
     ///     flagged - there is no part-of-speech switch that would resolve the finding, so it is
-    ///     unactionable regardless of what the guesser returns. Regression test for a reported bug
+    ///     unactionable regardless of what the resolver returns. Regression test for a reported bug
     ///     where an entry like "support (n) -&gt; SUPPORT, HOLD" and "support (v) -&gt; HOLD, SUPPORT"
     ///     was still being flagged even though ASD-STE100 approves the word in every role it can
     ///     grammatically take.
@@ -1240,12 +1243,9 @@ public class DictionaryCheckerTests
     {
         // Arrange: "support" is approved as both a noun and a verb (each sense's alternatives list
         // its own headword), so no correction exists in either role. The fixture deliberately
-        // includes a confident noun occurrence ("the switch to support gigabit" - preceded by "to",
-        // a confident verb signal) and a confident-noun occurrence ("Software support" - preceded
-        // by an adjective-modified noun phrase, resolving via the noun-compound-modifier signal) as
-        // well as an inconclusive occurrence, so this test cannot pass merely because
-        // IsUnactionable happens to only be reached via a null guess; it proves the suppression is
-        // independent of whatever the guesser returns.
+        // includes confident noun and verb occurrences as well as an inconclusive occurrence, so
+        // this test cannot pass merely because IsUnactionable happens to only be reached via a
+        // null role; it proves the suppression is independent of whatever the resolver returns.
         var config = new LintConfig
         {
             Dictionary = new DictionaryConfig
@@ -1270,37 +1270,11 @@ public class DictionaryCheckerTests
         ];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior - none of the three occurrences (confident noun,
         // confident verb, and inconclusive) are flagged.
         Assert.Empty(diagnostics);
-    }
-
-    /// <summary>
-    ///     Test that the mode-dependent imperative-sentence-start signal no longer confidently
-    ///     resolves "Hold" as a verb at the start of a Markdown table cell, now that the strong
-    ///     noun-compound/verbless-segment signals are correctly allowed to conflict with it.
-    ///     Regression test for the bug fixed in <see cref="PartOfSpeechGuesser.Guess"/>: asserts the
-    ///     guesser's own result directly (not just the end-to-end diagnostic outcome), because a
-    ///     noun-only entry is already protected from a wrongly-confident Verb guess by the
-    ///     pre-existing "confident guess matches no sense" rule regardless of this bug, so the
-    ///     end-to-end diagnostic count alone does not distinguish the fixed behavior from the
-    ///     pre-fix behavior for that entry shape.
-    /// </summary>
-    [Fact]
-    public void Guess_ImperativeAtStartOfTableCell_ResolvesAmbiguousNotConfidentVerb()
-    {
-        // Arrange: the exact table-cell fragment from the reported false positive.
-        const string text = "Hold at the end of the stroke while the column settles";
-        var index = text.IndexOf("Hold", StringComparison.Ordinal);
-
-        // Act: execute the operation being tested
-        var result = PartOfSpeechGuesser.Guess(text, index, "Hold".Length, LintMode.Procedure);
-
-        // Assert: the imperative signal alone no longer wins outright; the verbless-segment noun
-        // signal now conflicts with it, so the overall result is ambiguous (null).
-        Assert.Null(result);
     }
 
     /// <summary>
@@ -1327,7 +1301,7 @@ public class DictionaryCheckerTests
         var segments = MarkdownProseExtractor.Extract(markdown);
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Procedure);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -1358,7 +1332,7 @@ public class DictionaryCheckerTests
             [new ProseSegment("Neither figure gives a hold at the end of a stroke.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Single(diagnostics);
@@ -1388,7 +1362,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("You must check the gauge reading.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: "CHECK" is filtered out of the suggestion/citations, leaving the genuine alternatives
         var diagnostic = Assert.Single(diagnostics);
@@ -1428,7 +1402,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("They discuss Mix sometimes. The team operates daily.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: Inconclusive);
 
         // Assert: "MIX" never appears as a suggested alternative for itself
         var diagnostic = Assert.Single(diagnostics);
@@ -1468,7 +1442,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, LintMode.Descriptive, allowedPhrases: ["power supply"]);
+            "file.md", segments, dictionary, allowedPhrases: ["power supply"]);
 
         // Assert: only the standalone "power" (not inside "power supply") is flagged
         Assert.Single(diagnostics);
@@ -1488,7 +1462,7 @@ public class DictionaryCheckerTests
             [new ProseSegment("The old manual used the word \"utilize\" throughout its text.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -1518,7 +1492,7 @@ public class DictionaryCheckerTests
             [new ProseSegment("**Caution.** Keep hands clear of the panel.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -1548,11 +1522,61 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> rowSegments = [new ProseSegment("Use", 2, SegmentRole.TableRow)];
 
         // Act: execute the operation being tested
-        var headerDiagnostics = DictionaryChecker.Evaluate("file.md", headerSegments, dictionary, LintMode.Descriptive);
-        var rowDiagnostics = DictionaryChecker.Evaluate("file.md", rowSegments, dictionary, LintMode.Descriptive);
+        var headerDiagnostics = DictionaryChecker.Evaluate("file.md", headerSegments, dictionary);
+        var rowDiagnostics = DictionaryChecker.Evaluate("file.md", rowSegments, dictionary);
 
         // Assert: the header cell is skipped, but the same word in a data cell is still flagged
         Assert.Empty(headerDiagnostics);
         Assert.Single(rowDiagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a resolver that reports a confident role matching one sense of a multi-sense
+    ///     term yields only that sense's confident diagnostic.
+    /// </summary>
+    [Fact]
+    public void Evaluate_InjectedResolverConfidentVerb_ReportsOnlyVerbSense()
+    {
+        // Arrange: a two-sense entry and a resolver fixed to Verb
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("They discuss Impact sometimes.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, resolver: new FixedPartOfSpeechResolver(PartOfSpeech.Verb));
+
+        // Assert: only the verb sense is reported, labeled as a verb
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("affect", diagnostic.Suggestion);
+        Assert.Contains("used as a verb", diagnostic.Message);
+    }
+
+    /// <summary>
+    ///     Test that the default resolver is used when none is injected, and a noun role from the
+    ///     real tagger suppresses a verb-only dictionary entry.
+    /// </summary>
+    [Fact]
+    public void Evaluate_DefaultResolver_NounUsageOfVerbOnlyEntry_NotFlagged()
+    {
+        // Arrange: "test" disallowed as a verb only; used as a noun with an article
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                UseEmbedded = false,
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["test"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["TEST"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("The test passed.", 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+
+        // Assert: no finding
+        Assert.Empty(diagnostics);
     }
 }

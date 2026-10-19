@@ -23,7 +23,7 @@ using DemaConsulting.Ste100Mark.Linting;
 namespace DemaConsulting.Ste100Mark.Tests.Linting;
 
 /// <summary>
-///     A ~100-sentence, hand-written corpus measuring <see cref="PartOfSpeechGuesser"/>'s
+///     A ~100-sentence, hand-written corpus measuring <see cref="PartOfSpeechResolver"/>'s
 ///     false-positive rate against genuinely dual-class English noun/verb homographs (words with
 ///     the identical spelling in both roles, for example "test"/"TEST") - the same dictionary
 ///     shape that produced the reported false-positive pattern against a real, commercially
@@ -43,8 +43,8 @@ namespace DemaConsulting.Ste100Mark.Tests.Linting;
 ///     sentences are free to contain ordinary English words without accidentally tripping an
 ///     unrelated embedded-dictionary entry.
 ///
-///     A failure here is a genuine <see cref="PartOfSpeechGuesser"/> false positive on a realistic
-///     sentence, not noise - use failures to drive further heuristic tuning (Tier 2/3 work),
+///     A failure here is a genuine <see cref="PartOfSpeechResolver"/> false positive on a realistic
+///     sentence, not noise - use failures to adjust the resolver's confidence threshold or document a limitation,
 ///     rather than treating every diagnostic as equally suspect.
 /// </remarks>
 public class PartOfSpeechFalsePositiveCorpusTests
@@ -144,45 +144,43 @@ public class PartOfSpeechFalsePositiveCorpusTests
     /// </summary>
     public static IEnumerable<object[]> LegalVerbUsageCases()
     {
-        // The internal LintMode type cannot appear directly in a public [MemberData] row, so the
-        // boolean flag stands in for it and is translated back inside the theory method.
-        (string Term, string Sentence, bool IsProcedure)[] cases =
+        (string Term, string Sentence)[] cases =
         [
-            ("increase", "Increase the pressure gradually.", true),
-            ("decrease", "Decrease the flow rate slowly.", true),
-            ("access", "Technicians must access the panel from the rear.", false),
-            ("process", "The operator will process the batch tomorrow.", false),
-            ("damage", "Take care not to damage the coating during removal.", false),
-            ("wear", "Continued use can wear the bearing surface.", false),
-            ("repair", "Send the unit to the depot to repair the fault.", false),
-            ("return", "Plan to return the unit to service after testing.", false),
-            ("exchange", "Plan to exchange the sensor before the next test.", false),
-            ("release", "Continue to release the pressure slowly.", false),
-            ("request", "Plan to request approval before the change.", false),
-            ("demand", "The load may demand additional current during startup.", false),
-            ("offer", "The supplier will offer a replacement part.", false),
-            ("supply", "The pump will supply coolant to the engine.", false),
-            ("delay", "Plan to delay the shipment until parts arrive.", false),
-            ("advance", "Plan to advance the schedule by one week.", false),
-            ("display", "The system will display the fault code.", false),
-            ("review", "The engineer will review the drawing tomorrow.", false),
-            ("audit", "Plan to audit the process before the release.", false),
-            ("design", "Plan to design the fixture before manufacturing.", false),
-            ("model", "Engineers will model the airflow before testing.", false),
-            ("sketch", "Plan to sketch the layout before cutting metal.", false),
-            ("draft", "Plan to draft the procedure before the review.", false),
-            ("exercise", "Plan to exercise the valve weekly to prevent seizure.", false),
-            ("transfer", "Plan to transfer the data before shutdown.", false),
-            ("support", "The bracket will support the load during transport.", false),
-            ("contact", "Plan to contact the supplier before ordering parts.", false),
-            ("document", "Plan to document the results after each run.", false),
-            ("quote", "Plan to quote the customer before month end.", false),
-            ("stage", "Plan to stage the components before assembly.", false)
+            ("increase", "Increase the pressure gradually."),
+            ("decrease", "Decrease the flow rate slowly."),
+            ("access", "Technicians must access the panel from the rear."),
+            ("process", "The operator will process the batch tomorrow."),
+            ("damage", "Take care not to damage the coating during removal."),
+            ("wear", "Continued use can wear the bearing surface."),
+            ("repair", "Send the unit to the depot to repair the fault."),
+            ("return", "Plan to return the unit to service after testing."),
+            ("exchange", "Plan to exchange the sensor before the next test."),
+            ("release", "Continue to release the pressure slowly."),
+            ("request", "Plan to request approval before the change."),
+            ("demand", "The load may demand additional current during startup."),
+            ("offer", "The supplier will offer a replacement part."),
+            ("supply", "The pump will supply coolant to the engine."),
+            ("delay", "Plan to delay the shipment until parts arrive."),
+            ("advance", "Plan to advance the schedule by one week."),
+            ("display", "The system will display the fault code."),
+            ("review", "The engineer will review the drawing tomorrow."),
+            ("audit", "Plan to audit the process before the release."),
+            ("design", "Plan to design the fixture before manufacturing."),
+            ("model", "Engineers will model the airflow before testing."),
+            ("sketch", "Plan to sketch the layout before cutting metal."),
+            ("draft", "Plan to draft the procedure before the review."),
+            ("exercise", "Plan to exercise the valve weekly to prevent seizure."),
+            ("transfer", "Plan to transfer the data before shutdown."),
+            ("support", "The bracket will support the load during transport."),
+            ("contact", "Plan to contact the supplier before ordering parts."),
+            ("document", "Plan to document the results after each run."),
+            ("quote", "Plan to quote the customer before month end."),
+            ("stage", "Plan to stage the components before assembly.")
         ];
 
-        foreach (var (term, sentence, isProcedure) in cases)
+        foreach (var (term, sentence) in cases)
         {
-            yield return [term, sentence, isProcedure];
+            yield return [term, sentence];
         }
     }
 
@@ -211,7 +209,7 @@ public class PartOfSpeechFalsePositiveCorpusTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment(sentence, 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, LintMode.Descriptive);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: the legal noun usage produces no finding
         Assert.Empty(diagnostics);
@@ -223,7 +221,7 @@ public class PartOfSpeechFalsePositiveCorpusTests
     /// </summary>
     [Theory]
     [MemberData(nameof(LegalVerbUsageCases))]
-    public void Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged(string term, string sentence, bool isProcedure)
+    public void Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged(string term, string sentence)
     {
         // Arrange: a self-contained dictionary disallowing only the noun sense of the term
         var config = new LintConfig
@@ -239,10 +237,9 @@ public class PartOfSpeechFalsePositiveCorpusTests
         };
         var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
         IReadOnlyList<ProseSegment> segments = [new ProseSegment(sentence, 1, SegmentRole.Paragraph)];
-        var mode = isProcedure ? LintMode.Procedure : LintMode.Descriptive;
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, mode);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
         // Assert: the legal verb usage produces no finding
         Assert.Empty(diagnostics);

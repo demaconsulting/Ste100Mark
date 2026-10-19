@@ -27,10 +27,10 @@
 # Each sense has a `pos` (part of speech: `noun`, `verb`, `adjective`,
 # `adverb`, or `any` for a role-independent connector), an `alternatives`
 # list of suggested replacements for that sense, and an optional free-text
-# `note`. Every match is checked against a best-effort part-of-speech
-# heuristic: when the heuristic confidently resolves a role (noun or verb)
+# `note`. Every match is checked against a context-aware part-of-speech
+# tagger: when the tagger confidently resolves a role (noun or verb)
 # that none of the term's senses restrict, the match is not reported (the
-# word is not being used in a disallowed role here). When the heuristic
+# word is not being used in a disallowed role here). When the tagger
 # cannot decide confidently, every remaining candidate sense is reported,
 # labeled as ambiguous.
 # ---------------------------------------------------------------------------

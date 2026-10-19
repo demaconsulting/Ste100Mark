@@ -25,7 +25,7 @@ namespace DemaConsulting.Ste100Mark.Linting;
 /// <summary>
 ///     Scans prose text for disallowed vocabulary from a merged <see cref="LintDictionary"/> and
 ///     reports the matched term with its suggested alternative(s), using
-///     <see cref="PartOfSpeechGuesser"/> to select the applicable sense(s) when a term has more
+///     <see cref="IPartOfSpeechResolver"/> to select the applicable sense(s) when a term has more
 ///     than one.
 /// </summary>
 /// <remarks>
@@ -35,14 +35,14 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     "utilized" is not incorrectly flagged by a "utilize" entry unless "utilized" is itself
 ///     matched by the word-boundary regex (which it is not, since the boundary requires the exact
 ///     term). Multi-word terms match across the segment's normalized single-space-separated text.
-///     A term is always evaluated through <see cref="PartOfSpeechGuesser.GuessEffective"/>, even when it
-///     has only one sense: when the guesser confidently resolves a grammatical role (noun or
+///     A term is always evaluated through <see cref="IPartOfSpeechResolver.Resolve"/>, even when it
+///     has only one sense: when the resolver confidently resolves a grammatical role (noun or
 ///     verb) that none of the entry's senses restrict, the term is not being used in a
-///     disallowed role at this location and no diagnostic is reported. When the guess matches
+///     disallowed role at this location and no diagnostic is reported. When the resolved role matches
 ///     one sense, that sense's alternative(s) are reported (labeled with the resolved part of
 ///     speech only when the entry has more than one sense, so a single-sense entry's message
-///     stays unqualified). When the guess is inconclusive (or the entry has multiple senses none
-///     of which the guess narrows to exactly one), every remaining candidate sense is reported,
+///     stays unqualified). When the resolution is inconclusive (or the entry has multiple senses
+///     none of which the resolved role narrows to exactly one), every remaining candidate sense is reported,
 ///     labeled as ambiguous.
 ///
 ///     A match that falls entirely inside an inline code span (for example, a disallowed term that
@@ -68,10 +68,6 @@ internal static class DictionaryChecker
     /// <param name="file">File path used to populate <see cref="Diagnostic.File"/>.</param>
     /// <param name="segments">Prose segments produced by <see cref="MarkdownProseExtractor"/>.</param>
     /// <param name="dictionary">Merged dictionary to check against.</param>
-    /// <param name="mode">
-    ///     The file's resolved <see cref="LintMode"/>, forwarded to <see cref="PartOfSpeechGuesser.GuessEffective"/>
-    ///     for the imperative-sentence-start signal.
-    /// </param>
     /// <param name="extraAllowedTerms">
     ///     Additional terms to treat as allowed for this file only, on top of
     ///     <paramref name="dictionary"/>'s own global allow/ignore lists - typically the file's
@@ -85,18 +81,23 @@ internal static class DictionaryChecker
     ///     is suppressed, without suppressing the same term elsewhere in the segment. Pass
     ///     <see langword="null"/> or an empty collection when no phrase-scoped allowance applies.
     /// </param>
+    /// <param name="resolver">
+    ///     The part-of-speech resolver to use; <see langword="null"/> selects the process-wide default
+    ///     <see cref="PartOfSpeechResolver"/> (supplied explicitly only by tests).
+    /// </param>
     /// <returns>One diagnostic per matched occurrence, in segment order.</returns>
     public static IReadOnlyList<Diagnostic> Evaluate(
         string file,
         IReadOnlyList<ProseSegment> segments,
         LintDictionary dictionary,
-        LintMode mode,
         IReadOnlyCollection<string>? extraAllowedTerms = null,
-        IReadOnlyCollection<string>? allowedPhrases = null)
+        IReadOnlyCollection<string>? allowedPhrases = null,
+        IPartOfSpeechResolver? resolver = null)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(segments);
         ArgumentNullException.ThrowIfNull(dictionary);
+        resolver ??= PartOfSpeechResolver.Shared;
 
         var allowedTerms = extraAllowedTerms is { Count: > 0 }
             ? new HashSet<string>(extraAllowedTerms, StringComparer.OrdinalIgnoreCase)
@@ -160,7 +161,7 @@ internal static class DictionaryChecker
                         continue;
                     }
 
-                    var diagnostic = BuildDiagnostic(file, segment, entry, match, mode);
+                    var diagnostic = BuildDiagnostic(file, segment, entry, match, resolver);
                     if (diagnostic is not null)
                     {
                         diagnostics.Add(diagnostic);
@@ -204,7 +205,7 @@ internal static class DictionaryChecker
     /// <summary>
     ///     Builds the diagnostic for one matched occurrence, selecting the applicable sense(s) and
     ///     the corresponding confident-or-ambiguous message/suggestion wording, or
-    ///     <see langword="null"/> when a confident guess rules out every sense (the term is not
+    ///     <see langword="null"/> when a confident resolution rules out every sense (the term is not
     ///     disallowed in the grammatical role it is being used in here).
     /// </summary>
     private static Diagnostic? BuildDiagnostic(
@@ -212,16 +213,16 @@ internal static class DictionaryChecker
         ProseSegment segment,
         DictionaryEntry entry,
         Match match,
-        LintMode mode)
+        IPartOfSpeechResolver resolver)
     {
-        var guess = PartOfSpeechGuesser.GuessEffective(segment.Text, match.Index, match.Length, mode);
-        var candidates = guess is null
+        var role = resolver.Resolve(segment.Text, match.Index, match.Length);
+        var candidates = role is null
             ? entry.Senses
-            : entry.Senses.Where(s => s.Pos == guess || s.Pos == PartOfSpeech.Any).ToList();
+            : entry.Senses.Where(s => s.Pos == role || s.Pos == PartOfSpeech.Any).ToList();
 
-        if (guess is not null && candidates.Count == 0)
+        if (role is not null && candidates.Count == 0)
         {
-            // The guesser confidently resolved a grammatical role that none of the entry's
+            // The resolver confidently resolved a grammatical role that none of the entry's
             // senses restrict (for example, a verb-only entry matched where the term is used
             // as a noun): the word is not being used in a role ASD-STE100 disallows here, so no
             // diagnostic is reported.
@@ -234,24 +235,24 @@ internal static class DictionaryChecker
             // alternatives), and the senses between them cover more than one part of speech (for
             // example "support (n) -> SUPPORT, HOLD" and "support (v) -> HOLD, SUPPORT"). ASD-STE100
             // approves this word in every role it can grammatically take, so there is no
-            // part-of-speech switch left that would resolve the finding - the guesser being right
+            // part-of-speech switch left that would resolve the finding - the resolver being right
             // or wrong changes nothing. This is a pure dictionary-shape test and does not depend on
-            // the guesser at all.
+            // the resolver at all.
             return null;
         }
 
-        if (guess is null && entry.Senses.Count == 1 && IsSelfReferential(entry))
+        if (role is null && entry.Senses.Count == 1 && IsSelfReferential(entry))
         {
             // A self-referential entry (its alternatives list includes its own headword) is
             // ASD-STE100's convention for "this word is approved, but only in the other part of
             // speech" (for example "test (v) -> TEST", meaning the noun "test" is fine). When the
-            // guesser could not confidently resolve a role at all, an inconclusive match against a
+            // resolver could not confidently resolve a role at all, an inconclusive match against a
             // self-referential, single-sense entry is more likely a missed noun-compound/other
             // signal than a genuine disallowed usage, so it is not reported. This is deliberately
             // restricted to single-sense entries: a multi-sense entry that happens to include its
             // own headword among one sense's alternatives may still have a genuinely ambiguous
             // finding worth reporting under its other sense(s), so it is not suppressed here. A
-            // confident guess of the disallowed part of speech is still reported (handled by the
+            // confident resolution of the disallowed part of speech is still reported (handled by the
             // candidates check above); this only relaxes the previously-ambiguous case.
             return null;
         }
@@ -282,12 +283,12 @@ internal static class DictionaryChecker
     ///     role it can grammatically take, so there is no part-of-speech switch that would resolve
     ///     a finding: whichever role the word is used in here, ASD-STE100 already approves it in
     ///     that role. Such an entry can never produce an actionable diagnostic and is never
-    ///     flagged, regardless of what <see cref="PartOfSpeechGuesser.GuessEffective"/> returns. This differs
+    ///     flagged, regardless of what <see cref="IPartOfSpeechResolver.Resolve"/> returns. This differs
     ///     from <see cref="IsSelfReferential"/> only in scope: <see cref="IsSelfReferential"/> asks
     ///     whether *any* sense is self-referential (used to relax a single-sense entry's
-    ///     inconclusive-guess case), whereas this asks whether *every* sense across *more than one*
+    ///     inconclusive-resolution case), whereas this asks whether *every* sense across *more than one*
     ///     part of speech is self-referential (used to suppress the finding outright, independent of
-    ///     the guesser).
+    ///     the resolver).
     /// </summary>
     private static bool IsUnactionable(DictionaryEntry entry)
     {

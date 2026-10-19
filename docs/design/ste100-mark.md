@@ -155,6 +155,8 @@ diagnostics and summaries through `DiagnosticReporter` into that context's outpu
   results files.
 - **YamlDotNet**: provides YAML deserialization for `.ste100mark.yaml` and project dictionary
   files. See *YamlDotNet*.
+- **DemaConsulting.WordSense** and **DemaConsulting.WordSense.Basic**: provide the part-of-speech
+  tagger used to resolve noun and verb usage of dictionary terms. See *WordSense*.
 - **Microsoft.Extensions.FileSystemGlobbing**: provides glob evaluation for file selection and
   mode overrides. See *Microsoft.Extensions.FileSystemGlobbing*.
 

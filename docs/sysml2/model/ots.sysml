@@ -7,6 +7,14 @@ package Ste100Mark {
         comment reqRef /* Requirements: docs/reqstream/ots/yamldotnet.yaml */
     }
 
+    part def WordSense {
+        doc /* Statistical word-sense tagger (DemaConsulting.WordSense.Basic) used to resolve the part of speech of dictionary term matches. */
+
+        comment designRef /* Design: docs/design/ots/wordsense.md */
+        comment verificationRef /* Verification: docs/verification/ots/wordsense.md */
+        comment reqRef /* Requirements: docs/reqstream/ots/wordsense.yaml */
+    }
+
     part def FileSystemGlobbing {
         doc /* Glob matching library used to resolve include/exclude and mode-override patterns. */
 

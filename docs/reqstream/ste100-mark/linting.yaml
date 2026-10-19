@@ -234,61 +234,79 @@ sections:
 
       - id: Ste100Mark-Linting-DictionaryPos
         title: >-
-          The Linting subsystem shall select the applicable part-of-speech-tagged sense(s) of a
-          disallowed term using a deterministic heuristic - including recognizing a determiner
-          that governs the match through an intervening adjective/participle/proper-noun
-          modifier, and a match followed by a finite verb form - suppressing the match when the
-          heuristic confidently resolves a role that none of the term's senses restrict, and
-          reporting every remaining sense as ambiguous when the heuristic cannot decide
-          confidently.
+          When a part-of-speech resolution is confident, the Linting subsystem shall report a
+          disallowed term using only the part-of-speech-tagged sense that matches the resolved
+          role (together with any role-independent sense).
         justification: |
           A single disallowed term can have distinct noun and verb senses with different
-          approved alternatives (for example "impact" as a noun versus as a verb), and some
-          terms restrict only one grammatical role (for example a verb-only entry). Reporting
-          the wrong sense's alternative, or reporting a term used in a role it does not
-          restrict, would be misleading. Technical writing is dense with noun phrases built from
-          modifiers (for example "the metering probe" or "the Vantage probe"), and the
-          heuristic must recognize a determiner's reach through such a modifier, not just an
-          immediately preceding word, to avoid over-reporting subject nouns as unqualified
-          matches. The subsystem must use surrounding sentence context to pick the correct
-          sense (or determine that no sense applies) when possible, and fall back to reporting
-          every remaining sense, clearly labeled as ambiguous, when the context does not
-          confidently indicate one grammatical role.
+          approved alternatives (for example "impact" as a noun versus as a verb). Reporting
+          the wrong sense's alternative would be misleading. A resolution is confident when the
+          part-of-speech tagger chose a noun or a verb for the matched word, within its own
+          sentence, with a confidence of at least 0.45.
+        children:
+          - Ste100Mark-PartOfSpeechResolver-NounVerbResolution
+          - Ste100Mark-PartOfSpeechResolver-SentenceScope
+          - Ste100Mark-PartOfSpeechResolver-RepeatedWord
+          - Ste100Mark-PartOfSpeechResolver-MinimumConfidence
+          - Ste100Mark-PartOfSpeechResolver-SentenceReuse
+          - Ste100Mark-PartOfSpeechResolver-SharedInstance
+          - Ste100Mark-PartOfSpeechResolver-NullSegmentText
+          - Ste100Mark-PartOfSpeechResolver-MatchOutsideText
+          - Ste100Mark-PartOfSpeechResolver-NullModel
+          - Ste100Mark-OTS-WordSense
         tests:
-          - Guess_PrecededByTo_ReturnsVerb
-          - Guess_PrecededByModal_ReturnsVerb
-          - Guess_PrecededByBeAuxiliaryWithIngSuffix_ReturnsVerb
-          - Guess_InflectionSuffixAlone_ReturnsVerb
-          - Guess_ImperativeSentenceStartInProcedureMode_ReturnsVerb
-          - Guess_SentenceStartInDescriptiveMode_ReturnsNull
-          - Guess_PrecededByArticle_ReturnsNoun
-          - Guess_PrecededByPossessive_ReturnsNoun
-          - Guess_PrecededByQuantifier_ReturnsNoun
-          - Guess_PrecededByPreposition_ReturnsNoun
-          - Guess_PluralSuffix_ReturnsNoun
-          - Guess_FollowedByOf_ReturnsNoun
-          - Guess_ConflictingSignals_ReturnsNull
-          - Guess_NoSignals_ReturnsNull
-          - Guess_ArticleThenParticipleModifier_ReturnsNoun
-          - Guess_ArticleThenProperNounModifier_ReturnsNoun
-          - Guess_ArticleThenAdjectiveModifier_ReturnsNoun
-          - Guess_DeterminerBeyondMaxScanDistance_DoesNotGovern
-          - Guess_FollowedByFiniteVerb_ReturnsNoun
-          - Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel
-          - Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged
-          - Evaluate_MultiSenseTerm_ConfidentGuessMatchesNoSense_NotFlagged
+          - Evaluate_InjectedResolverConfidentVerb_ReportsOnlyVerbSense
           - Evaluate_MultiSenseTerm_NounContext_ReportsNounSense
           - Evaluate_MultiSenseTerm_VerbContext_ReportsVerbSense
-          - Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous
           - Evaluate_AnyPosSingleSenseTerm_AlwaysReported
           - Evaluate_ConfidentSenseSingleAlternative_NoOrInMessage
           - Evaluate_ConfidentSenseTwoAlternatives_JoinsWithOrNoOxfordComma
           - Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr
+          - Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage
+          - Evaluate_ConfidentSingleSenseTermWithNoAlternatives_SuggestionAndCitationsAreNull
+
+      - id: Ste100Mark-Linting-DictionaryPos-Suppression
+        title: >-
+          When a part-of-speech resolution is confident and none of a disallowed term's senses
+          restrict the resolved role, the Linting subsystem shall not report the match.
+        justification: |
+          Some terms restrict only one grammatical role (for example a verb-only entry), and
+          technical writing is dense with noun phrases built from modifiers (for example "the
+          metering probe"). Reporting a term used in a role it does not restrict is a false
+          positive that erodes trust in the dictionary check. Only a confident resolution (a
+          noun or verb answer of at least 0.45 confidence) may suppress a match.
+        children:
+          - Ste100Mark-PartOfSpeechResolver-NounVerbResolution
+        tests:
+          - Evaluate_LegalNounUsage_VerbOnlyDisallowedEntry_NotFlagged
+          - Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged
+          - Evaluate_DefaultResolver_NounUsageOfVerbOnlyEntry_NotFlagged
+          - Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged
+          - Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged
+
+      - id: Ste100Mark-Linting-DictionaryPos-Ambiguous
+        title: >-
+          When a part-of-speech resolution is inconclusive, the Linting subsystem shall report
+          every remaining sense of the disallowed term, labeled as ambiguous when the term has
+          more than one sense.
+        justification: |
+          A resolution is inconclusive when the word is unknown to the tagger, the confidence is
+          below 0.45, the tagger chose a part of speech other than noun or verb, or the match
+          covers more than one word. The subsystem must not guess in these cases. It must fall
+          back to reporting every remaining sense, clearly labeled as ambiguous, so the author
+          can choose the correct alternative.
+        children:
+          - Ste100Mark-PartOfSpeechResolver-MinimumConfidence
+          - Ste100Mark-PartOfSpeechResolver-UnknownWord
+          - Ste100Mark-PartOfSpeechResolver-OtherPartOfSpeech
+          - Ste100Mark-PartOfSpeechResolver-MultiWordMatch
+          - Ste100Mark-PartOfSpeechResolver-UnusableTaggerResult
+        tests:
+          - Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel
+          - Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous
           - Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin
           - Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment
-          - Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage
           - Evaluate_PureSelfReferentialCandidate_WithinAmbiguousResult_UsesRoleRestrictionClause
-          - Evaluate_ConfidentSingleSenseTermWithNoAlternatives_SuggestionAndCitationsAreNull
 
       - id: Ste100Mark-Linting-AccurateLineNumbers
         title: >-

@@ -204,6 +204,8 @@ sections:
           - Ste100Mark-Linting-DictionaryDisable
           - Ste100Mark-Linting-InlineCodeSpans
           - Ste100Mark-Linting-DictionaryPos
+          - Ste100Mark-Linting-DictionaryPos-Suppression
+          - Ste100Mark-Linting-DictionaryPos-Ambiguous
           - Ste100Mark-Linting-AccurateLineNumbers
           - Ste100Mark-Linting-WrappedListItemPhraseMatching
           - Ste100Mark-Linting-FrontMatter
@@ -212,7 +214,7 @@ sections:
         tests:
           - Ste100Mark_LintCleanFile_ReturnsZeroExitCode
           - Ste100Mark_LintFileWithSemicolon_ReportsErrorAndReturnsNonZero
-
+          - Ste100Mark_LintDictionaryTermWithWordSenseResolution_ReportsOnlyDisallowedOrAmbiguousUsage
       - id: Ste100Mark-System-LintConfig
         title: >-
           The tool shall load lint configuration (include/exclude scope, default mode, rule
