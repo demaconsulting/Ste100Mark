@@ -270,8 +270,10 @@ by `Resolve_NounUsage_ReturnsNoun`, `Resolve_VerbUsage_ReturnsVerb`,
 `Resolve_NonNounVerbPartOfSpeech_ReturnsNull`, `Resolve_UnknownWord_ReturnsNull`,
 `Resolve_MultiWordMatch_ReturnsNull`, `Resolve_ModelReturnsWrongResultCount_ReturnsNull`,
 `Resolve_SameSentenceTwice_ClassifiesOnce`, `Resolve_ConcurrentSameSentence_ClassifiesOnce`,
+`Resolve_EvictionWhileInFlight_ClassifiesInFlightSentenceOnce`,
 `Resolve_NullSegmentText_ThrowsArgumentNullException`,
 `Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException`,
+`Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException`,
 `Constructor_NullModel_ThrowsArgumentNullException`, and `Shared_ReturnsSameInstance`.
 
 **System-level WordSense resolution (Ste100Mark-System-Lint)**: The published tool assembly is

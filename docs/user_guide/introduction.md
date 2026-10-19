@@ -288,9 +288,11 @@ prior to:
     note: Simpler time relation.
 ```
 
-A term with exactly one sense is always reported using that sense, regardless of context, so
-no ambiguity is possible when only one sense exists. When a term has more than one sense,
-Ste100Mark uses the `DemaConsulting.WordSense` part-of-speech tagger on the sentence that
+A term with exactly one sense is reported using that sense unless the tagger confidently
+resolves a role incompatible with the entry's part of speech (for example a verb-only entry
+used as a noun); it is reported when the role is compatible or the result is inconclusive.
+When a term has more than one sense, Ste100Mark uses the `DemaConsulting.WordSense`
+part-of-speech tagger on the sentence that
 contains the term to decide which sense applies. A confident noun-versus-verb decision reports
 only the matching sense, whose alternatives are joined with natural "or"/Oxford-comma
 phrasing, and the diagnostic message notes the grammatical role, for example

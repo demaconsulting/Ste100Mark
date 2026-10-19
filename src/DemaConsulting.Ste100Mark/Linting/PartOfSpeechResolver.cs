@@ -54,7 +54,7 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// </remarks>
     internal const double MinimumConfidence = 0.45;
 
-    /// <summary>Maximum number of cached sentence classifications before the cache is reset.</summary>
+    /// <summary>Maximum number of cached sentence classifications before completed entries are evicted.</summary>
     private const int MaxCacheEntries = 4096;
 
     /// <summary>Regex timeout applied to every pattern used by this class.</summary>
@@ -77,6 +77,9 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// <summary>The tagger model.</summary>
     private readonly IWordSenseModel _model;
 
+    /// <summary>Cache entry count at which completed entries are evicted.</summary>
+    private readonly int _maxCacheEntries;
+
     /// <summary>Cache of per-sentence classifications keyed by sentence text.</summary>
     /// <remarks>
     ///     Each value is a <see cref="Lazy{T}"/> so concurrent callers share a single classification.
@@ -97,9 +100,22 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// </summary>
     /// <param name="model">The tagger model; its lifetime is the lifetime of this resolver.</param>
     internal PartOfSpeechResolver(IWordSenseModel model)
+        : this(model, MaxCacheEntries)
+    {
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class using the given model
+    ///     and cache capacity.
+    /// </summary>
+    /// <param name="model">The tagger model; its lifetime is the lifetime of this resolver.</param>
+    /// <param name="maxCacheEntries">Entry count at which completed cache entries are evicted.</param>
+    internal PartOfSpeechResolver(IWordSenseModel model, int maxCacheEntries)
     {
         ArgumentNullException.ThrowIfNull(model);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxCacheEntries);
         _model = model;
+        _maxCacheEntries = maxCacheEntries;
     }
 
     /// <summary>
@@ -111,7 +127,8 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     public PartOfSpeech? Resolve(string segmentText, int matchIndex, int matchLength)
     {
         ArgumentNullException.ThrowIfNull(segmentText);
-        if (matchIndex < 0 || matchLength <= 0 || matchIndex + matchLength > segmentText.Length)
+        if (matchIndex < 0 || matchIndex > segmentText.Length || matchLength <= 0
+            || matchLength > segmentText.Length - matchIndex)
         {
             throw new ArgumentOutOfRangeException(nameof(matchIndex), "The match must lie within the segment text.");
         }
@@ -167,9 +184,17 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// </summary>
     private SentenceTags GetTags(string sentence)
     {
-        if (_cache.Count >= MaxCacheEntries)
+        // Only a new key can grow the cache, so only a miss may evict. Eviction removes completed
+        // entries only: an in-flight Lazy stays reachable so concurrent callers keep sharing it.
+        if (!_cache.ContainsKey(sentence) && _cache.Count >= _maxCacheEntries)
         {
-            _cache.Clear();
+            foreach (var pair in _cache)
+            {
+                if (pair.Value.IsValueCreated)
+                {
+                    _cache.TryRemove(pair);
+                }
+            }
         }
 
         // One Lazy per sentence: concurrent callers block on the same computation, so it runs once.

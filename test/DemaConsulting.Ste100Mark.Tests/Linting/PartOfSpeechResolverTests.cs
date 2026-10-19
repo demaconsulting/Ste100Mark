@@ -445,6 +445,66 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
+    ///     Test that a match length large enough to overflow an int sum is rejected like any other
+    ///     out-of-range match.
+    /// </summary>
+    [Fact]
+    public void Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange: a resolver
+        var resolver = new PartOfSpeechResolver(Uniform(WsPos.Noun, 0.9));
+
+        // Act / Assert: index + length would overflow, but the range is still rejected
+        Assert.Throws<ArgumentOutOfRangeException>(() => resolver.Resolve("short", 3, int.MaxValue));
+    }
+
+    /// <summary>
+    ///     Test that cache eviction at capacity never drops an in-flight classification, so a concurrent
+    ///     lookup of that sentence still shares it.
+    /// </summary>
+    [Fact]
+    public async Task Resolve_EvictionWhileInFlight_ClassifiesInFlightSentenceOnce()
+    {
+        // Arrange: capacity 2; the model blocks only on the "Gate" sentence and counts its calls
+        var gateCalls = 0;
+        using var entered = new ManualResetEventSlim(false);
+        using var release = new ManualResetEventSlim(false);
+        var model = new ScriptedModel(tokens =>
+        {
+            if (tokens[0] == "Gate")
+            {
+                Interlocked.Increment(ref gateCalls);
+                entered.Set();
+                release.Wait(TimeSpan.FromSeconds(5));
+            }
+
+            return tokens.Select(t => Tag(t, WsPos.Noun, 0.9)).ToArray();
+        });
+        var resolver = new PartOfSpeechResolver(model, 2);
+        resolver.Resolve("Alpha one.", 0, 5);
+        resolver.Resolve("Beta two.", 0, 4);
+
+        // Act: start the gate sentence (evicts the completed entries), then add a new key while it is
+        // in flight, then look the gate sentence up again before releasing it
+        var first = Task.Factory.StartNew(
+            () => resolver.Resolve("Gate one.", 0, 4),
+            TaskCreationOptions.LongRunning);
+        entered.Wait(TestContext.Current.CancellationToken);
+        resolver.Resolve("Delta four.", 0, 5);
+        resolver.Resolve("Echo five.", 0, 4);
+        var second = Task.Factory.StartNew(
+            () => resolver.Resolve("Gate one.", 0, 4),
+            TaskCreationOptions.LongRunning);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        release.Set();
+        var results = await Task.WhenAll(first, second);
+
+        // Assert: the in-flight sentence was classified once and both callers got its answer
+        Assert.Equal(1, gateCalls);
+        Assert.All(results, r => Assert.Equal(PartOfSpeech.Noun, r));
+    }
+
+    /// <summary>
     ///     Test that a null model is rejected by the constructor.
     /// </summary>
     [Fact]

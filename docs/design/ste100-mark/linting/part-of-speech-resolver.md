@@ -39,7 +39,8 @@ in-memory and thread-safe and needs no download.
 **Shared**: lazily created process-wide instance, so the model is built once per process.
 
 **Cache**: a `ConcurrentDictionary` of per-sentence `Lazy` token spans and roles (thread-safe
-`ExecutionAndPublication`), keyed by sentence text and cleared when it reaches 4096 entries.
+`ExecutionAndPublication`), keyed by sentence text. When a new sentence would be added at 4096 entries, only completed
+entries are evicted; in-flight entries are kept so single-flight is preserved.
 One sentence is therefore classified only once however many dictionary terms it contains and
 however many threads ask at the same time. A computation that throws is removed from the cache
 so a later call retries.

@@ -121,6 +121,7 @@ sections:
         tests:
           - Resolve_SameSentenceTwice_ClassifiesOnce
           - Resolve_ConcurrentSameSentence_ClassifiesOnce
+          - Resolve_EvictionWhileInFlight_ClassifiesInFlightSentenceOnce
 
       - id: Ste100Mark-PartOfSpeechResolver-SharedInstance
         title: >-
@@ -148,6 +149,7 @@ sections:
           fast with a clear exception prevents a misleading resolution from an invalid position.
         tests:
           - Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException
+          - Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException
 
       - id: Ste100Mark-PartOfSpeechResolver-NullModel
         title: >-
