@@ -552,10 +552,30 @@ public class PartOfSpeechResolverTests
         // Arrange: capacity 2, pre-filled with completed entries; many threads released together
         const int capacity = 2;
         const int threads = 16;
-        var model = new ScriptedModel(tokens => tokens.Select(t => Tag(t, WsPos.Noun, 0.9)).ToArray());
-        var resolver = new PartOfSpeechResolver(model, capacity);
+        using var entered = new CountdownEvent(threads);
+        var blocking = false;
+        var countWhileInFlight = 0;
+        PartOfSpeechResolver resolver = null!;
+        var model = new ScriptedModel(tokens =>
+        {
+            // Hold every classification in flight until all workers have entered the model
+            if (Volatile.Read(ref blocking))
+            {
+                entered.Signal();
+                entered.Wait(TimeSpan.FromSeconds(10));
+                var observed = resolver.CachedSentenceCount;
+                lock (entered)
+                {
+                    countWhileInFlight = Math.Max(countWhileInFlight, observed);
+                }
+            }
+
+            return tokens.Select(t => Tag(t, WsPos.Noun, 0.9)).ToArray();
+        });
+        resolver = new PartOfSpeechResolver(model, capacity);
         resolver.Resolve("Alpha one.", 0, 5);
         resolver.Resolve("Beta two.", 0, 4);
+        Volatile.Write(ref blocking, true);
         using var barrier = new Barrier(threads);
         var active = 0;
         var peak = 0;
@@ -583,6 +603,9 @@ public class PartOfSpeechResolverTests
         // Assert: in-flight entries may transiently exceed capacity, but once all classifications
         // have completed the cache has been trimmed back to its capacity
         Assert.True(peak >= 1);
+        Assert.True(
+            countWhileInFlight > capacity,
+            $"Cache held {countWhileInFlight} entries while all calls were in flight; expected more than {capacity}.");
         Assert.True(
             resolver.CachedSentenceCount <= capacity,
             $"Cache holds {resolver.CachedSentenceCount} entries; capacity is {capacity}.");
