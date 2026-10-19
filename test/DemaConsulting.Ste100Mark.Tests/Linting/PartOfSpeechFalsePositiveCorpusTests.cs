@@ -211,7 +211,8 @@ public class PartOfSpeechFalsePositiveCorpusTests
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
-        // Assert: the legal noun usage produces no finding
+        // Assert: the real resolver identifies the noun role and the legal usage produces no finding
+        Assert.Equal(PartOfSpeech.Noun, ResolveRole(term, sentence));
         Assert.Empty(diagnostics);
     }
 
@@ -241,7 +242,15 @@ public class PartOfSpeechFalsePositiveCorpusTests
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
-        // Assert: the legal verb usage produces no finding
+        // Assert: the real resolver identifies the verb role and the legal usage produces no finding
+        Assert.Equal(PartOfSpeech.Verb, ResolveRole(term, sentence));
         Assert.Empty(diagnostics);
     }
+
+    /// <summary>
+    ///     Resolves the role of the first occurrence of a term in a sentence using the real resolver.
+    /// </summary>
+    private static PartOfSpeech? ResolveRole(string term, string sentence) =>
+        PartOfSpeechResolver.Shared.Resolve(
+            sentence, sentence.IndexOf(term, StringComparison.OrdinalIgnoreCase), term.Length);
 }

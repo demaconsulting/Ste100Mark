@@ -83,7 +83,7 @@ internal static class SentenceAnalyzer
     ///     the (rarer) case of a colon-introduced clause appearing within a single paragraph
     ///     segment.
     /// </summary>
-    private static readonly Regex SentenceSplitRegex =
+    internal static readonly Regex SentenceSplitRegex =
         new(@"(?<=[.!?:])\s+(?=[A-Z0-9""'(`*_]|$)", RegexOptions.Compiled, RegexTimeout);
 
     /// <summary>Matches a double-quoted span (Rule 8.6: quoted text counts as one word).</summary>

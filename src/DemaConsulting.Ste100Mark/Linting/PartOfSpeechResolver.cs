@@ -60,9 +60,11 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// <summary>Regex timeout applied to every pattern used by this class.</summary>
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
 
-    /// <summary>Sentence boundary: whitespace that follows sentence-ending punctuation.</summary>
-    private static readonly Regex SentenceBoundaryRegex =
-        new(@"(?<=[.!?:])\s+", RegexOptions.Compiled, RegexTimeout);
+    /// <summary>
+    ///     Sentence boundary, shared with <see cref="SentenceAnalyzer"/> so both agree on where a sentence
+    ///     ends (for example, no boundary in <c>e.g. test the valve</c>).
+    /// </summary>
+    private static readonly Regex SentenceBoundaryRegex = SentenceAnalyzer.SentenceSplitRegex;
 
     /// <summary>Tokenizer: a word (letters, digits, apostrophes, hyphens) or one punctuation character.</summary>
     private static readonly Regex TokenRegex =
@@ -76,7 +78,10 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     private readonly IWordSenseModel _model;
 
     /// <summary>Cache of per-sentence classifications keyed by sentence text.</summary>
-    private readonly ConcurrentDictionary<string, SentenceTags> _cache = new(StringComparer.Ordinal);
+    /// <remarks>
+    ///     Each value is a <see cref="Lazy{T}"/> so concurrent callers share a single classification.
+    /// </remarks>
+    private readonly ConcurrentDictionary<string, Lazy<SentenceTags>> _cache = new(StringComparer.Ordinal);
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class using the
@@ -162,11 +167,32 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// </summary>
     private SentenceTags GetTags(string sentence)
     {
-        if (_cache.TryGetValue(sentence, out var cached))
+        if (_cache.Count >= MaxCacheEntries)
         {
-            return cached;
+            _cache.Clear();
         }
 
+        // One Lazy per sentence: concurrent callers block on the same computation, so it runs once.
+        var entry = _cache.GetOrAdd(
+            sentence,
+            key => new Lazy<SentenceTags>(() => Classify(key), LazyThreadSafetyMode.ExecutionAndPublication));
+        try
+        {
+            return entry.Value;
+        }
+        catch
+        {
+            // A failed classification must not poison the cache; remove exactly this entry.
+            _cache.TryRemove(new KeyValuePair<string, Lazy<SentenceTags>>(sentence, entry));
+            throw;
+        }
+    }
+
+    /// <summary>
+    ///     Tokenizes and classifies one sentence.
+    /// </summary>
+    private SentenceTags Classify(string sentence)
+    {
         var matches = TokenRegex.Matches(sentence);
         var spans = new (int Start, int Length)[matches.Count];
         var words = new string[matches.Count];
@@ -188,14 +214,7 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
             }
         }
 
-        var tags = new SentenceTags(spans, roles);
-        if (_cache.Count >= MaxCacheEntries)
-        {
-            _cache.Clear();
-        }
-
-        _cache[sentence] = tags;
-        return tags;
+        return new SentenceTags(spans, roles);
     }
 
     /// <summary>

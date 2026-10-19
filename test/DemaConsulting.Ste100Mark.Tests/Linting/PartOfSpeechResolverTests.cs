@@ -360,6 +360,65 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
+    ///     Test that concurrent resolution of the same uncached sentence classifies it only once.
+    /// </summary>
+    [Fact]
+    public async Task Resolve_ConcurrentSameSentence_ClassifiesOnce()
+    {
+        // Arrange: a slow scripted model counting classification calls
+        var calls = 0;
+        using var gate = new ManualResetEventSlim(false);
+        var model = new ScriptedModel(tokens =>
+        {
+            Interlocked.Increment(ref calls);
+            gate.Wait(TimeSpan.FromSeconds(5));
+            return tokens.Select(t => Tag(t, WsPos.Noun, 0.9)).ToArray();
+        });
+        var resolver = new PartOfSpeechResolver(model);
+        const string text = "The test passed.";
+
+        // Act: resolve the same sentence from many threads, holding the first classification open
+        using var started = new CountdownEvent(16);
+        var tasks = Enumerable.Range(0, 16)
+            .Select(_ => Task.Factory.StartNew(
+                () =>
+                {
+                    started.Signal();
+                    return resolver.Resolve(text, 4, 4);
+                },
+                TaskCreationOptions.LongRunning))
+            .ToArray();
+        started.Wait(TestContext.Current.CancellationToken);
+        gate.Set();
+        var results = await Task.WhenAll(tasks);
+
+        // Assert: one classification served every caller
+        Assert.Equal(1, calls);
+        Assert.All(results, r => Assert.Equal(PartOfSpeech.Noun, r));
+    }
+
+    /// <summary>
+    ///     Test that a lowercase continuation after an abbreviation does not start a new sentence,
+    ///     matching the sentence analyzer's boundary rule.
+    /// </summary>
+    [Fact]
+    public void Resolve_LowercaseContinuationAfterPeriod_StaysInSameSentence()
+    {
+        // Arrange: a scripted model and an abbreviation followed by a lowercase continuation
+        var model = Uniform(WsPos.Verb, 0.9);
+        var resolver = new PartOfSpeechResolver(model);
+        const string text = "Use e.g. test the valve.";
+
+        // Act: resolve "test"
+        var result = resolver.Resolve(text, text.IndexOf("test", StringComparison.Ordinal), 4);
+
+        // Assert: the whole text is one sentence classified with its full context
+        Assert.Equal(PartOfSpeech.Verb, result);
+        var call = Assert.Single(model.Calls);
+        Assert.Equal(["Use", "e", ".", "g", ".", "test", "the", "valve", "."], call);
+    }
+
+    /// <summary>
     ///     Test that a null segment text is rejected.
     /// </summary>
     [Fact]

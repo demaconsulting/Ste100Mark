@@ -23,8 +23,11 @@ tests can inject a scripted or fixed resolver.
 **MinimumConfidence**: `internal const double` (0.45). The minimum tagger confidence for a noun
 or verb answer to be accepted. See *Threshold selection* below.
 
-**SentenceBoundaryRegex**: `(?<=[.!?:])\s+` - splits a segment into sentences, so a match is
-classified within its own sentence only.
+**SentenceBoundaryRegex**: shared with `SentenceAnalyzer` (`SentenceSplitRegex`, a single source
+of truth): whitespace after `.`, `!`, `?`, or `:` that is followed by an uppercase letter, digit,
+quote, opening parenthesis, backtick, asterisk, underscore, or the end of text. A lowercase
+continuation (for example `e.g. test the valve`) therefore stays in one sentence. A segment is
+split into sentences so a match is classified within its own sentence only.
 
 **TokenRegex**: `[\w'-]+|[^\w\s]` - tokenizes a sentence into words (letters, digits,
 apostrophes, hyphens) and single punctuation characters.
@@ -35,9 +38,11 @@ in-memory and thread-safe and needs no download.
 
 **Shared**: lazily created process-wide instance, so the model is built once per process.
 
-**Cache**: a `ConcurrentDictionary` of per-sentence token spans and roles, keyed by sentence
-text and cleared when it reaches 4096 entries. One sentence is therefore classified only once
-however many dictionary terms it contains.
+**Cache**: a `ConcurrentDictionary` of per-sentence `Lazy` token spans and roles (thread-safe
+`ExecutionAndPublication`), keyed by sentence text and cleared when it reaches 4096 entries.
+One sentence is therefore classified only once however many dictionary terms it contains and
+however many threads ask at the same time. A computation that throws is removed from the cache
+so a later call retries.
 
 #### Key Methods
 

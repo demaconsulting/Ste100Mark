@@ -39,6 +39,7 @@ sections:
           the wrong finding.
         tests:
           - Resolve_MatchInSecondSentence_UsesThatSentenceOnly
+          - Resolve_LowercaseContinuationAfterPeriod_StaysInSameSentence
           - Resolve_Tokenization_SendsOneSentenceWithWordAndPunctuationTokens
 
       - id: Ste100Mark-PartOfSpeechResolver-RepeatedWord
@@ -119,6 +120,7 @@ sections:
           document sets.
         tests:
           - Resolve_SameSentenceTwice_ClassifiesOnce
+          - Resolve_ConcurrentSameSentence_ClassifiesOnce
 
       - id: Ste100Mark-PartOfSpeechResolver-SharedInstance
         title: >-
