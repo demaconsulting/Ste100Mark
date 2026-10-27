@@ -641,19 +641,25 @@ public class ContextTests
     ///     Test that --pos-engine parses each supported engine, case-insensitively.
     /// </summary>
     [Theory]
-    [InlineData("basic", 0)]
-    [InlineData("minilm", 1)]
-    [InlineData("bert", 2)]
-    [InlineData("MiniLM", 1)]
-    [InlineData("BERT", 2)]
-    public void Context_Create_PosEngineFlag_ParsesEngine(string value, int expected)
+    [MemberData(nameof(PosEngineCases))]
+    public void Context_Create_PosEngineFlag_ParsesEngine(string value, object expected)
     {
         // Act: execute the operation being tested
         using var context = Context.Create(["--pos-engine", value]);
 
-        // Assert: the enum value matches (Basic = 0, MiniLm = 1, Bert = 2)
-        Assert.Equal(expected, (int)context.PosEngine!.Value);
+        // Assert: the parsed engine matches the expected enum value
+        Assert.Equal((PartOfSpeechEngine)expected, context.PosEngine!.Value);
     }
+
+    /// <summary>Gets the engine argument values and the enum values they parse to.</summary>
+    public static TheoryData<string, object> PosEngineCases => new()
+    {
+        { "basic", PartOfSpeechEngine.Basic },
+        { "minilm", PartOfSpeechEngine.MiniLm },
+        { "bert", PartOfSpeechEngine.Bert },
+        { "MiniLM", PartOfSpeechEngine.MiniLm },
+        { "BERT", PartOfSpeechEngine.Bert }
+    };
 
     /// <summary>
     ///     Test that --pos-engine with an unsupported value throws a clear exception.

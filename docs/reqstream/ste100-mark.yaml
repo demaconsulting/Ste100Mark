@@ -327,17 +327,36 @@ sections:
         title: >-
           The tool shall let the user select the part-of-speech engine (basic, minilm, or bert)
           with `--pos-engine` or the `dictionary.pos-engine` configuration value, defaulting to
-          minilm, and shall fail with a clear non-zero exit when the value is invalid or the
-          selected model cannot be downloaded or loaded.
+          minilm.
         justification: |
           The basic engine is offline and fast, while the encoder engines are more accurate but
-          download a model on first use. Users and CI jobs need explicit control and a visible
-          failure instead of a silent fallback that would change lint results.
+          download a model on first use. Users and CI jobs need explicit control.
         tags: [system]
         children:
           - Ste100Mark-Cli-PosEngine
           - Ste100Mark-Context-PosEngineArgumentParsing
           - Ste100Mark-Linting-PosEngineSelection
-          - Ste100Mark-Linting-PosEngineLifecycle
+          - Ste100Mark-Linting-PosEngineLazyPreparation
+
+      - id: Ste100Mark-System-PosEngineInvalidValue
+        title: >-
+          The tool shall fail with a clear non-zero exit when the part-of-speech engine value is
+          invalid.
+        justification: |
+          A mistyped engine name must be a visible error, not a silent choice of another engine.
+        tags: [system]
+        children:
+          - Ste100Mark-Linting-PosEngineConfigParsing
         tests:
           - Ste100Mark_PosEngineInvalidValue_ReturnsErrorExitCode
+
+      - id: Ste100Mark-System-PosEngineModelFailure
+        title: >-
+          The tool shall fail with a clear non-zero exit, with no fallback to another engine, when
+          the selected part-of-speech model cannot be downloaded or loaded.
+        justification: |
+          A silent fallback would change lint results depending on network state.
+        tags: [system]
+        children:
+          - Ste100Mark-Linting-PosEngineFailure
+          - Ste100Mark-Linting-PosEngineDisposal

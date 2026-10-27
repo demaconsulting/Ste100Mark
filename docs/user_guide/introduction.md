@@ -335,7 +335,8 @@ The command-line option overrides the configuration file, and the configuration 
 the default (`minilm`). An invalid value fails the run with an error and a non-zero exit code.
 The `minilm` and `bert` models download only when a dictionary match needs part-of-speech
 resolution, and the `WORDSENSE_MIRROR_*` environment variables redirect the download. If the
-download or load fails, the run fails with a clear error and a non-zero exit code; it does not
+download or load fails, or does not finish within five minutes, the run fails with a clear error
+and a non-zero exit code; it does not
 fall back to another engine. For offline or air-gapped use, select `basic`. The confidence
 threshold (0.45) was calibrated with the basic model and has not been re-tuned for the encoder
 engines.

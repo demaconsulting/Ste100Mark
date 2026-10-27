@@ -100,7 +100,6 @@ sections:
           - Context_Create_PosEngineFlag_WithoutValue_ThrowsArgumentException
 
       - id: Ste100Mark-Context-GlobArgumentParsing
-
         title: The Context class shall collect positional non-flag arguments as glob patterns in the order supplied.
         justification: |
           Callers must be able to scope linting to explicit path patterns supplied on the

@@ -718,6 +718,59 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
+    ///     Downloadable fake model whose preparation never completes on its own; it completes (as
+    ///     canceled) only when the supplied token is canceled.
+    /// </summary>
+    internal sealed class HangingDownloadableModel : Ws.IDownloadableWordSenseModel
+    {
+        private readonly TaskCompletionSource _never = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Gets a value indicating whether the token passed to preparation was canceled.</summary>
+        public bool TokenCanceled { get; private set; }
+
+        /// <inheritdoc />
+        public Task EnsureModelAsync(Ws.DownloadOptions? options = null, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.Register(() =>
+            {
+                TokenCanceled = true;
+                _never.TrySetCanceled(cancellationToken);
+            });
+            return _never.Task;
+        }
+
+        /// <inheritdoc />
+        public Task<Ws.ClassifyResult[]> ClassifyAsync(
+            IEnumerable<string> words, CancellationToken cancellationToken = default) =>
+            Task.FromResult(words.Select(w => Tag(w, WsPos.Noun, 0.9)).ToArray());
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+        }
+    }
+
+    /// <summary>
+    ///     Test that a model preparation that never completes fails with a clear, bounded-wait error.
+    /// </summary>
+    [Fact]
+    public void Resolve_DownloadNeverCompletes_ThrowsTimeoutError()
+    {
+        // Arrange: a downloadable fake model that never completes, with a short timeout
+        var model = new HangingDownloadableModel();
+        using var resolver = new PartOfSpeechResolver(model, TimeSpan.FromMilliseconds(100));
+
+        // Act
+        var ex = Assert.Throws<InvalidOperationException>(() => resolver.Resolve("The pump is clean.", 4, 4));
+
+        // Assert: clear message with the offline hint, and the library was asked to stop
+        Assert.Contains("could not be prepared", ex.Message);
+        Assert.Contains("did not complete", ex.Message);
+        Assert.Contains("--pos-engine basic", ex.Message);
+        Assert.True(model.TokenCanceled);
+    }
+
+    /// <summary>
     ///     Test that a non-downloadable model is used directly without a readiness step.
     /// </summary>
     [Fact]

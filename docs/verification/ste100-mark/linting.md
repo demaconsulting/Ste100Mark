@@ -285,9 +285,12 @@ by `Resolve_NounUsage_ReturnsNoun`, `Resolve_VerbUsage_ReturnsVerb`,
 `Create_DefaultFactory_CreatesResolverWithoutDownload`,
 `Constructor_DownloadableModel_DoesNotEnsureModel`,
 `Resolve_DownloadableModel_EnsuresModelOnce`, `Resolve_NonDownloadableModel_ClassifiesDirectly`,
-`Resolve_DownloadFails_ThrowsClearErrorEveryTime`, and `Dispose_DisposesModel`.
+`Resolve_DownloadFails_ThrowsClearErrorEveryTime`, `Resolve_DownloadNeverCompletes_ThrowsTimeoutError`
+(a fake model whose preparation never completes; no sleeping, the resolver's five-minute default
+timeout is shortened through an internal constructor), and `Dispose_DisposesModel`.
 
-**Ste100Mark-Linting-PosEngineSelection and PosEngineLifecycle**: Verified through
+**Ste100Mark-Linting-PosEngineSelection, PosEngineConfigParsing, PosEngineLazyPreparation,
+PosEngineFailure, and PosEngineDisposal**: Verified through
 `LintConfigTests` (`Load_DictionaryPosEngine_ParsesEngine`,
 `Load_DictionaryWithoutPosEngine_LeavesEngineUnspecified`,
 `Load_DictionaryPosEngine_InvalidValue_ThrowsInvalidOperationException`) and `LinterPosEngineTests`,

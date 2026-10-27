@@ -63,6 +63,9 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver, IDisposable
     /// <summary>Maximum number of cached sentence classifications before completed entries are evicted.</summary>
     private const int MaxCacheEntries = 4096;
 
+    /// <summary>Default maximum time to wait for a downloadable model to be downloaded and loaded.</summary>
+    private static readonly TimeSpan DefaultReadyTimeout = TimeSpan.FromMinutes(5);
+
     /// <summary>Regex timeout applied to every pattern used by this class.</summary>
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
 
@@ -78,6 +81,9 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver, IDisposable
 
     /// <summary>The tagger model.</summary>
     private readonly IWordSenseModel _model;
+
+    /// <summary>Maximum time to wait for a downloadable model to become ready.</summary>
+    private readonly TimeSpan _readyTimeout;
 
     /// <summary>The engine this resolver was created for, used in failure messages.</summary>
     private readonly string _engineName;
@@ -157,15 +163,30 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver, IDisposable
     }
 
     /// <summary>
+    ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class with a custom
+    ///     model-preparation timeout (for tests).
+    /// </summary>
+    /// <param name="model">The tagger model; its lifetime is the lifetime of this resolver.</param>
+    /// <param name="readyTimeout">Maximum time to wait for a downloadable model to become ready.</param>
+    internal PartOfSpeechResolver(IWordSenseModel model, TimeSpan readyTimeout)
+        : this(model, MaxCacheEntries, "custom", readyTimeout)
+    {
+    }
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class.
     /// </summary>
     /// <param name="model">The tagger model; its lifetime is the lifetime of this resolver.</param>
     /// <param name="maxCacheEntries">Entry count at which completed cache entries are evicted.</param>
     /// <param name="engineName">The engine name used in failure messages.</param>
-    private PartOfSpeechResolver(IWordSenseModel model, int maxCacheEntries, string engineName)
+    /// <param name="readyTimeout">Maximum time to wait for a downloadable model to become ready.</param>
+    private PartOfSpeechResolver(
+        IWordSenseModel model, int maxCacheEntries, string engineName, TimeSpan? readyTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxCacheEntries);
+        _readyTimeout = readyTimeout ?? DefaultReadyTimeout;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_readyTimeout, TimeSpan.Zero);
         _model = model;
         _maxCacheEntries = maxCacheEntries;
         _engineName = engineName;
@@ -188,7 +209,18 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver, IDisposable
         {
             // Null options: WORDSENSE_MIRROR_* environment variables are honored by the library.
             // Console app, no synchronization context, called once: waiting here cannot deadlock.
-            downloadable.EnsureModelAsync(null, CancellationToken.None).GetAwaiter().GetResult();
+            // The wait is bounded: the token asks the library to stop, and the bounded wait also
+            // covers a model that ignores the token.
+            using var cts = new CancellationTokenSource();
+            var task = downloadable.EnsureModelAsync(null, cts.Token);
+            if (!task.Wait(_readyTimeout))
+            {
+                cts.Cancel();
+                throw new TimeoutException(
+                    $"Preparing the model did not complete within {_readyTimeout.TotalSeconds:0} seconds.");
+            }
+
+            task.GetAwaiter().GetResult();
             return true;
         }
         // Generic catch is justified: the library throws several exception types (unavailable,

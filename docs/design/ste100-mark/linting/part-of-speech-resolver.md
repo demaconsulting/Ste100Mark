@@ -46,7 +46,10 @@ classification calls `EnsureModelAsync` once (download if needed, then load). Re
 never need classification never touch the network. If preparation throws, the resolver throws an
 `InvalidOperationException` ("Part-of-speech engine '<name>' could not be prepared: ... Use
 --pos-engine basic (or dictionary.pos-engine: basic) to work offline."), caches that failure so
-later calls fail the same way without retrying, and never falls back to another engine.
+later calls fail the same way without retrying, and never falls back to another engine. The wait is
+bounded (five minutes by default): a cancellation token is passed to `EnsureModelAsync`, and the
+resolver also stops waiting itself, so a hung download fails with the same error ("... did not
+complete within 300 seconds ... Use --pos-engine basic ...").
 
 **Disposal**: the resolver is `IDisposable` and disposes its model. `Linter` owns it per run.
 There is no shared process-wide instance.

@@ -151,12 +151,14 @@ sections:
       - id: Ste100Mark-PartOfSpeechResolver-ModelUnavailable
         title: >-
           The PartOfSpeechResolver class shall fail with a clear error, without falling back to
-          another engine, when the classifier model cannot be downloaded or loaded.
+          another engine, when the classifier model cannot be downloaded or loaded within a
+          bounded time.
         justification: |
           A silent fallback would make results depend on network state. A clear error naming the
           engine and the offline option lets the user fix the problem or choose the basic engine.
         tests:
           - Resolve_DownloadFails_ThrowsClearErrorEveryTime
+          - Resolve_DownloadNeverCompletes_ThrowsTimeoutError
 
       - id: Ste100Mark-PartOfSpeechResolver-Dispose
         title: >-

@@ -67,6 +67,9 @@ reviews:
       - "docs/verification/introduction.md"
       - "docs/verification/ste100-mark.md"
       - "test/**/IntegrationTests.cs"
+      - "test/**/Runner.cs"
+      - "test/**/AssemblyInfo.cs"
+      - "docs/reqstream/quality.yaml"
 
   - id: Ste100Mark-Design
     title: Review of Ste100Mark architectural and design consistency
@@ -125,6 +128,7 @@ reviews:
       - "docs/verification/ste100-mark/cli/context.md"
       - "src/**/Cli/Context.cs"
       - "src/**/Cli/PartOfSpeechEngine.cs"
+      - "src/**/Cli/OutputFormat.cs"
       - "test/**/Cli/ContextTests.cs"
 
   # Ste100Mark - SelfTest
