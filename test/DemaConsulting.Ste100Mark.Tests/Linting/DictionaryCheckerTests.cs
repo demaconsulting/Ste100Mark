@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.Ste100Mark.Linting;
+using DictionaryChecker = DemaConsulting.Ste100Mark.Tests.Linting.TestDictionaryChecker;
 
 namespace DemaConsulting.Ste100Mark.Tests.Linting;
 
@@ -696,12 +697,16 @@ public class DictionaryCheckerTests
     [Fact]
     public void Evaluate_VerblessTableCellNounPhrase_NotFlagged()
     {
-        // Arrange: "Wash pump" - a verbless noun-phrase cell
+        // Arrange: "Wash pump" - a verbless noun-phrase cell. The tagger is scripted to answer Noun:
+        // the checker logic is under test, not the tagger. The real tagger is unreliable for such
+        // runt fragments (it tags "pump" as a verb with no sentence context); this is an accepted,
+        // documented limitation (see the part-of-speech resolver design document).
         var dictionary = VerblessSegmentFixtureDictionary();
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Wash pump", 1, SegmentRole.TableRow)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, resolver: new FixedPartOfSpeechResolver(PartOfSpeech.Noun));
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -1085,8 +1090,10 @@ public class DictionaryCheckerTests
                 SegmentRole.Paragraph)
         ];
 
-        // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+        // Act: execute the operation being tested (inconclusive scripted resolver: the real tagger
+        // currently tags "check" in this compound as a confident verb, which would exercise the
+        // "confident role" path instead of the suppression path under test)
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: Inconclusive);
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);

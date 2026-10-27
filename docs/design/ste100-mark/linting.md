@@ -36,7 +36,8 @@ The source folder contains twelve primary behavioral units plus two supporting v
 - `PartOfSpeechResolver` - resolves whether a matched term is used as a noun or a verb at its
   match site, used to select the applicable sense(s) of a multi-sense dictionary entry. It
   implements the internal `IPartOfSpeechResolver` interface and delegates to the
-  `DemaConsulting.WordSense` OTS tagger (`BasicWordSenseModel`): the sentence containing the
+  `DemaConsulting.WordSense` OTS tagger (`basic`, `minilm`, or `bert` engine; default `minilm`,
+  selected by `--pos-engine` or `dictionary.pos-engine`): the sentence containing the
   match is tokenized and classified in one call, and a noun or verb answer at or above a
   documented minimum confidence (0.45) is accepted, while every other outcome is
   inconclusive. `DictionaryChecker` calls it for general noun/verb sense selection.

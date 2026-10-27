@@ -29,6 +29,18 @@ sections:
           - CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag
           - CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag
           - CliSubsystem_ListRulesFlow_ContextAndProgram_ParsesListRulesFlag
+          - CliSubsystem_PosEngineFlow_InvalidValue_ExitsNonZero
+
+      - id: Ste100Mark-Cli-PosEngine
+        title: >-
+          The Cli subsystem shall support the --pos-engine flag with `basic`, `minilm`, and `bert`
+          values and reject any other value with a descriptive error and a non-zero exit code.
+        justification: |
+          Users need to choose between the offline basic engine and the more accurate downloaded
+          encoder engines for a single invocation.
+        tests:
+          - CliSubsystem_PosEngineFlow_InvalidValue_ExitsNonZero
+          - Ste100Mark_PosEngineInvalidValue_ReturnsErrorExitCode
 
       - id: Ste100Mark-Cli-OutputChannels
         title: >-

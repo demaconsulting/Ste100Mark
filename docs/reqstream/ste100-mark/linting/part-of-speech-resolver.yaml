@@ -125,14 +125,50 @@ sections:
           - Resolve_CapacityExceededByOne_EvictsOnlyOneEntry
           - Resolve_ConcurrentMisses_CacheStaysWithinCapacityPlusInFlight
 
-      - id: Ste100Mark-PartOfSpeechResolver-SharedInstance
+      - id: Ste100Mark-PartOfSpeechResolver-EngineCreation
         title: >-
-          The PartOfSpeechResolver class shall provide a single shared default instance.
+          The PartOfSpeechResolver class shall create a resolver for the selected part-of-speech
+          engine (basic, minilm, or bert) without performing any download at creation time.
         justification: |
-          Creating the classifier model is costly. One shared default instance lets every lint run
-          in the process pay that cost only once.
+          The engine is a user choice. Creating the model object must be cheap and offline so
+          that a run that never needs a resolution (no dictionary hits) never downloads a model.
         tests:
-          - Shared_ReturnsSameInstance
+          - Create_UsesFactoryForEngine
+          - Create_DefaultFactory_CreatesResolverWithoutDownload
+          - Constructor_DownloadableModel_DoesNotEnsureModel
+
+      - id: Ste100Mark-PartOfSpeechResolver-LazyModelPreparation
+        title: >-
+          The PartOfSpeechResolver class shall prepare a downloadable classifier model once, and
+          only when the first classification is needed.
+        justification: |
+          Encoder models download on first use. Preparing lazily and exactly once keeps clean
+          runs fast and offline and avoids repeated network checks.
+        tests:
+          - Resolve_DownloadableModel_EnsuresModelOnce
+          - Resolve_NonDownloadableModel_ClassifiesDirectly
+
+      - id: Ste100Mark-PartOfSpeechResolver-ModelUnavailable
+        title: >-
+          The PartOfSpeechResolver class shall fail with a clear error, without falling back to
+          another engine, when the classifier model cannot be downloaded or loaded within a
+          bounded time.
+        justification: |
+          A silent fallback would make results depend on network state. A clear error naming the
+          engine and the offline option lets the user fix the problem or choose the basic engine.
+        tests:
+          - Resolve_DownloadFails_ThrowsClearErrorEveryTime
+          - Resolve_DownloadNeverCompletes_ThrowsTimeoutError
+
+      - id: Ste100Mark-PartOfSpeechResolver-Dispose
+        title: >-
+          The PartOfSpeechResolver class shall dispose the classifier model when the resolver is
+          disposed.
+        justification: |
+          Encoder models hold native inference resources that must be released at the end of a
+          lint run.
+        tests:
+          - Dispose_DisposesModel
 
       - id: Ste100Mark-PartOfSpeechResolver-NullSegmentText
         title: >-

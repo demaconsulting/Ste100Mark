@@ -69,7 +69,7 @@ public class RuleCatalogTests
         IReadOnlyList<ProseSegment> dictionarySegments =
             [new ProseSegment("Please utilize the tool.", 1, SegmentRole.Paragraph)];
         var dictionaryCodes = DictionaryChecker
-            .Evaluate("file.md", dictionarySegments, dictionary)
+            .Evaluate("file.md", dictionarySegments, dictionary, TestResolvers.Basic)
             .Select(d => d.RuleCode);
 
         // Act: the set of codes actually emitted by the two rule-evaluating units

@@ -88,6 +88,10 @@ files it matches.
   entirely and does not run `DictionaryChecker`, disabling the `STE100-DICT` check project-wide
   without requiring any dictionary source. Distinct from `UseEmbedded`, which only removes the
   embedded baseline while the check itself still runs against any remaining sources.
+- `PosEngine`: `string?` - optional part-of-speech engine name (`basic`, `minilm`, or `bert`,
+  YAML key `pos-engine`). `Load` validates it case-insensitively and exposes the result as
+  the internal `ParsedPosEngine` (`PartOfSpeechEngine?`). The `--pos-engine` command-line
+  option overrides it.
 
 **LintConfig**: root configuration class.
 
@@ -170,7 +174,8 @@ each glob is evaluated independently.
 #### Error Handling
 
 `Load` throws `InvalidOperationException` when `path` is non-null but the file does not
-exist, or when YamlDotNet fails to parse the file. `ResolveMode`, `ResolveRules`,
+exist, when YamlDotNet fails to parse the file, or when `dictionary.pos-engine` is not one of
+`basic`, `minilm`, or `bert`. `ResolveMode`, `ResolveRules`,
 `ResolveAllowedTerms`, and `ResolveAllowedPhrases` do not catch matcher or null-argument
 failures; `ArgumentNullException` propagates for a null path.
 

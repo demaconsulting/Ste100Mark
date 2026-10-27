@@ -8,7 +8,10 @@
 a specific point in prose, so that `DictionaryChecker` can select the correct
 part-of-speech-tagged sense of a multi-sense `DictionaryEntry`. It implements the internal
 `IPartOfSpeechResolver` interface and delegates the tagging to the `DemaConsulting.WordSense`
-OTS library (the `BasicWordSenseModel`). It replaces an earlier regex-based heuristic.
+OTS library. The engine is selectable: `basic` (`BasicWordSenseModel`, in-memory, offline),
+`minilm` (`MiniLMWordSenseModel`, the default), or `bert` (`BertBaseCasedWordSenseModel`). The two
+encoder models implement `IDownloadableWordSenseModel` and download their model files on first use.
+It replaces an earlier regex-based heuristic.
 
 The resolver only ever returns `Noun`, `Verb`, or `null` (inconclusive). Entries with only
 adjective or adverb senses therefore resolve as ambiguous, which is the conservative behavior
@@ -32,11 +35,24 @@ split into sentences so a match is classified within its own sentence only.
 **TokenRegex**: `[\w'-]+|[^\w\s]` - tokenizes a sentence into words (letters, digits,
 apostrophes, hyphens) and single punctuation characters.
 
-**Model**: the `IWordSenseModel` used for tagging. The public constructor creates a
-`BasicWordSenseModel`; an internal constructor accepts any model for tests. The model is
-in-memory and thread-safe and needs no download.
+**Model**: the `IWordSenseModel` used for tagging. `Create(engine, factory)` builds a resolver
+for a `PartOfSpeechEngine`; the optional factory lets tests substitute any model, and the
+default factory creates the real `BasicWordSenseModel`, `MiniLMWordSenseModel`, or
+`BertBaseCasedWordSenseModel`. Creating a model performs no I/O. Internal constructors accept any
+model for tests.
 
-**Shared**: lazily created process-wide instance, so the model is built once per process.
+**Lazy preparation**: when the model is an `IDownloadableWordSenseModel`, the first
+classification calls `EnsureModelAsync` once (download if needed, then load). Resolutions that
+never need classification never touch the network. If preparation throws, the resolver throws an
+`InvalidOperationException` ("Part-of-speech engine '<name>' could not be prepared: ... Use
+--pos-engine basic (or dictionary.pos-engine: basic) to work offline."), caches that failure so
+later calls fail the same way without retrying, and never falls back to another engine. The wait is
+bounded (five minutes by default): a cancellation token is passed to `EnsureModelAsync`, and the
+resolver also stops waiting itself, so a hung download fails with the same error ("... did not
+complete within 300 seconds ... Use --pos-engine basic ...").
+
+**Disposal**: the resolver is `IDisposable` and disposes its model. `Linter` owns it per run.
+There is no shared process-wide instance.
 
 **Cache**: a `ConcurrentDictionary` of per-sentence `Lazy` token spans and roles (thread-safe
 `ExecutionAndPublication`), keyed by sentence text. Hits are served without a lock. Miss management (re-check,
@@ -88,7 +104,18 @@ answer in the set is lost while near-random answers are still rejected.
 The 26 hard cases were authored for this change, because the case list from the original
 spike was not recoverable.
 
+The calibration used the original basic model. It has not been re-tuned for the `minilm` and
+`bert` encoder engines or for the 0.1.0-beta.6 basic model, and the threshold stays at 0.45.
+Re-tuning per engine is a recommended follow-up.
+
 #### Known limitations
+
+**Runt fragments (accepted limitation)**: the beta.6 basic tagger reads a two-word fragment
+without a verb, such as "Wash pump", as an imperative and tags `pump` as a verb. Real prose
+sentences ("The wash pump is clean.") are tagged as nouns. The affected unit tests use a full
+sentence or a scripted resolver instead of the fragment, and the verb-less table-cell case is
+documented in `DictionaryCheckerTests`. This limitation is accepted; no resolver heuristic
+compensates for it.
 
 The tagger is a statistical model and is wrong for some inputs. Wrong answers observed outside
 the 126-sentence set are not removable by any threshold that keeps all 126 correct:
@@ -109,14 +136,18 @@ Descriptive) no longer influences the part of speech.
 `Resolve` throws `ArgumentNullException` for a null `segmentText` and
 `ArgumentOutOfRangeException` for a match outside the text. The internal constructor throws
 `ArgumentNullException` for a null model. Regex timeouts are bounded to one second per pattern
-match. Failures of the model propagate to the caller.
+match. Failures of the model propagate to the caller; a failure to download or load a
+downloadable model is wrapped in a clear `InvalidOperationException` (see *Lazy preparation*).
 
 #### Dependencies
 
-- **WordSense** (OTS) - `BasicWordSenseModel` and `ClassifyAsync`.
+- **WordSense** (OTS) - `BasicWordSenseModel`, `MiniLMWordSenseModel`,
+  `BertBaseCasedWordSenseModel`, `IDownloadableWordSenseModel.EnsureModelAsync`, and
+  `ClassifyAsync`.
+- **PartOfSpeechEngine** - the engine selection enum.
 - **.NET BCL** - `Regex` and concurrent collections.
 
 #### Callers
 
 - **DictionaryChecker** - calls `Resolve` once per match of a dictionary entry to select the
-  applicable sense(s). `Linter` passes the shared resolver.
+  applicable sense(s). `Linter` creates one resolver per run and passes it in.

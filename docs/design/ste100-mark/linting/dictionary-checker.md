@@ -94,8 +94,8 @@ differ from the entry's headword (for example "run"), so both comparisons are ne
 
 - *Parameters*: `string file` - file path for diagnostics; `IReadOnlyList<ProseSegment> segments`
   - prose segments; `LintDictionary dictionary` - merged dictionary;
-  `IPartOfSpeechResolver? resolver` - optional resolver used for sense selection, defaulting
-  to `PartOfSpeechResolver.Shared` (the writing mode no longer influences the part of speech);
+  `IPartOfSpeechResolver resolver` - required resolver used for sense selection (a null value
+  throws; the caller owns and disposes it; the writing mode no longer influences the part of speech);
   `IReadOnlyCollection<string>? extraAllowedTerms` - optional additional per-file allowed
   terms (typically `LintConfig.ResolveAllowedTerms`), defaulting to `null` (no per-file
   allowance); `IReadOnlyCollection<string>? allowedPhrases` - optional phrase-scoped

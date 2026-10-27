@@ -625,6 +625,66 @@ public class ContextTests
     }
 
     /// <summary>
+    ///     Test that --pos-engine is unspecified (null) by default.
+    /// </summary>
+    [Fact]
+    public void Context_Create_NoPosEngineFlag_LeavesEngineUnspecified()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create([]);
+
+        // Assert: verify expected behavior
+        Assert.Null(context.PosEngine);
+    }
+
+    /// <summary>
+    ///     Test that --pos-engine parses each supported engine, case-insensitively.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(PosEngineCases))]
+    public void Context_Create_PosEngineFlag_ParsesEngine(string value, object expected)
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create(["--pos-engine", value]);
+
+        // Assert: the parsed engine matches the expected enum value
+        Assert.Equal((PartOfSpeechEngine)expected, context.PosEngine!.Value);
+    }
+
+    /// <summary>Gets the engine argument values and the enum values they parse to.</summary>
+    public static TheoryData<string, object> PosEngineCases => new()
+    {
+        { "basic", PartOfSpeechEngine.Basic },
+        { "minilm", PartOfSpeechEngine.MiniLm },
+        { "bert", PartOfSpeechEngine.Bert },
+        { "MiniLM", PartOfSpeechEngine.MiniLm },
+        { "BERT", PartOfSpeechEngine.Bert }
+    };
+
+    /// <summary>
+    ///     Test that --pos-engine with an unsupported value throws a clear exception.
+    /// </summary>
+    [Fact]
+    public void Context_Create_PosEngineFlag_UnsupportedValue_ThrowsArgumentException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => Context.Create(["--pos-engine", "gpt"]));
+        Assert.Contains("--pos-engine", exception.Message);
+        Assert.Contains("'gpt'", exception.Message);
+    }
+
+    /// <summary>
+    ///     Test that --pos-engine without a value throws an exception.
+    /// </summary>
+    [Fact]
+    public void Context_Create_PosEngineFlag_WithoutValue_ThrowsArgumentException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => Context.Create(["--pos-engine"]));
+        Assert.Contains("--pos-engine", exception.Message);
+    }
+
+    /// <summary>
     ///     Test creating a context with the strict flag.
     /// </summary>
     [Fact]

@@ -719,5 +719,29 @@ public class IntegrationTests
             Directory.Delete(workingDirectory, true);
         }
     }
+
+    /// <summary>
+    ///     Test that an invalid <c>--pos-engine</c> value fails the published CLI with a clear message.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_PosEngineInvalidValue_ReturnsErrorExitCode()
+    {
+        // Arrange: an isolated working directory
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            // Act: run the linter with an unsupported engine name
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "--pos-engine", "foo");
+
+            // Assert: non-zero exit code and a message naming the flag and the value
+            Assert.Equal(1, exitCode);
+            Assert.Contains("--pos-engine", output);
+            Assert.Contains("'foo'", output);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
 }
 

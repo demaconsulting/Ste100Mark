@@ -41,6 +41,11 @@ zero-matched file selection back into a success exit code instead of the distinc
 **ListRules**: `bool` — `true` when `--list-rules` was present in the argument list; requests
 that `Program.Run` dispatch to the rule-catalog JSON output path instead of the main lint flow.
 
+**PosEngine**: `PartOfSpeechEngine?` — Engine selected with `--pos-engine` (`basic`, `minilm`, or
+`bert`, case-insensitive); `null` when the option is absent so `Linter` can apply the
+precedence CLI > configuration file > default. An unsupported or missing value makes `Create`
+throw `ArgumentException`.
+
 **NoFilesMatchedExitCode**: `int` (const, `2`) — The distinct exit code returned by `ExitCode`
 when the file selection matched zero files and `AllowEmpty` was not specified. Kept as a single
 named constant so `Program`'s help text and the derivation logic below share one source of
@@ -63,7 +68,9 @@ takes precedence so a genuine reported error is never masked by the zero-files e
 
 Delegates to the private `ArgumentParser` helper to parse flags, then opens the log file by
 calling `OpenLogFile` if `--log` was present. Throws `ArgumentException` for unknown or
-malformed arguments; throws `InvalidOperationException` if the log file cannot be opened.
+malformed arguments, including an unsupported `--pos-engine` value
+("--pos-engine requires 'basic', 'minilm' or 'bert', got '{value}'"); throws
+`InvalidOperationException` if the log file cannot be opened.
 
 **WriteLine**: Writes a message to standard output and to the log file.
 
@@ -124,8 +131,8 @@ silently ignored.
 
 #### Dependencies
 
-- **.NET BCL** — `Console`, `StreamWriter`, and `Path` are the only dependencies. No other
-  tool units are used.
+- **.NET BCL** — `Console`, `StreamWriter`, and `Path` are the only dependencies. The
+  `PartOfSpeechEngine` enum (and its `TryParse` helper) supplies the `--pos-engine` values.
 
 #### Callers
 

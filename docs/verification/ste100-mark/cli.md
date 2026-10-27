@@ -136,6 +136,14 @@ against a zero-match glob with `--allow-empty`; exit code is 0. This scenario ve
 `[`"`--list-rules`"`]` are parsed through `Context.Create`; `Context.ListRules` is true. This
 scenario verifies `Ste100Mark-Cli-ArgumentParsing` and `Ste100Mark-Cli-ListRules`.
 
+**CliSubsystem_PosEngineFlow_InvalidValue_ExitsNonZero**: `Program.Main` is called with
+`["--pos-engine", "gpt"]`; the exit code is non-zero and an error names the option. This scenario
+verifies `Ste100Mark-Cli-PosEngine`.
+
+**Ste100Mark_PosEngineInvalidValue_ReturnsErrorExitCode**: The published CLI is run with
+`--pos-engine foo`; exit code is 1 and the output names `--pos-engine` and the value. This
+scenario verifies `Ste100Mark-Cli-PosEngine` and `Ste100Mark-System-PosEngine`.
+
 **Ste100Mark_ListRulesFlag_Provided_OutputsRuleCatalogJson**: The published CLI is run with
 `--list-rules` and no other arguments in an empty working directory containing no Markdown
 files; exit code is 0 and stdout parses as a JSON array containing every expected rule code.

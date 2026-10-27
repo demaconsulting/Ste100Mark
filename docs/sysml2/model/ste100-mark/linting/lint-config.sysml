@@ -1,6 +1,6 @@
 package Ste100Mark {
     part def LintConfig {
-        doc /* YAML-backed lint configuration model; resolves per-file mode, rules, and dictionary allowances via profiles. */
+        doc /* YAML-backed lint configuration model; resolves per-file mode, rules, and dictionary allowances via profiles, and validates dictionary.pos-engine. */
 
         comment sourceRef /* Source: src/DemaConsulting.Ste100Mark/Linting/LintConfig.cs */
         comment testRef /* Test: test/DemaConsulting.Ste100Mark.Tests/Linting/LintConfigTests.cs */

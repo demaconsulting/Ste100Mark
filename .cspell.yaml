@@ -67,6 +67,8 @@ words:
   - versionmark
   - Weasyprint
   - wordsense
+  - minilm
+  - onnx
   - yamldotnet
   - yamlfix
 

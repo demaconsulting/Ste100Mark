@@ -20,15 +20,17 @@
 
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using DemaConsulting.Ste100Mark.Cli;
 using DemaConsulting.WordSense;
-using DemaConsulting.WordSense.Basic;
+using DemaConsulting.WordSense.BertBaseCased;
+using DemaConsulting.WordSense.MiniLM;
 using WsPos = DemaConsulting.WordSense.PartOfSpeech;
 
 namespace DemaConsulting.Ste100Mark.Linting;
 
 /// <summary>
-///     <see cref="IPartOfSpeechResolver"/> backed by the <c>DemaConsulting.WordSense.Basic</c> context-aware
-///     part-of-speech tagger.
+///     <see cref="IPartOfSpeechResolver"/> backed by a <c>DemaConsulting.WordSense</c> context-aware
+///     part-of-speech tagger (the offline basic model, or a MiniLM or BERT encoder model).
 /// </summary>
 /// <remarks>
 ///     The segment is split into sentences; the sentence containing the occurrence is tokenized
@@ -37,9 +39,12 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     <see cref="PartOfSpeech.Verb"/> only when the tagger chose a sense whose confidence is at least
 ///     <see cref="MinimumConfidence"/>; every other outcome (unknown word, low confidence, any other
 ///     part of speech, an occurrence spanning several tokens) is inconclusive (<see langword="null"/>).
-///     The model is thread-safe and fully in-memory (no download), and per-sentence results are cached.
+///     The model is thread-safe; per-sentence results are cached. A downloadable (encoder) model is
+///     made ready once, lazily, on the first classification, so no download happens unless a
+///     dictionary match needs a part-of-speech answer; a download or load failure is fatal (no
+///     fallback to another engine).
 /// </remarks>
-internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
+internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver, IDisposable
 {
     /// <summary>
     ///     Minimum tagger confidence (0 to 1) for a noun or verb answer to be accepted.
@@ -50,12 +55,16 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     ///     classified correctly, the lowest confidence of a correct noun or verb answer was 0.4926, and
     ///     no incorrect noun or verb answer was observed in that set at any confidence. The value is set
     ///     just below that lowest correct confidence, so that no correct answer in the set is lost while
-    ///     near-random answers are still rejected.
+    ///     near-random answers are still rejected. The calibration used the basic model; it has not been
+    ///     re-tuned for the minilm and bert encoder engines or for the beta.6 basic model.
     /// </remarks>
     internal const double MinimumConfidence = 0.45;
 
     /// <summary>Maximum number of cached sentence classifications before completed entries are evicted.</summary>
     private const int MaxCacheEntries = 4096;
+
+    /// <summary>Default maximum time to wait for a downloadable model to be downloaded and loaded.</summary>
+    private static readonly TimeSpan DefaultReadyTimeout = TimeSpan.FromMinutes(5);
 
     /// <summary>Regex timeout applied to every pattern used by this class.</summary>
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
@@ -70,12 +79,20 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     private static readonly Regex TokenRegex =
         new(@"[\w'-]+|[^\w\s]", RegexOptions.Compiled, RegexTimeout);
 
-    /// <summary>The lazily created process-wide default resolver.</summary>
-    private static readonly Lazy<PartOfSpeechResolver> SharedInstance =
-        new(() => new PartOfSpeechResolver(), LazyThreadSafetyMode.ExecutionAndPublication);
-
     /// <summary>The tagger model.</summary>
     private readonly IWordSenseModel _model;
+
+    /// <summary>Maximum time to wait for a downloadable model to become ready.</summary>
+    private readonly TimeSpan _readyTimeout;
+
+    /// <summary>The engine this resolver was created for, used in failure messages.</summary>
+    private readonly string _engineName;
+
+    /// <summary>
+    ///     Gate that makes a downloadable model ready exactly once, on first use; a failure is cached
+    ///     and rethrown for every later call.
+    /// </summary>
+    private readonly Lazy<bool> _ready;
 
     /// <summary>Cache entry count at which completed entries are evicted.</summary>
     private readonly int _maxCacheEntries;
@@ -90,13 +107,40 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     private readonly object _cacheLock = new();
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class using the
-    ///     <see cref="BasicWordSenseModel"/>.
+    ///     Creates a resolver for the selected engine. No model file is touched here: encoder models
+    ///     are downloaded and loaded lazily on the first <see cref="Resolve"/> call that needs them.
     /// </summary>
-    public PartOfSpeechResolver()
-        : this(new BasicWordSenseModel())
+    /// <param name="engine">The engine to use.</param>
+    /// <param name="modelFactory">
+    ///     Optional factory that supplies the model for an engine (tests inject fakes); when
+    ///     <see langword="null"/> the real WordSense model for the engine is created.
+    /// </param>
+    /// <returns>A new resolver that owns (and disposes) its model.</returns>
+    internal static PartOfSpeechResolver Create(
+        PartOfSpeechEngine engine,
+        Func<PartOfSpeechEngine, IWordSenseModel>? modelFactory = null)
     {
+        var model = modelFactory is not null ? modelFactory(engine) : CreateModel(engine);
+        return new PartOfSpeechResolver(model, MaxCacheEntries, EngineName(engine));
     }
+
+    /// <summary>Creates the real WordSense model for an engine.</summary>
+    private static IWordSenseModel CreateModel(PartOfSpeechEngine engine) => engine switch
+    {
+        PartOfSpeechEngine.Basic => new BasicWordSenseModel(),
+        PartOfSpeechEngine.MiniLm => new MiniLMWordSenseModel(),
+        PartOfSpeechEngine.Bert => new BertBaseCasedWordSenseModel(),
+        _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, "Unknown part-of-speech engine.")
+    };
+
+    /// <summary>Gets the user-facing (command-line) name of an engine.</summary>
+    private static string EngineName(PartOfSpeechEngine engine) => engine switch
+    {
+        PartOfSpeechEngine.Basic => "basic",
+        PartOfSpeechEngine.MiniLm => "minilm",
+        PartOfSpeechEngine.Bert => "bert",
+        _ => engine.ToString()
+    };
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class using the given model.
@@ -114,11 +158,88 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// <param name="model">The tagger model; its lifetime is the lifetime of this resolver.</param>
     /// <param name="maxCacheEntries">Entry count at which completed cache entries are evicted.</param>
     internal PartOfSpeechResolver(IWordSenseModel model, int maxCacheEntries)
+        : this(model, maxCacheEntries, "custom")
+    {
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class with a custom
+    ///     model-preparation timeout (for tests).
+    /// </summary>
+    /// <param name="model">The tagger model; its lifetime is the lifetime of this resolver.</param>
+    /// <param name="readyTimeout">Maximum time to wait for a downloadable model to become ready.</param>
+    internal PartOfSpeechResolver(IWordSenseModel model, TimeSpan readyTimeout)
+        : this(model, MaxCacheEntries, "custom", readyTimeout)
+    {
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class.
+    /// </summary>
+    /// <param name="model">The tagger model; its lifetime is the lifetime of this resolver.</param>
+    /// <param name="maxCacheEntries">Entry count at which completed cache entries are evicted.</param>
+    /// <param name="engineName">The engine name used in failure messages.</param>
+    /// <param name="readyTimeout">Maximum time to wait for a downloadable model to become ready.</param>
+    private PartOfSpeechResolver(
+        IWordSenseModel model, int maxCacheEntries, string engineName, TimeSpan? readyTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxCacheEntries);
+        _readyTimeout = readyTimeout ?? DefaultReadyTimeout;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_readyTimeout, TimeSpan.Zero);
         _model = model;
         _maxCacheEntries = maxCacheEntries;
+        _engineName = engineName;
+        _ready = new Lazy<bool>(EnsureReady, LazyThreadSafetyMode.ExecutionAndPublication);
+    }
+
+    /// <summary>
+    ///     Makes a downloadable model ready (downloads and verifies it when it is not already stored).
+    /// </summary>
+    /// <returns>Always <see langword="true"/>; failures throw.</returns>
+    /// <exception cref="InvalidOperationException">The model could not be downloaded or loaded.</exception>
+    private bool EnsureReady()
+    {
+        if (_model is not IDownloadableWordSenseModel downloadable)
+        {
+            return true;
+        }
+
+        try
+        {
+            // Null options: WORDSENSE_MIRROR_* environment variables are honored by the library.
+            // Console app, no synchronization context, called once: waiting here cannot deadlock.
+            // The wait is bounded: the token asks the library to stop, and the bounded wait also
+            // covers a model that ignores the token.
+            using var cts = new CancellationTokenSource();
+            var task = downloadable.EnsureModelAsync(null, cts.Token);
+            if (!task.Wait(_readyTimeout))
+            {
+                cts.Cancel();
+                throw new TimeoutException(
+                    $"Preparing the model did not complete within {_readyTimeout.TotalSeconds:0} seconds.");
+            }
+
+            task.GetAwaiter().GetResult();
+            return true;
+        }
+        // Generic catch is justified: the library throws several exception types (unavailable,
+        // integrity, configuration, I/O, HTTP); all must become one clear, fatal error with no fallback.
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Part-of-speech engine '{_engineName}' could not be prepared: {ex.Message} " +
+                "Use --pos-engine basic (or dictionary.pos-engine: basic) to work offline.",
+                ex);
+        }
+    }
+
+    /// <summary>
+    ///     Disposes the model when it is disposable.
+    /// </summary>
+    public void Dispose()
+    {
+        (_model as IDisposable)?.Dispose();
     }
 
     /// <summary>Gets the number of cached sentence entries (for tests).</summary>
@@ -130,11 +251,6 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// <param name="sentence">The sentence text.</param>
     /// <returns><see langword="true"/> when the sentence is cached.</returns>
     internal bool IsSentenceCached(string sentence) => _cache.ContainsKey(sentence);
-
-    /// <summary>
-    ///     Gets the process-wide default resolver, created on first use and kept for the process lifetime.
-    /// </summary>
-    public static PartOfSpeechResolver Shared => SharedInstance.Value;
 
     /// <inheritdoc />
     public PartOfSpeech? Resolve(string segmentText, int matchIndex, int matchLength)
@@ -287,7 +403,9 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 
         var roles = new PartOfSpeech?[matches.Count];
 
-        // The Basic model completes synchronously, so waiting here cannot deadlock or block on I/O.
+        // Download/load the model on first use (no-op for the offline basic engine). Waiting on the
+        // async calls is safe: console app, no synchronization context.
+        _ = _ready.Value;
         var results = _model.ClassifyAsync(words).GetAwaiter().GetResult();
         if (results.Length == words.Length)
         {
@@ -304,7 +422,7 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     ///     Maps one tagger result to a repository part of speech, or <see langword="null"/> when it is not
     ///     a confident noun or verb.
     /// </summary>
-    private static PartOfSpeech? MapRole(DemaConsulting.WordSense.WordSense result)
+    private static PartOfSpeech? MapRole(ClassifyResult result)
     {
         if (result.Details is null || result.Confidence < MinimumConfidence)
         {

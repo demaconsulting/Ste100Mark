@@ -63,10 +63,17 @@ internal static class Runner
             startInfo.WorkingDirectory = workingDirectory;
         }
 
-        // Add the arguments
+        // Add the arguments; the offline basic part-of-speech engine is the test default so that no
+        // test ever downloads a model (a test that selects an engine itself is left unchanged)
         foreach (var argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
+        }
+
+        if (!arguments.Contains("--pos-engine"))
+        {
+            startInfo.ArgumentList.Add("--pos-engine");
+            startInfo.ArgumentList.Add("basic");
         }
 
         // Start the process

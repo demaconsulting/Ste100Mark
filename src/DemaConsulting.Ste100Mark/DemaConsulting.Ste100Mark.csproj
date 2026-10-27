@@ -49,8 +49,9 @@
   <!-- Runtime Dependencies -->
   <ItemGroup>
     <PackageReference Include="DemaConsulting.TestResults" Version="1.10.0" />
-    <PackageReference Include="DemaConsulting.WordSense" Version="0.1.0-beta.1" />
-    <PackageReference Include="DemaConsulting.WordSense.Basic" Version="0.1.0-beta.1" />
+    <PackageReference Include="DemaConsulting.WordSense" Version="0.1.0-beta.6" />
+    <PackageReference Include="DemaConsulting.WordSense.MiniLM" Version="0.1.0-beta.6" />
+    <PackageReference Include="DemaConsulting.WordSense.BertBaseCased" Version="0.1.0-beta.6" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.13" />
   </ItemGroup>

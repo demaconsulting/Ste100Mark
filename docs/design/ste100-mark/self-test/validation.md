@@ -67,8 +67,9 @@ exception occurs.
 Creates a `TemporaryDirectory`, writes a short compliant Markdown file, temporarily switches
 the current directory to the temp directory (so the linter's glob resolution finds the file by
 its relative name), invokes `Program.Run` with
-`[relativeFile, "--silent", "--log", logFile]` (no `--validate`, so the run reaches
-`Linter.Run` instead of `Validation.Run`), and asserts `Context.ExitCode` is `0`. Records pass
+`[relativeFile, "--silent", "--pos-engine", "basic", "--log", logFile]` (no `--validate`, so the
+run reaches `Linter.Run` instead of `Validation.Run`; the offline `basic` engine keeps the
+self-test free of any model download), and asserts `Context.ExitCode` is `0`. Records pass
 or fail. Any exception is caught by a broad `catch (Exception)` and recorded via
 `HandleTestException`.
 

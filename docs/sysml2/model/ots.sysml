@@ -8,7 +8,7 @@ package Ste100Mark {
     }
 
     part def WordSense {
-        doc /* Statistical word-sense tagger (DemaConsulting.WordSense.Basic) used to resolve the part of speech of dictionary term matches. */
+        doc /* Statistical word-sense tagger (DemaConsulting.WordSense with the MiniLM and BertBaseCased encoder model packages) used to resolve the part of speech of dictionary term matches. */
 
         comment designRef /* Design: docs/design/ots/wordsense.md */
         comment verificationRef /* Verification: docs/verification/ots/wordsense.md */

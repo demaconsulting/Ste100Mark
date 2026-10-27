@@ -248,7 +248,7 @@ sense's alternatives grouped per sense. This scenario is tested by
 
 **Ste100Mark-PartOfSpeechResolver-\* (unit requirements)**: `PartOfSpeechResolver` is verified in
 two layers. Scenarios that depend on the tagger's real answers use the real
-`DemaConsulting.WordSense.Basic` model: noun and verb usage (articles, possessives,
+`DemaConsulting.WordSense` basic model (the offline engine): noun and verb usage (articles, possessives,
 quantifiers, prepositions, modals, the infinitive marker, progressive auxiliaries, plural
 nouns, noun-phrase modifiers, and a finite verb following the match), the 26 hard cases
 (imperatives, noun-noun compounds, and modals), the requested sentence of a multi-sentence
@@ -257,7 +257,12 @@ scripted model so the tagger's answer is controlled: one classification call per
 word and punctuation tokens, the requested occurrence of a repeated word, the inclusive
 confidence boundary at 0.45, the rejection of parts of speech other than noun and verb, a
 word with no details, multi-word matches, a model returning a wrong result count,
-per-sentence caching, argument validation, and the shared instance. These scenarios are tested
+per-sentence caching, argument validation, and disposal. Engine creation, lazy single
+preparation of downloadable models, and the no-fallback download failure are verified offline
+with a fake `IDownloadableWordSenseModel`; the three real models are only constructed, never
+downloaded. The two-word fragment "Wash pump" is tagged as a verb by the beta.6 basic model (an
+accepted limitation, see the design), so the corresponding tests use a full sentence or a
+scripted resolver. These scenarios are tested
 by `Resolve_NounUsage_ReturnsNoun`, `Resolve_VerbUsage_ReturnsVerb`,
 `Resolve_HardCase_ReturnsExpectedRole`, `HardCases_ContainsTwentySixCases`,
 `Resolve_MatchInSecondSentence_UsesThatSentenceOnly`,
@@ -276,7 +281,26 @@ by `Resolve_NounUsage_ReturnsNoun`, `Resolve_VerbUsage_ReturnsVerb`,
 `Resolve_NullSegmentText_ThrowsArgumentNullException`,
 `Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException`,
 `Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException`,
-`Constructor_NullModel_ThrowsArgumentNullException`, and `Shared_ReturnsSameInstance`.
+`Constructor_NullModel_ThrowsArgumentNullException`, `Create_UsesFactoryForEngine`,
+`Create_DefaultFactory_CreatesResolverWithoutDownload`,
+`Constructor_DownloadableModel_DoesNotEnsureModel`,
+`Resolve_DownloadableModel_EnsuresModelOnce`, `Resolve_NonDownloadableModel_ClassifiesDirectly`,
+`Resolve_DownloadFails_ThrowsClearErrorEveryTime`, `Resolve_DownloadNeverCompletes_ThrowsTimeoutError`
+(a fake model whose preparation never completes; no sleeping, the resolver's five-minute default
+timeout is shortened through an internal constructor), and `Dispose_DisposesModel`.
+
+**Ste100Mark-Linting-PosEngineSelection, PosEngineConfigParsing, PosEngineLazyPreparation,
+PosEngineFailure, and PosEngineDisposal**: Verified through
+`LintConfigTests` (`Load_DictionaryPosEngine_ParsesEngine`,
+`Load_DictionaryWithoutPosEngine_LeavesEngineUnspecified`,
+`Load_DictionaryPosEngine_InvalidValue_ThrowsInvalidOperationException`) and `LinterPosEngineTests`,
+which drive `Linter` with a fake model factory so no test downloads a model:
+`Run_NoEngineSelected_RequestsMiniLm`, `Run_YamlEngineOnly_RequestsYamlEngine`,
+`Run_CliAndYamlEngine_CliWins`, `Run_InvalidYamlEngine_FailsWithClearError`,
+`Run_DownloadFails_FailsWithClearErrorAndNoFallback`, `Run_ManyDictionaryHits_EnsuresModelOnce`,
+`Run_NoDictionaryHits_DoesNotEnsureModel`, `Run_DictionaryDisabled_DoesNotCreateModel`, and
+`Run_NoFiles_DoesNotEnsureModel`. Integration tests append `--pos-engine basic` so they stay
+offline. No automated test downloads the minilm or bert models.
 
 **System-level WordSense resolution (Ste100Mark-System-Lint)**: The published tool assembly is
 run against a configuration with a verb-only entry ("check") and a two-sense entry for a

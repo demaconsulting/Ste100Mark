@@ -463,6 +463,32 @@ public class CliSubsystemTests
     }
 
     /// <summary>
+    ///     Test that an invalid --pos-engine value surfaces through Program.Main as a non-zero exit code.
+    /// </summary>
+    [Fact]
+    public void CliSubsystem_PosEngineFlow_InvalidValue_ExitsNonZero()
+    {
+        // Arrange: capture stderr
+        var originalError = Console.Error;
+        try
+        {
+            using var errWriter = new StringWriter();
+            Console.SetError(errWriter);
+
+            // Act: run Main with an invalid engine
+            var result = Program.Main(["--pos-engine", "gpt"]);
+
+            // Assert: clear error, exit code 1
+            Assert.Equal(1, result);
+            Assert.Contains("--pos-engine", errWriter.ToString());
+        }
+        finally
+        {
+            Console.SetError(originalError);
+        }
+    }
+
+    /// <summary>
     ///     Test that Context parses the --strict flag.
     /// </summary>
     [Fact]
@@ -519,7 +545,7 @@ public class CliSubsystemTests
         // Arrange: a clean Markdown file linted with JSON output; capture console output
         var tempDir = Path.GetTempPath();
         var filePath = Path.Combine(tempDir, $"cli_test_{Guid.NewGuid()}.md");
-        var args = new[] { filePath, "--format", "json" };
+        var args = new[] { filePath, "--format", "json", "--pos-engine", "basic" };
         var originalOut = Console.Out;
         using var capturedOut = new StringWriter();
 

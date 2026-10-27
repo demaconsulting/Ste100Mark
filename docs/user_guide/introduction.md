@@ -214,6 +214,7 @@ dictionary:
     - api
   allow-in-phrase:
     - trail mix
+  pos-engine: basic
 ```
 
 Configuration fields:
@@ -225,7 +226,7 @@ Configuration fields:
 - `rules` - global rule tuning for sentence limits, semicolons, contractions, paragraph
   cap, and passive voice
 - `dictionary` - project dictionary file plus inline allow/disallow/ignore/allow-in-phrase
-  tuning
+  tuning, and `pos-engine` (`basic`, `minilm`, or `bert`; see "Part-of-Speech Engine")
 
 ## Profiles
 
@@ -309,7 +310,36 @@ cases, all of which the tagger classified correctly. Known weak spots include a 
 imperative that reads like a noun phrase (for example "Test results daily") and a verb followed
 by a number. In those cases a term can be reported with the wrong sense, or not be reported at
 all. The writing mode does not influence the decision. Add an `allow` entry or an
-`allow-in-phrase` entry to suppress a finding that you judge to be wrong.
+`allow-in-phrase` entry to suppress a finding that you judge to be wrong. A two-word fragment
+without a verb (for example the table cell "Wash pump") can be read as an imperative, so a
+noun there can be tagged as a verb; this is an accepted limitation.
+
+## Part-of-Speech Engine
+
+The dictionary check can use one of three engines:
+
+| Engine | Description |
+| --- | --- |
+| `basic` | Small built-in model. Works offline. |
+| `minilm` | Default. More accurate encoder model that downloads on first use. |
+| `bert` | Larger encoder model that downloads on first use. |
+
+Choose the engine with `--pos-engine` or with `dictionary.pos-engine` in `.ste100mark.yaml`:
+
+```yaml
+dictionary:
+  pos-engine: basic
+```
+
+The command-line option overrides the configuration file, and the configuration file overrides
+the default (`minilm`). An invalid value fails the run with an error and a non-zero exit code.
+The `minilm` and `bert` models download only when a dictionary match needs part-of-speech
+resolution, and the `WORDSENSE_MIRROR_*` environment variables redirect the download. If the
+download or load fails, or does not finish within five minutes, the run fails with a clear error
+and a non-zero exit code; it does not
+fall back to another engine. For offline or air-gapped use, select `basic`. The confidence
+threshold (0.45) was calibrated with the basic model and has not been re-tuned for the encoder
+engines.
 
 A reported suggestion never includes the exact word that was just flagged as one of its own
 alternatives, for both a confidently-resolved sense and an ambiguous, multi-sense result. For
@@ -529,6 +559,7 @@ The following command-line options are supported:
 | `--format <text\|json>` | Diagnostic output format for linting (default: `text`) |
 | `--strict` | Promote warn-severity lint findings to a failing exit code |
 | `--allow-empty` | Treat a file selection that matches zero files as success (default: exit code 2) |
+| `--pos-engine <basic\|minilm\|bert>` | Dictionary part-of-speech engine (default: `minilm`); overrides config. |
 | `--list-rules` | Display the rule catalog as a JSON array and exit |
 
 # Examples

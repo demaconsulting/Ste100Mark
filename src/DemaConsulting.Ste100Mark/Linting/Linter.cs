@@ -79,13 +79,24 @@ internal static class Linter
     ///     <see cref="Program.Main"/>'s top-level exception handling is reserved for genuinely
     ///     unexpected failures.
     /// </remarks>
-    public static void Run(Context context)
+    public static void Run(Context context) => Run(context, null);
+
+    /// <summary>
+    ///     Runs a full lint pass with an optional model factory (tests inject fake models so that no
+    ///     engine is downloaded).
+    /// </summary>
+    /// <param name="context">Parsed command-line context.</param>
+    /// <param name="modelFactory">
+    ///     Supplies the tagger model for the selected engine, or <see langword="null"/> to use the real
+    ///     WordSense models.
+    /// </param>
+    internal static void Run(Context context, Func<PartOfSpeechEngine, DemaConsulting.WordSense.IWordSenseModel>? modelFactory)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         try
         {
-            RunCore(context);
+            RunCore(context, modelFactory);
         }
         catch (InvalidOperationException ex)
         {
@@ -97,11 +108,14 @@ internal static class Linter
     }
 
     /// <summary>
-    ///     Performs the actual lint pass; separated from <see cref="Run"/> so that configuration and
+    ///     Performs the actual lint pass; separated from <see cref="Run(Context)"/> so that configuration and
     ///     dictionary loading failures can be caught in one place.
     /// </summary>
     /// <param name="context">Parsed command-line context.</param>
-    private static void RunCore(Context context)
+    /// <param name="modelFactory">Optional model factory (tests only).</param>
+    private static void RunCore(
+        Context context,
+        Func<PartOfSpeechEngine, DemaConsulting.WordSense.IWordSenseModel>? modelFactory)
     {
         var configPath = ResolveConfigPath(context.ConfigFile);
         var config = LintConfig.Load(configPath);
@@ -117,6 +131,15 @@ internal static class Linter
         var dictionary = dictionaryEnabled ? LintDictionary.Load(config, configDirectory) : null;
         var files = ResolveFiles(context.Globs, config);
 
+        // Engine precedence: command line over configuration file over built-in default. The resolver
+        // only creates the model object here; any download or load happens on the first dictionary
+        // match that needs a part-of-speech answer, and the model is disposed when the run ends.
+        using var resolver = dictionary is null
+            ? null
+            : PartOfSpeechResolver.Create(
+                context.PosEngine ?? config.Dictionary?.ParsedPosEngine ?? PartOfSpeechEngineNames.Default,
+                modelFactory);
+
         var diagnostics = new List<Diagnostic>();
         var relativePaths = new List<string>(files.Count);
         foreach (var file in files)
@@ -131,10 +154,10 @@ internal static class Linter
 
             diagnostics.AddRange(StructuralRules.Evaluate(relativePath, segments, mode, rules, allowedTerms));
 
-            if (dictionary is not null)
+            if (dictionary is not null && resolver is not null)
             {
                 var allowedPhrases = config.ResolveAllowedPhrases(relativePath);
-                diagnostics.AddRange(DictionaryChecker.Evaluate(relativePath, segments, dictionary, allowedTerms, allowedPhrases));
+                diagnostics.AddRange(DictionaryChecker.Evaluate(relativePath, segments, dictionary, resolver, allowedTerms, allowedPhrases));
             }
         }
 

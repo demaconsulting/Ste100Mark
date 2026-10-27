@@ -180,6 +180,8 @@ internal static class Program
               --log <file>               Write output to log file
               --config <file>            Path to lint configuration file (default: .ste100mark.yaml)
               --format <text|json>       Diagnostic output format (default: text)
+              --pos-engine <basic|minilm|bert>
+                                         Part-of-speech engine for dictionary checks (default: minilm)
               --strict                   Promote warn-severity findings to errors for exit code
               --allow-empty              Treat zero matched files as success (default: exit code {Context.NoFilesMatchedExitCode})
               --list-rules               Display the rule catalog as JSON and exit
@@ -189,6 +191,10 @@ internal static class Program
             work the same way, and either form may be relative to the current directory or
             absolute.
             When omitted, the include/exclude patterns from the resolved configuration are used.
+            The minilm and bert engines download their model the first time a dictionary match needs
+            it (a mirror can be set with WORDSENSE_MIRROR_* variables); use --pos-engine basic to work
+            offline. The engine can also be set with dictionary.pos-engine in the configuration file;
+            the command line takes precedence.
             Exit codes: 0 = success, 1 = lint or argument errors, {Context.NoFilesMatchedExitCode} = the file
             selection matched zero files (use --allow-empty to accept an intentionally empty
             selection).
