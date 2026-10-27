@@ -270,6 +270,7 @@ internal static class Validation
             {
                 "clean.md",
                 "--silent",
+                "--pos-engine", "basic",
                 "--log", logFile
             };
 
@@ -344,6 +345,7 @@ internal static class Validation
             {
                 "violations.md",
                 "--silent",
+                "--pos-engine", "basic",
                 "--log", logFile
             };
 
@@ -414,6 +416,7 @@ internal static class Validation
             {
                 "json-output.md",
                 "--silent",
+                "--pos-engine", "basic",
                 "--log", logFile,
                 "--format", "json"
             };

@@ -84,7 +84,23 @@ sections:
           - Context_Create_NoArguments_ReturnsLintingDefaults
           - Context_Create_ListRulesFlag_SetsListRulesTrue
 
+      - id: Ste100Mark-Context-PosEngineArgumentParsing
+        title: >-
+          The Context class shall parse the --pos-engine option, accept the values basic, minilm,
+          and bert (case-insensitive), and expose the selected engine, or no engine when the
+          option is absent.
+        justification: |
+          The part-of-speech engine is chosen per invocation. Exposing "not specified"
+          separately from a chosen engine lets the linter apply the precedence of the command
+          line over the configuration file over the default.
+        tests:
+          - Context_Create_NoPosEngineFlag_LeavesEngineUnspecified
+          - Context_Create_PosEngineFlag_ParsesEngine
+          - Context_Create_PosEngineFlag_UnsupportedValue_ThrowsArgumentException
+          - Context_Create_PosEngineFlag_WithoutValue_ThrowsArgumentException
+
       - id: Ste100Mark-Context-GlobArgumentParsing
+
         title: The Context class shall collect positional non-flag arguments as glob patterns in the order supplied.
         justification: |
           Callers must be able to scope linting to explicit path patterns supplied on the

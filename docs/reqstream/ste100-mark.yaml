@@ -322,3 +322,22 @@ sections:
           - Ste100Mark-Linting-RuleCatalog
         tests:
           - Ste100Mark_ListRulesFlag_Provided_OutputsRuleCatalogJson
+
+      - id: Ste100Mark-System-PosEngine
+        title: >-
+          The tool shall let the user select the part-of-speech engine (basic, minilm, or bert)
+          with `--pos-engine` or the `dictionary.pos-engine` configuration value, defaulting to
+          minilm, and shall fail with a clear non-zero exit when the value is invalid or the
+          selected model cannot be downloaded or loaded.
+        justification: |
+          The basic engine is offline and fast, while the encoder engines are more accurate but
+          download a model on first use. Users and CI jobs need explicit control and a visible
+          failure instead of a silent fallback that would change lint results.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-PosEngine
+          - Ste100Mark-Context-PosEngineArgumentParsing
+          - Ste100Mark-Linting-PosEngineSelection
+          - Ste100Mark-Linting-PosEngineLifecycle
+        tests:
+          - Ste100Mark_PosEngineInvalidValue_ReturnsErrorExitCode

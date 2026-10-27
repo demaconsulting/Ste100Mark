@@ -26,7 +26,7 @@ namespace DemaConsulting.Ste100Mark.Tests.Linting;
 ///     A set of 26 hard cases (imperatives, noun-noun compounds, and modals) that, together with the
 ///     100-sentence corpus in <see cref="PartOfSpeechFalsePositiveCorpusTests"/>, were used to choose
 ///     <see cref="PartOfSpeechResolver.MinimumConfidence"/>. Each row is resolved through the real
-///     <c>DemaConsulting.WordSense.Basic</c> tagger.
+///     <c>DemaConsulting.WordSense</c> Basic tagger.
 /// </summary>
 public class PartOfSpeechHardCasesTests
 {
@@ -78,7 +78,7 @@ public class PartOfSpeechHardCasesTests
     public void Resolve_HardCase_ReturnsExpectedRole(string term, string sentence, bool isVerb)
     {
         // Arrange: a resolver using the real Basic tagger
-        var resolver = new PartOfSpeechResolver();
+        var resolver = TestResolvers.Basic;
 
         // Act: resolve the first occurrence of the term
         var result = resolver.Resolve(sentence, sentence.IndexOf(term, StringComparison.Ordinal), term.Length);

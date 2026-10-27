@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.Ste100Mark.Cli;
 using Microsoft.Extensions.FileSystemGlobbing;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -309,6 +310,22 @@ internal sealed class DictionaryConfig
     ///     feature request, added to satisfy the "embedded dictionary, unless disabled" requirement.
     /// </summary>
     public bool UseEmbedded { get; set; } = true;
+
+    /// <summary>
+    ///     Part-of-speech engine used to resolve noun/verb usage for dictionary matches
+    ///     (<c>basic</c>, <c>minilm</c> or <c>bert</c>, case-insensitive), or <see langword="null"/>
+    ///     when not specified. The <c>--pos-engine</c> command-line flag takes precedence over this
+    ///     value; when neither is given the built-in default (<c>minilm</c>) applies. The value is
+    ///     validated by <see cref="LintConfig.Load"/>.
+    /// </summary>
+    public string? PosEngine { get; set; }
+
+    /// <summary>
+    ///     Gets <see cref="PosEngine"/> parsed to a <see cref="PartOfSpeechEngine"/>, or
+    ///     <see langword="null"/> when it is not specified or not a valid engine name.
+    /// </summary>
+    internal PartOfSpeechEngine? ParsedPosEngine =>
+        PartOfSpeechEngineNames.TryParse(PosEngine, out var engine) ? engine : null;
 }
 
 /// <summary>
@@ -399,7 +416,18 @@ internal sealed class LintConfig
 
             // An empty or comment-only file deserializes to null; treat it as all-defaults rather
             // than a null-reference failure downstream.
-            return deserializer.Deserialize<LintConfig>(yaml) ?? new LintConfig();
+            var config = deserializer.Deserialize<LintConfig>(yaml) ?? new LintConfig();
+
+            // Unknown keys are ignored by the deserializer, so an invalid engine name must be
+            // rejected explicitly rather than silently replaced by the default engine.
+            var posEngine = config.Dictionary?.PosEngine;
+            if (posEngine is not null && !PartOfSpeechEngineNames.TryParse(posEngine, out _))
+            {
+                throw new InvalidOperationException(
+                    $"Invalid 'dictionary.pos-engine' value '{posEngine}' in '{path}'; expected {PartOfSpeechEngineNames.AcceptedValues}.");
+            }
+
+            return config;
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {

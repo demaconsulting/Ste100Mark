@@ -138,6 +138,86 @@ public class LintConfigTests
     }
 
     /// <summary>
+    ///     Test that <c>dictionary.pos-engine</c> parses each supported engine (case-insensitive) and
+    ///     coexists with other dictionary keys.
+    /// </summary>
+    [Theory]
+    [InlineData("basic")]
+    [InlineData("minilm")]
+    [InlineData("bert")]
+    [InlineData("MiniLM")]
+    public void Load_DictionaryPosEngine_ParsesEngine(string value)
+    {
+        // Arrange: a configuration file selecting an engine next to another dictionary key
+        var tempFile = Path.Combine(Path.GetTempPath(), $"ste100mark-config-{Guid.NewGuid()}.yaml");
+        File.WriteAllText(tempFile, $"dictionary:\n  use-embedded: false\n  pos-engine: {value}\n");
+
+        try
+        {
+            // Act: load the configuration
+            var config = LintConfig.Load(tempFile);
+
+            // Assert: the engine is parsed and the other key is preserved
+            Assert.Equal(value, config.Dictionary?.PosEngine);
+            Assert.NotNull(config.Dictionary?.ParsedPosEngine);
+            Assert.False(config.Dictionary?.UseEmbedded);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>
+    ///     Test that an absent <c>dictionary.pos-engine</c> leaves the engine unspecified.
+    /// </summary>
+    [Fact]
+    public void Load_DictionaryWithoutPosEngine_LeavesEngineUnspecified()
+    {
+        // Arrange: a dictionary section without an engine
+        var tempFile = Path.Combine(Path.GetTempPath(), $"ste100mark-config-{Guid.NewGuid()}.yaml");
+        File.WriteAllText(tempFile, "dictionary:\n  enabled: true\n");
+
+        try
+        {
+            // Act: load the configuration
+            var config = LintConfig.Load(tempFile);
+
+            // Assert: no engine is specified
+            Assert.Null(config.Dictionary?.PosEngine);
+            Assert.Null(config.Dictionary?.ParsedPosEngine);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>
+    ///     Test that an invalid <c>dictionary.pos-engine</c> value is rejected with a clear message.
+    /// </summary>
+    [Fact]
+    public void Load_DictionaryPosEngine_InvalidValue_ThrowsInvalidOperationException()
+    {
+        // Arrange: a configuration file with an unknown engine name
+        var tempFile = Path.Combine(Path.GetTempPath(), $"ste100mark-config-{Guid.NewGuid()}.yaml");
+        File.WriteAllText(tempFile, "dictionary:\n  pos-engine: gpt\n");
+
+        try
+        {
+            // Act & Assert: the message names the key, the value and the accepted values
+            var exception = Assert.Throws<InvalidOperationException>(() => LintConfig.Load(tempFile));
+            Assert.Contains("dictionary.pos-engine", exception.Message);
+            Assert.Contains("'gpt'", exception.Message);
+            Assert.Contains("basic, minilm or bert", exception.Message);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>
     ///     Test that ResolveMode returns the default mode when no profile matches.
     /// </summary>
     [Fact]

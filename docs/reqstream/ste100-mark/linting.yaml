@@ -249,7 +249,9 @@ sections:
           - Ste100Mark-PartOfSpeechResolver-RepeatedWord
           - Ste100Mark-PartOfSpeechResolver-MinimumConfidence
           - Ste100Mark-PartOfSpeechResolver-SentenceReuse
-          - Ste100Mark-PartOfSpeechResolver-SharedInstance
+          - Ste100Mark-PartOfSpeechResolver-EngineCreation
+          - Ste100Mark-PartOfSpeechResolver-LazyModelPreparation
+          - Ste100Mark-PartOfSpeechResolver-Dispose
           - Ste100Mark-PartOfSpeechResolver-NullSegmentText
           - Ste100Mark-PartOfSpeechResolver-MatchOutsideText
           - Ste100Mark-PartOfSpeechResolver-NullModel
@@ -397,6 +399,45 @@ sections:
           - Evaluate_TermInExtraAllowedTerms_NotFlagged
           - Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic
           - Evaluate_ExtraAllowedTermsUnrelatedTerm_StillFlagsOtherDisallowedTerm
+
+      - id: Ste100Mark-Linting-PosEngineSelection
+        title: >-
+          The Linting subsystem shall select the part-of-speech engine (basic, minilm, or bert)
+          from the --pos-engine option, else the dictionary.pos-engine configuration value, else
+          the default minilm, and shall reject an invalid configuration value with a clear error.
+        justification: |
+          The basic engine works offline, while the encoder engines are more accurate but need a
+          one-time model download. Users must choose per run or per project, with the command line
+          overriding the project file, and a mistyped value must never silently select an engine.
+        children:
+          - Ste100Mark-Context-PosEngineArgumentParsing
+          - Ste100Mark-Cli-PosEngine
+        tests:
+          - Load_DictionaryPosEngine_ParsesEngine
+          - Load_DictionaryWithoutPosEngine_LeavesEngineUnspecified
+          - Load_DictionaryPosEngine_InvalidValue_ThrowsInvalidOperationException
+          - Run_NoEngineSelected_RequestsMiniLm
+          - Run_YamlEngineOnly_RequestsYamlEngine
+          - Run_CliAndYamlEngine_CliWins
+          - Run_InvalidYamlEngine_FailsWithClearError
+
+      - id: Ste100Mark-Linting-PosEngineLifecycle
+        title: >-
+          The Linting subsystem shall prepare the selected engine only when a dictionary match
+          needs a resolution, shall fail the run with a clear non-zero exit when the model cannot
+          be downloaded or loaded (with no fallback to another engine), and shall dispose the
+          model when the run ends.
+        justification: |
+          Runs with no dictionary hits, or with the dictionary disabled, must stay offline and
+          fast. A download failure must be visible and must not change results silently.
+        children:
+          - Ste100Mark-PartOfSpeechResolver-ModelUnavailable
+        tests:
+          - Run_DownloadFails_FailsWithClearErrorAndNoFallback
+          - Run_ManyDictionaryHits_EnsuresModelOnce
+          - Run_NoDictionaryHits_DoesNotEnsureModel
+          - Run_DictionaryDisabled_DoesNotCreateModel
+          - Run_NoFiles_DoesNotEnsureModel
 
       - id: Ste100Mark-Linting-CliIntegration
         title: >-

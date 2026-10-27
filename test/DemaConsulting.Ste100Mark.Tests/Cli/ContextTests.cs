@@ -625,6 +625,60 @@ public class ContextTests
     }
 
     /// <summary>
+    ///     Test that --pos-engine is unspecified (null) by default.
+    /// </summary>
+    [Fact]
+    public void Context_Create_NoPosEngineFlag_LeavesEngineUnspecified()
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create([]);
+
+        // Assert: verify expected behavior
+        Assert.Null(context.PosEngine);
+    }
+
+    /// <summary>
+    ///     Test that --pos-engine parses each supported engine, case-insensitively.
+    /// </summary>
+    [Theory]
+    [InlineData("basic", 0)]
+    [InlineData("minilm", 1)]
+    [InlineData("bert", 2)]
+    [InlineData("MiniLM", 1)]
+    [InlineData("BERT", 2)]
+    public void Context_Create_PosEngineFlag_ParsesEngine(string value, int expected)
+    {
+        // Act: execute the operation being tested
+        using var context = Context.Create(["--pos-engine", value]);
+
+        // Assert: the enum value matches (Basic = 0, MiniLm = 1, Bert = 2)
+        Assert.Equal(expected, (int)context.PosEngine!.Value);
+    }
+
+    /// <summary>
+    ///     Test that --pos-engine with an unsupported value throws a clear exception.
+    /// </summary>
+    [Fact]
+    public void Context_Create_PosEngineFlag_UnsupportedValue_ThrowsArgumentException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => Context.Create(["--pos-engine", "gpt"]));
+        Assert.Contains("--pos-engine", exception.Message);
+        Assert.Contains("'gpt'", exception.Message);
+    }
+
+    /// <summary>
+    ///     Test that --pos-engine without a value throws an exception.
+    /// </summary>
+    [Fact]
+    public void Context_Create_PosEngineFlag_WithoutValue_ThrowsArgumentException()
+    {
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => Context.Create(["--pos-engine"]));
+        Assert.Contains("--pos-engine", exception.Message);
+    }
+
+    /// <summary>
     ///     Test creating a context with the strict flag.
     /// </summary>
     [Fact]

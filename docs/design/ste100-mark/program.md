@@ -56,9 +56,11 @@ logic via `RunToolLogic(context)`. Exactly one path runs per invocation.
 
 **PrintHelp**: Writes the usage synopsis and the umbrella CLI options table to `context`,
 including the lint-related options `--config`, `--format`, `--strict`, `--allow-empty`,
-`--list-rules`, and the
+`--list-rules`, `--pos-engine <basic|minilm|bert>` (default `minilm`), and the
 optional input glob arguments used by the main lint workflow, plus a summary of the three exit
-codes (0/1/2) and when `--allow-empty` changes that outcome.
+codes (0/1/2) and when `--allow-empty` changes that outcome. It also notes that the minilm and
+bert engines download a model on first use (honoring the `WORDSENSE_MIRROR_*` environment
+variables) and that `--pos-engine basic` works offline.
 
 - *Parameters*: `Context context` — output target.
 - *Returns*: `void`.

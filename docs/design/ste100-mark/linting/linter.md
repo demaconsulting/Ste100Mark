@@ -27,14 +27,25 @@ inside `RunCore`.
 
 `Run` delegates to `RunCore` and catches `InvalidOperationException` so expected
 user-fixable configuration problems become normal lint errors rather than top-level crashes.
+An internal overload accepts a `Func<PartOfSpeechEngine, IWordSenseModel>` model factory so
+tests can substitute scripted or fake models; the public path uses the real models.
 
 **RunCore**: Private implementation of the lint pass.
 
-- *Parameters*: `Context context` - parsed command-line context.
+- *Parameters*: `Context context` - parsed command-line context; the optional model factory.
 - *Returns*: `void`.
 - *Preconditions*: `context` is not null.
 - *Postconditions*: Files are resolved, diagnostics are reported, and the exit code is driven
   according to error and strict-mode semantics.
+
+When the dictionary check is enabled, `RunCore` selects the part-of-speech engine as
+`context.PosEngine ?? config.Dictionary.ParsedPosEngine ?? PartOfSpeechEngine.MiniLm`
+(command line over configuration file over default), creates one `PartOfSpeechResolver` for the
+run in a `using` scope, and passes it to every `DictionaryChecker.Evaluate` call. The model is
+prepared (downloaded and loaded) lazily by the resolver on the first dictionary match that needs
+a resolution, and is disposed when the run ends. A preparation failure surfaces as an
+`InvalidOperationException`, so the run reports the message and exits non-zero without falling
+back to another engine. When the dictionary check is disabled, no resolver or model is created.
 
 `RunCore` resolves the configuration path, loads `LintConfig` and `LintDictionary`, resolves
 files, reads file contents, extracts prose, resolves each file's mode/rules/allowed-terms/
@@ -111,6 +122,7 @@ as unexpected failures.
 - **LintDictionary** - builds the effective dictionary.
 - **MarkdownProseExtractor** - extracts prose segments from each Markdown file.
 - **StructuralRules** and **DictionaryChecker** - produce diagnostics.
+- **PartOfSpeechResolver** and **PartOfSpeechEngine** - engine selection and per-run resolver.
 - **DiagnosticReporter** - formats and writes the final report.
 - **Microsoft.Extensions.FileSystemGlobbing** - resolves file-selection patterns.
 - **.NET BCL** - file-system and file-content access.

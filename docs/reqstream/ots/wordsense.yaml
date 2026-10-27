@@ -1,7 +1,8 @@
 ---
 # WordSense OTS Software Requirements
 #
-# Requirements for the DemaConsulting.WordSense / DemaConsulting.WordSense.Basic part-of-speech tagging library.
+# Requirements for the DemaConsulting.WordSense part-of-speech tagging library and its model packages
+# (DemaConsulting.WordSense.MiniLM and DemaConsulting.WordSense.BertBaseCased).
 
 sections:
   - title: OTS Software Requirements
@@ -11,14 +12,20 @@ sections:
           - id: Ste100Mark-OTS-WordSense
             title: WordSense shall classify the part of speech of a word within its sentence context.
             justification: |
-              DemaConsulting.WordSense.Basic is the context-aware part-of-speech tagger used by the
+              The DemaConsulting.WordSense library (its built-in basic model, plus the optional
+              MiniLM and BERT encoder models that download on first use) is the context-aware
+              part-of-speech tagger used by the
               Linting subsystem to decide whether a dictionary term is used as a noun or a verb.
               Passing tests that classify noun and verb usages (including a corpus of legal usages
               and a set of hard cases such as imperatives and noun-noun compounds), and that
               handle unknown words, confirm the library returns the correct part of speech for the
-              usages the project relies on.
+              usages the project relies on. Encoder models are verified offline through the
+              downloadable-model contract (a fake model) and construction of the real models
+              without network access.
             tags: [ots]
             tests:
+              - Create_DefaultFactory_CreatesResolverWithoutDownload
+              - Resolve_DownloadableModel_EnsuresModelOnce
               - Resolve_NounUsage_ReturnsNoun
               - Resolve_VerbUsage_ReturnsVerb
               - Resolve_HardCase_ReturnsExpectedRole

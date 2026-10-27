@@ -147,6 +147,14 @@ tested by `Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue`.
 `["--list-rules"]`; the `ListRules` property is true and `ExitCode` is 0. This scenario is
 tested by `Context_Create_ListRulesFlag_SetsListRulesTrue`.
 
+**Context_Create_PosEngineFlag_\***: `Context.Create` with no `--pos-engine` leaves `PosEngine`
+unspecified (`Context_Create_NoPosEngineFlag_LeavesEngineUnspecified`); with `basic`, `minilm`, or
+`bert` in any letter case it exposes the matching engine
+(`Context_Create_PosEngineFlag_ParsesEngine`); an unsupported value or a missing value throws
+`ArgumentException` (`Context_Create_PosEngineFlag_UnsupportedValue_ThrowsArgumentException`,
+`Context_Create_PosEngineFlag_WithoutValue_ThrowsArgumentException`). These scenarios verify
+`Ste100Mark-Context-PosEngineArgumentParsing`.
+
 **Context_WriteNoFilesMatchedError_SetsNoFilesMatchedExitCode**: A `Context` calls
 `WriteNoFilesMatchedError` with a test message; `ExitCode` becomes `NoFilesMatchedExitCode` (2)
 rather than 1, and the message appears on standard error. This scenario is tested by

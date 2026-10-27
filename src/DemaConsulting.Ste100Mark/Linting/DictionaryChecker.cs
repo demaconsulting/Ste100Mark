@@ -68,6 +68,10 @@ internal static class DictionaryChecker
     /// <param name="file">File path used to populate <see cref="Diagnostic.File"/>.</param>
     /// <param name="segments">Prose segments produced by <see cref="MarkdownProseExtractor"/>.</param>
     /// <param name="dictionary">Merged dictionary to check against.</param>
+    /// <param name="resolver">
+    ///     The part-of-speech resolver to use; required, so no engine (and no model download) is ever
+    ///     selected implicitly.
+    /// </param>
     /// <param name="extraAllowedTerms">
     ///     Additional terms to treat as allowed for this file only, on top of
     ///     <paramref name="dictionary"/>'s own global allow/ignore lists - typically the file's
@@ -81,23 +85,19 @@ internal static class DictionaryChecker
     ///     is suppressed, without suppressing the same term elsewhere in the segment. Pass
     ///     <see langword="null"/> or an empty collection when no phrase-scoped allowance applies.
     /// </param>
-    /// <param name="resolver">
-    ///     The part-of-speech resolver to use; <see langword="null"/> selects the process-wide default
-    ///     <see cref="PartOfSpeechResolver"/> (supplied explicitly only by tests).
-    /// </param>
     /// <returns>One diagnostic per matched occurrence, in segment order.</returns>
     public static IReadOnlyList<Diagnostic> Evaluate(
         string file,
         IReadOnlyList<ProseSegment> segments,
         LintDictionary dictionary,
+        IPartOfSpeechResolver resolver,
         IReadOnlyCollection<string>? extraAllowedTerms = null,
-        IReadOnlyCollection<string>? allowedPhrases = null,
-        IPartOfSpeechResolver? resolver = null)
+        IReadOnlyCollection<string>? allowedPhrases = null)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(segments);
         ArgumentNullException.ThrowIfNull(dictionary);
-        resolver ??= PartOfSpeechResolver.Shared;
+        ArgumentNullException.ThrowIfNull(resolver);
 
         var allowedTerms = extraAllowedTerms is { Count: > 0 }
             ? new HashSet<string>(extraAllowedTerms, StringComparer.OrdinalIgnoreCase)

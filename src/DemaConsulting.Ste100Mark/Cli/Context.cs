@@ -98,6 +98,16 @@ internal sealed class Context : IDisposable
     public OutputFormat Format { get; private init; } = OutputFormat.Text;
 
     /// <summary>
+    ///     Gets the part-of-speech engine selected via <c>--pos-engine</c>, or <see langword="null"/>
+    ///     when the flag was not specified.
+    /// </summary>
+    /// <remarks>
+    ///     <see langword="null"/> lets the linter fall back to the <c>dictionary.pos-engine</c>
+    ///     configuration value and then to the built-in default (CLI over configuration over default).
+    /// </remarks>
+    internal PartOfSpeechEngine? PosEngine { get; private init; }
+
+    /// <summary>
     ///     Gets a value indicating whether the strict flag was specified.
     /// </summary>
     /// <remarks>
@@ -199,6 +209,7 @@ internal sealed class Context : IDisposable
             Globs = parser.Globs,
             ConfigFile = parser.ConfigFile,
             Format = parser.Format,
+            PosEngine = parser.PosEngine,
             Strict = parser.Strict,
             AllowEmpty = parser.AllowEmpty,
             ListRules = parser.ListRules
@@ -290,6 +301,11 @@ internal sealed class Context : IDisposable
         public OutputFormat Format { get; private set; } = OutputFormat.Text;
 
         /// <summary>
+        ///     Gets the part-of-speech engine, or <see langword="null"/> when not specified.
+        /// </summary>
+        public PartOfSpeechEngine? PosEngine { get; private set; }
+
+        /// <summary>
         ///     Gets a value indicating whether the strict flag was specified.
         /// </summary>
         public bool Strict { get; private set; }
@@ -372,6 +388,10 @@ internal sealed class Context : IDisposable
                     Format = GetRequiredFormatArgument(arg, args, index);
                     return index + 1;
 
+                case "--pos-engine":
+                    PosEngine = GetRequiredPosEngineArgument(arg, args, index);
+                    return index + 1;
+
                 case "--strict":
                     Strict = true;
                     return index;
@@ -416,6 +436,24 @@ internal sealed class Context : IDisposable
                 "json" => OutputFormat.Json,
                 _ => throw new ArgumentException($"{arg} requires 'text' or 'json', got '{value}'", nameof(args))
             };
+        }
+
+        /// <summary>
+        ///     Gets a required part-of-speech engine argument value
+        /// </summary>
+        /// <param name="arg">Argument name</param>
+        /// <param name="args">All arguments</param>
+        /// <param name="index">Current index</param>
+        /// <returns>Parsed <see cref="PartOfSpeechEngine"/> value</returns>
+        private static PartOfSpeechEngine GetRequiredPosEngineArgument(string arg, string[] args, int index)
+        {
+            var value = GetRequiredStringArgument(arg, args, index, "an engine argument (basic, minilm or bert)");
+            if (!PartOfSpeechEngineNames.TryParse(value, out var engine))
+            {
+                throw new ArgumentException($"{arg} requires 'basic', 'minilm' or 'bert', got '{value}'", nameof(args));
+            }
+
+            return engine;
         }
 
         /// <summary>

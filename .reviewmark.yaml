@@ -124,6 +124,7 @@ reviews:
       - "docs/design/ste100-mark/cli/context.md"
       - "docs/verification/ste100-mark/cli/context.md"
       - "src/**/Cli/Context.cs"
+      - "src/**/Cli/PartOfSpeechEngine.cs"
       - "test/**/Cli/ContextTests.cs"
 
   # Ste100Mark - SelfTest

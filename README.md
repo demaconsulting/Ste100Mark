@@ -268,7 +268,13 @@ reported severity.
 | `--format <text\|json>` | Diagnostic output format for linting (default: `text`) |
 | `--strict` | Promote warn-severity lint findings to a failing exit code |
 | `--allow-empty` | Treat a file selection that matches zero files as success (default: exit code 2) |
+| `--pos-engine <basic\|minilm\|bert>` | Dictionary part-of-speech engine (default: `minilm`); overrides config. |
 | `--list-rules` | Display the rule catalog as a JSON array and exit |
+
+The `minilm` and `bert` engines download their model on first use (honoring the
+`WORDSENSE_MIRROR_*` environment variables); if the download or load fails, the run fails with an
+error and does not fall back to another engine. Use `--pos-engine basic` (or `dictionary.pos-engine:
+basic`) to work offline.
 
 ## Error Handling
 

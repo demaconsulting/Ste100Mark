@@ -120,6 +120,8 @@ public class ProgramTests
             Assert.Contains("--help", output);
             Assert.Contains("--config", output);
             Assert.Contains("--format", output);
+            Assert.Contains("--pos-engine", output);
+            Assert.Contains("basic|minilm|bert", output);
             Assert.Contains("--strict", output);
             Assert.Contains("--allow-empty", output);
             Assert.Contains("--list-rules", output);
@@ -186,7 +188,7 @@ public class ProgramTests
 
             using var outWriter = new StringWriter();
             Console.SetOut(outWriter);
-            using var context = Context.Create([]);
+            using var context = Context.Create(["--pos-engine", "basic"]);
 
             // Act: execute the operation being tested
             Program.Run(context);

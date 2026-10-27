@@ -20,6 +20,7 @@
 
 using DemaConsulting.Ste100Mark.Cli;
 using DemaConsulting.Ste100Mark.Linting;
+using Linter = DemaConsulting.Ste100Mark.Tests.Linting.TestLinter;
 
 namespace DemaConsulting.Ste100Mark.Tests.Linting;
 

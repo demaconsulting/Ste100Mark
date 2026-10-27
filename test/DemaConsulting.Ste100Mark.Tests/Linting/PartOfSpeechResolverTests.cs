@@ -26,7 +26,7 @@ namespace DemaConsulting.Ste100Mark.Tests.Linting;
 
 /// <summary>
 ///     Unit tests for the PartOfSpeechResolver class: scenario tests against the real
-///     <c>DemaConsulting.WordSense.Basic</c> tagger (ported from the former heuristic's test suite)
+///     <c>DemaConsulting.WordSense</c> Basic tagger (ported from the former heuristic's test suite)
 ///     and mechanism tests (tokenization, offsets, threshold, mapping, caching) against a scripted
 ///     model.
 /// </summary>
@@ -36,17 +36,13 @@ public class PartOfSpeechResolverTests
     ///     Scripted tagger model: records every call and answers from a delegate.
     /// </summary>
     /// <param name="answer">Produces the results for the supplied tokens.</param>
-    private sealed class ScriptedModel(Func<string[], DemaConsulting.WordSense.WordSense[]> answer) : Ws.IWordSenseModel
+    private sealed class ScriptedModel(Func<string[], Ws.ClassifyResult[]> answer) : Ws.IWordSenseModel
     {
         /// <summary>Gets the token lists passed to every call.</summary>
         public List<string[]> Calls { get; } = [];
 
         /// <inheritdoc />
-        public Task EnsureModelAsync(Ws.MirrorOptions? mirror = null, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
-
-        /// <inheritdoc />
-        public Task<DemaConsulting.WordSense.WordSense[]> ClassifyAsync(
+        public Task<Ws.ClassifyResult[]> ClassifyAsync(
             IEnumerable<string> words, CancellationToken cancellationToken = default)
         {
             var tokens = words.ToArray();
@@ -67,8 +63,16 @@ public class PartOfSpeechResolverTests
     /// <summary>
     ///     Builds a result for one token with the given part of speech and confidence.
     /// </summary>
-    private static DemaConsulting.WordSense.WordSense Tag(string word, WsPos pos, double confidence) =>
-        new(word, new Ws.WordDetails($"{word}#1", word, pos, string.Empty), confidence);
+    private static Ws.ClassifyResult Tag(string word, WsPos pos, double confidence) =>
+        new(
+            word,
+            true,
+            System.Collections.Immutable.ImmutableArray<Ws.AnalysisCandidate>.Empty,
+            new Ws.WordDetails(word, pos, string.Empty),
+            Ws.SenseLevel.PartOfSpeech,
+            confidence,
+            null,
+            null);
 
     /// <summary>
     ///     Builds a scripted model that tags every token as the given part of speech and confidence.
@@ -89,7 +93,7 @@ public class PartOfSpeechResolverTests
         ["impact", "The metering impact moves to the tower."],
         ["impact", "Install a custom impact in the holder."],
         ["impact", "Consider impact of weather on delays."],
-        ["pump", "Wash pump"],
+        ["pump", "The wash pump is clean."],
         ["pump", "Instructions to wash pump parts."],
         ["test", "The breadboard is a laboratory test fixture."],
         ["duty", "Pump rate is set by the duty cycle."],
@@ -127,7 +131,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_NounUsage_ReturnsNoun(string term, string sentence)
     {
         // Arrange: a resolver using the real Basic tagger
-        var resolver = new PartOfSpeechResolver();
+        var resolver = TestResolvers.Basic;
 
         // Act: resolve the first occurrence of the term
         var result = resolver.Resolve(sentence, sentence.IndexOf(term, StringComparison.Ordinal), term.Length);
@@ -144,7 +148,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_VerbUsage_ReturnsVerb(string term, string sentence)
     {
         // Arrange: a resolver using the real Basic tagger
-        var resolver = new PartOfSpeechResolver();
+        var resolver = TestResolvers.Basic;
 
         // Act: resolve the first occurrence of the term
         var result = resolver.Resolve(sentence, sentence.IndexOf(term, StringComparison.Ordinal), term.Length);
@@ -161,7 +165,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_MatchInSecondSentence_UsesThatSentenceOnly()
     {
         // Arrange: the same word is a noun in sentence one and a verb in sentence two
-        var resolver = new PartOfSpeechResolver();
+        var resolver = TestResolvers.Basic;
         const string text = "The test passed. You must test the unit.";
         var second = text.LastIndexOf("test", StringComparison.Ordinal);
 
@@ -202,7 +206,7 @@ public class PartOfSpeechResolverTests
     {
         // Arrange: tagger answers Verb only for the second "run" token
         var seen = 0;
-        DemaConsulting.WordSense.WordSense TagToken(string t)
+        Ws.ClassifyResult TagToken(string t)
         {
             if (t != "run")
             {
@@ -284,7 +288,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_UnknownWordWithRealModel_ReturnsNull()
     {
         // Arrange: a resolver using the real Basic tagger and a made-up word it cannot know
-        var resolver = new PartOfSpeechResolver();
+        var resolver = TestResolvers.Basic;
         const string sentence = "The zzqxorb passed.";
 
         // Act: resolve the made-up word
@@ -301,7 +305,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_UnknownWord_ReturnsNull()
     {
         // Arrange: a tagger that returns no chosen sense
-        var model = new ScriptedModel(tokens => tokens.Select(t => new DemaConsulting.WordSense.WordSense(t, null, 0)).ToArray());
+        var model = new ScriptedModel(tokens => tokens.Select(Ws.ClassifyResult.Unknown).ToArray());
         var resolver = new PartOfSpeechResolver(model);
 
         // Act: execute the operation being tested
@@ -622,12 +626,172 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
-    ///     Test that the shared default resolver is a single instance.
+    ///     Downloadable fake model: records readiness and disposal calls and can fail the download.
+    /// </summary>
+    /// <param name="failure">Exception thrown by <c>EnsureModelAsync</c>, or <see langword="null"/>.</param>
+    internal sealed class FakeDownloadableModel(Exception? failure = null) : Ws.IDownloadableWordSenseModel
+    {
+        private int _ensureCalls;
+
+        /// <summary>Gets the number of <c>EnsureModelAsync</c> calls.</summary>
+        public int EnsureCalls => _ensureCalls;
+
+        /// <summary>Gets the number of <c>ClassifyAsync</c> calls.</summary>
+        public int ClassifyCalls { get; private set; }
+
+        /// <summary>Gets a value indicating whether the model was disposed.</summary>
+        public bool Disposed { get; private set; }
+
+        /// <inheritdoc />
+        public Task EnsureModelAsync(Ws.DownloadOptions? options = null, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _ensureCalls);
+            return failure is null ? Task.CompletedTask : Task.FromException(failure);
+        }
+
+        /// <inheritdoc />
+        public Task<Ws.ClassifyResult[]> ClassifyAsync(
+            IEnumerable<string> words, CancellationToken cancellationToken = default)
+        {
+            ClassifyCalls++;
+            return Task.FromResult(words.Select(w => Tag(w, WsPos.Noun, 0.9)).ToArray());
+        }
+
+        /// <inheritdoc />
+        public void Dispose() => Disposed = true;
+    }
+
+    /// <summary>
+    ///     Test that a downloadable model is made ready exactly once, before the first classification.
     /// </summary>
     [Fact]
-    public void Shared_ReturnsSameInstance()
+    public void Resolve_DownloadableModel_EnsuresModelOnce()
     {
-        // Act / Assert: the process-wide resolver is created once
-        Assert.Same(PartOfSpeechResolver.Shared, PartOfSpeechResolver.Shared);
+        // Arrange: a downloadable fake model
+        var model = new FakeDownloadableModel();
+        using var resolver = new PartOfSpeechResolver(model);
+
+        // Act: resolve in two different sentences
+        resolver.Resolve("The pump is clean.", 4, 4);
+        resolver.Resolve("Check the valve.", 10, 5);
+
+        // Assert: the model was prepared once and classified twice
+        Assert.Equal(1, model.EnsureCalls);
+        Assert.Equal(2, model.ClassifyCalls);
+    }
+
+    /// <summary>
+    ///     Test that no download is requested until a resolution is needed.
+    /// </summary>
+    [Fact]
+    public void Constructor_DownloadableModel_DoesNotEnsureModel()
+    {
+        // Arrange / Act: create a resolver without resolving anything
+        var model = new FakeDownloadableModel();
+        using var resolver = new PartOfSpeechResolver(model);
+
+        // Assert: nothing was downloaded
+        Assert.Equal(0, model.EnsureCalls);
+    }
+
+    /// <summary>
+    ///     Test that a download failure is reported as a clear error and is not retried or ignored.
+    /// </summary>
+    [Fact]
+    public void Resolve_DownloadFails_ThrowsClearErrorEveryTime()
+    {
+        // Arrange: a downloadable fake model whose download fails
+        var model = new FakeDownloadableModel(new Ws.ModelUnavailableException("network down"));
+        using var resolver = new PartOfSpeechResolver(model);
+
+        // Act: resolve twice
+        var first = Assert.Throws<InvalidOperationException>(() => resolver.Resolve("The pump is clean.", 4, 4));
+        var second = Assert.Throws<InvalidOperationException>(() => resolver.Resolve("Check the valve.", 10, 5));
+
+        // Assert: both calls report the failure, the download was attempted once, nothing was classified
+        Assert.Contains("could not be prepared", first.Message);
+        Assert.Contains("network down", first.Message);
+        Assert.Contains("--pos-engine basic", first.Message);
+        Assert.Contains("could not be prepared", second.Message);
+        Assert.Equal(1, model.EnsureCalls);
+        Assert.Equal(0, model.ClassifyCalls);
+    }
+
+    /// <summary>
+    ///     Test that a non-downloadable model is used directly without a readiness step.
+    /// </summary>
+    [Fact]
+    public void Resolve_NonDownloadableModel_ClassifiesDirectly()
+    {
+        // Arrange: a scripted (non-downloadable) model
+        var model = Uniform(WsPos.Noun, 0.9);
+        using var resolver = new PartOfSpeechResolver(model);
+
+        // Act: resolve
+        var result = resolver.Resolve("The pump is clean.", 4, 4);
+
+        // Assert: classified without any readiness step
+        Assert.Equal(PartOfSpeech.Noun, result);
+        Assert.Single(model.Calls);
+    }
+
+    /// <summary>
+    ///     Test that disposing the resolver disposes the model.
+    /// </summary>
+    [Fact]
+    public void Dispose_DisposesModel()
+    {
+        // Arrange: a fake model
+        var model = new FakeDownloadableModel();
+        var resolver = new PartOfSpeechResolver(model);
+
+        // Act: dispose the resolver
+        resolver.Dispose();
+
+        // Assert: the model was disposed
+        Assert.True(model.Disposed);
+    }
+
+    /// <summary>
+    ///     Test that <c>Create</c> asks the factory for the requested engine and does not touch the model.
+    /// </summary>
+    [Theory]
+    [InlineData("basic")]
+    [InlineData("minilm")]
+    [InlineData("bert")]
+    public void Create_UsesFactoryForEngine(string engineName)
+    {
+        // Arrange: a factory that records the requested engine
+        Assert.True(Ste100Mark.Cli.PartOfSpeechEngineNames.TryParse(engineName, out var engine));
+        Ste100Mark.Cli.PartOfSpeechEngine? requested = null;
+        var model = new FakeDownloadableModel();
+
+        // Act: create the resolver
+        using var resolver = PartOfSpeechResolver.Create(engine, e =>
+        {
+            requested = e;
+            return model;
+        });
+
+        // Assert: the requested engine was passed and nothing was downloaded
+        Assert.Equal(engine, requested);
+        Assert.Equal(0, model.EnsureCalls);
+    }
+
+    /// <summary>
+    ///     Test that <c>Create</c> maps each engine to its real model type without any download.
+    /// </summary>
+    [Theory]
+    [InlineData("basic")]
+    [InlineData("minilm")]
+    [InlineData("bert")]
+    public void Create_DefaultFactory_CreatesResolverWithoutDownload(string engineName)
+    {
+        // Act: create a resolver with the real models (constructors perform no I/O)
+        Assert.True(Ste100Mark.Cli.PartOfSpeechEngineNames.TryParse(engineName, out var engine));
+        using var resolver = PartOfSpeechResolver.Create(engine);
+
+        // Assert: created and disposable without any resolution
+        Assert.NotNull(resolver);
     }
 }

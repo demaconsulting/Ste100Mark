@@ -6,7 +6,8 @@ Requirements for this OTS item are defined in the WordSense OTS Software Require
 ### Required Functionality
 
 WordSense is the part-of-speech tagging library used by the Linting subsystem. Through
-`BasicWordSenseModel.ClassifyAsync` it classifies the words of a sentence, so the project can
+`ClassifyAsync` of the selected model (`basic`, `minilm`, or `bert`) it classifies the words of a
+sentence, so the project can
 tell a noun usage of a dictionary term from a verb usage. Correct noun and verb answers for
 representative technical sentences, and a null result for unknown words, confirm the library is
 functioning correctly for the project's usage.
@@ -15,7 +16,12 @@ functioning correctly for the project's usage.
 
 WordSense has no self-validation CLI of its own, so it is verified by transitive evidence from
 the Linting subsystem's passing tests. Each scenario below names a test that runs the real
-`BasicWordSenseModel` through `PartOfSpeechResolver`. Scripted-model tests of the resolver's own
+`BasicWordSenseModel` through `PartOfSpeechResolver`. The encoder models (`minilm`, `bert`) are
+not downloaded by any automated test: their construction is checked offline
+(`Create_DefaultFactory_CreatesResolverWithoutDownload`), and the download contract
+(`IDownloadableWordSenseModel.EnsureModelAsync` called once, lazily, with failures reported and
+no fallback) is verified with a fake model (`Resolve_DownloadableModel_EnsuresModelOnce`). A
+manual smoke run with network access is recommended before release. Scripted-model tests of the resolver's own
 mapping logic (for example `Resolve_UnknownWord_ReturnsNull`, which scripts a tagger that
 returns no details) verify the resolver rather than the library, so they are not evidence for
 this OTS item. A passing test run for all scenarios constitutes evidence that the tagger
@@ -69,11 +75,31 @@ linted using the real tagger.
 
 **Requirement coverage**: `Ste100Mark-OTS-WordSense`.
 
+**Requirement coverage**: `Ste100Mark-OTS-WordSense`.
+
 #### Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged
 
 **Scenario**: The corpus of legal verb usages of noun-only disallowed entries is linted using
 the real tagger.
 
 **Expected**: The tagger classifies each usage as a verb, so no usage is flagged.
+
+**Requirement coverage**: `Ste100Mark-OTS-WordSense`.
+
+#### Create_DefaultFactory_CreatesResolverWithoutDownload
+
+**Scenario**: A resolver is created for each of the `basic`, `minilm`, and `bert` engines with
+the real model factory, and disposed, without network access.
+
+**Expected**: Every real model type constructs and disposes without error and without any
+download.
+
+**Requirement coverage**: `Ste100Mark-OTS-WordSense`.
+
+#### Resolve_DownloadableModel_EnsuresModelOnce
+
+**Scenario**: A fake downloadable model backs the resolver and several matches are resolved.
+
+**Expected**: `EnsureModelAsync` is called exactly once, before the first classification.
 
 **Requirement coverage**: `Ste100Mark-OTS-WordSense`.

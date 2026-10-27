@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.Ste100Mark.Linting;
+using DictionaryChecker = DemaConsulting.Ste100Mark.Tests.Linting.TestDictionaryChecker;
 
 namespace DemaConsulting.Ste100Mark.Tests.Linting;
 
@@ -251,6 +252,6 @@ public class PartOfSpeechFalsePositiveCorpusTests
     ///     Resolves the role of the first occurrence of a term in a sentence using the real resolver.
     /// </summary>
     private static PartOfSpeech? ResolveRole(string term, string sentence) =>
-        PartOfSpeechResolver.Shared.Resolve(
+        TestResolvers.Basic.Resolve(
             sentence, sentence.IndexOf(term, StringComparison.OrdinalIgnoreCase), term.Length);
 }
