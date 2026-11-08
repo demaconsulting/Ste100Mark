@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="14" y="16" width="935" height="535" rx="28" fill="#d5dce6"/>
+  <rect x="10" y="10" width="935" height="535" rx="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+
+  <g transform="translate(30,30)">
+    <rect x="170" y="0" width="520" height="60" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+    <text x="430" y="27" font-size="16" font-family="Consolas, monospace" font-weight="600" fill="#92400e" text-anchor="middle">ste100mark (Program)</text>
+    <text x="430" y="47" font-size="13" fill="#92400e" text-anchor="middle">lints Markdown prose against ASD-STE100-style rules</text>
+    <line x1="430" y1="64" x2="430" y2="100" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+    <text x="442" y="86" font-size="12" fill="#334155">runs one invocation</text>
+
+    <rect x="170" y="104" width="520" height="292" rx="14" fill="#f8fafc" stroke="#2563eb" stroke-width="2" stroke-dasharray="8 5"/>
+    <text x="186" y="126" font-size="14" font-weight="600" fill="#2563eb">DemaConsulting.Ste100Mark</text>
+
+    <rect x="190" y="136" width="480" height="48" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+    <text x="430" y="157" font-size="16" font-weight="600" fill="#166534" text-anchor="middle">Cli</text>
+    <text x="430" y="175" font-size="12" fill="#166534" text-anchor="middle">Context parses the arguments and owns the output</text>
+
+    <rect x="190" y="196" width="480" height="120" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2"/>
+    <text x="430" y="216" font-size="14" font-weight="600" fill="#4c1d95" text-anchor="middle">Linting</text>
+    <g font-size="11" fill="#5b21b6" text-anchor="middle">
+      <rect x="200" y="226" width="109" height="80" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+      <text x="254" y="246" font-size="13" font-weight="600" fill="#4c1d95">Configuration</text>
+      <text x="254" y="266">LintConfig and</text>
+      <text x="254" y="280">LintDictionary</text>
+      <text x="254" y="294">merge the settings</text>
+      <rect x="319" y="226" width="109" height="80" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+      <text x="373" y="246" font-size="13" font-weight="600" fill="#4c1d95">Prose</text>
+      <text x="373" y="266">Extractor and</text>
+      <text x="373" y="280">SentenceAnalyzer</text>
+      <text x="373" y="294">split the text</text>
+      <rect x="438" y="226" width="109" height="80" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+      <text x="492" y="246" font-size="13" font-weight="600" fill="#4c1d95">Rules</text>
+      <text x="492" y="266">StructuralRules and</text>
+      <text x="492" y="280">DictionaryChecker</text>
+      <text x="492" y="294">find the problems</text>
+      <rect x="557" y="226" width="103" height="80" rx="8" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+      <text x="608" y="246" font-size="13" font-weight="600" fill="#4c1d95">Reporting</text>
+      <text x="608" y="266">Diagnostic and</text>
+      <text x="608" y="280">DiagnosticReporter</text>
+      <text x="608" y="294">format the result</text>
+    </g>
+
+    <g font-size="11" fill="#1e40af" text-anchor="middle">
+      <rect x="190" y="328" width="236" height="56" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+      <text x="308" y="352" font-size="14" font-weight="600" fill="#1e3a8a">SelfTest</text>
+      <text x="308" y="370">Validation of the tool itself</text>
+      <rect x="436" y="328" width="234" height="56" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+      <text x="553" y="352" font-size="14" font-weight="600" fill="#1e3a8a">Utilities</text>
+      <text x="553" y="370">PathHelpers for safe file paths</text>
+    </g>
+
+    <line x1="430" y1="400" x2="430" y2="424" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+    <text x="442" y="416" font-size="12" fill="#334155">built on</text>
+
+    <g text-anchor="middle">
+      <rect x="170" y="428" width="166" height="60" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+      <text x="253" y="454" font-size="15" font-weight="600" fill="#334155">YamlDotNet</text>
+      <text x="253" y="474" font-size="12" fill="#475569">YAML configuration</text>
+      <rect x="347" y="428" width="166" height="60" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+      <text x="430" y="454" font-size="15" font-weight="600" fill="#334155">WordSense</text>
+      <text x="430" y="474" font-size="12" fill="#475569">Noun and verb tagging</text>
+      <rect x="524" y="428" width="166" height="60" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+      <text x="607" y="454" font-size="15" font-weight="600" fill="#334155">FileSystemGlobbing</text>
+      <text x="607" y="474" font-size="12" fill="#475569">File selection globs</text>
+    </g>
+
+    <text x="70" y="221" font-size="13" font-weight="600" fill="#475569" text-anchor="middle">Inputs</text>
+    <rect x="0" y="235" width="140" height="66" rx="6" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+    <text x="70" y="262" font-size="15" font-weight="600" fill="#334155" text-anchor="middle">Markdown files</text>
+    <text x="70" y="283" font-size="12" fill="#475569" text-anchor="middle">+ .ste100mark.yaml</text>
+    <line x1="144" y1="268" x2="166" y2="268" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+
+    <rect x="720" y="190" width="165" height="166" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+    <text x="802" y="216" font-size="16" font-weight="600" fill="#166534" text-anchor="middle">Outputs</text>
+    <g font-size="13" fill="#14532d" text-anchor="middle">
+      <rect x="734" y="228" width="137" height="26" rx="5" fill="#ffffff" stroke="#16a34a"/>
+      <text x="802" y="246">Text or JSON findings</text>
+      <rect x="734" y="258" width="137" height="26" rx="5" fill="#ffffff" stroke="#16a34a"/>
+      <text x="802" y="276">Exit code</text>
+      <rect x="734" y="288" width="137" height="26" rx="5" fill="#ffffff" stroke="#16a34a"/>
+      <text x="802" y="306">Rule catalog</text>
+      <rect x="734" y="318" width="137" height="26" rx="5" fill="#ffffff" stroke="#16a34a"/>
+      <text x="802" y="336">TRX / JUnit results</text>
+    </g>
+    <line x1="694" y1="273" x2="716" y2="273" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  </g>
+</svg>

@@ -1,5 +1,10 @@
 # Introduction
 
+The diagram below shows how one `ste100mark` run reads Markdown files and configuration, lints the prose,
+and reports the findings.
+
+![Ste100Mark architecture: the ste100mark program runs the Cli, which hands Markdown files and an optional .ste100mark.yaml to the Linting subsystem (configuration, prose extraction, rules, and reporting) to produce text or JSON findings and an exit code, with SelfTest and Utilities as support, built on YamlDotNet, WordSense, and FileSystemGlobbing](architecture.svg)
+
 ## Purpose
 
 Ste100Mark is a .NET command-line tool for linting Markdown prose against ASD-STE100-style
