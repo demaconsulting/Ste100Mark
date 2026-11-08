@@ -13,6 +13,11 @@ Ste100Mark is a .NET CLI tool for linting Markdown prose against ASD-STE100-styl
 while also demonstrating DEMA Consulting practices for command-line tooling,
 self-validation, and continuous-compliance documentation.
 
+The diagram below shows how one `ste100mark` run reads Markdown files and configuration, lints the prose,
+and reports the findings.
+
+![Ste100Mark architecture: the ste100mark program runs the Cli, which hands Markdown files and an optional .ste100mark.yaml to the Linting subsystem (configuration, prose extraction, rules, and reporting) to produce text or JSON findings and an exit code, with SelfTest and Utilities as support, built on YamlDotNet, WordSense, and FileSystemGlobbing][architecture]
+
 ## Features
 
 Ste100Mark provides:
@@ -369,6 +374,7 @@ Copyright (c) DEMA Consulting. Licensed under the MIT License. See [LICENSE][lin
 By contributing to this project, you agree that your contributions will be licensed under the MIT License.
 
 <!-- Badge References -->
+[architecture]: https://raw.githubusercontent.com/demaconsulting/Ste100Mark/main/docs/images/architecture.png
 [badge-forks]: https://img.shields.io/github/forks/demaconsulting/Ste100Mark?style=plastic
 [badge-stars]: https://img.shields.io/github/stars/demaconsulting/Ste100Mark?style=plastic
 [badge-contributors]: https://img.shields.io/github/contributors/demaconsulting/Ste100Mark?style=plastic
