@@ -17,6 +17,7 @@ The following OTS items have integration design documentation:
 - FileAssert (_fileassert.md_) - document assertion tool
 - Microsoft.Extensions.FileSystemGlobbing (_file-system-globbing.md_) - glob matching library
 - Pandoc (_pandoc.md_) - Markdown-to-HTML conversion tool
+- PartOfSpeech (_part-of-speech.md_) - part-of-speech tagging library
 - ReqStream (_reqstream.md_) - requirements traceability tool
 - ReviewMark (_reviewmark.md_) - file review enforcement tool
 - SarifMark (_sarifmark.md_) - SARIF report conversion tool
@@ -24,7 +25,6 @@ The following OTS items have integration design documentation:
 - SysML2Tools (_sysml2tools.md_) - architecture model validation and diagram rendering tool
 - VersionMark (_versionmark.md_) - tool-version documentation tool
 - WeasyPrint (_weasyprint.md_) - HTML-to-PDF conversion tool
-- WordSense (_wordsense.md_) - part-of-speech tagging library
 - xUnit (_xunit.md_) - unit-testing framework
 - YamlDotNet (_yamldotnet.md_) - YAML parsing library
 

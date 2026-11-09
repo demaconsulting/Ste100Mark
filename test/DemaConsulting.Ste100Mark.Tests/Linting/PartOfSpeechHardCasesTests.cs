@@ -22,52 +22,56 @@ using DemaConsulting.Ste100Mark.Linting;
 
 namespace DemaConsulting.Ste100Mark.Tests.Linting;
 
+using PartOfSpeech = DemaConsulting.Ste100Mark.Linting.PartOfSpeech;
+
 /// <summary>
 ///     A set of 26 hard cases (imperatives, noun-noun compounds, and modals) that, together with the
-///     100-sentence corpus in <see cref="PartOfSpeechFalsePositiveCorpusTests"/>, were used to choose
-///     <see cref="PartOfSpeechResolver.MinimumConfidence"/>. Each row is resolved through the real
-///     <c>DemaConsulting.WordSense.Basic</c> tagger.
+///     100-sentence corpus in <see cref="PartOfSpeechFalsePositiveCorpusTests"/>, exercise
+///     <see cref="PartOfSpeechResolver"/> on the sentence shapes that mislead a part-of-speech tagger.
+///     Each row is resolved through the real <c>DemaConsulting.PartOfSpeech</c> tagger
+///     (<c>Tagger.Default</c>) at <see cref="PartOfSpeechResolver.MinimumConfidence"/>.
 /// </summary>
 public class PartOfSpeechHardCasesTests
 {
     /// <summary>
-    ///     The 26 hard cases: term, sentence, and whether the term is a verb in that sentence.
+    ///     The 26 hard cases: term, sentence, and the expected role ("verb", "noun", or "none" when the
+    ///     tagger is below the minimum confidence and the answer is inconclusive).
     /// </summary>
     public static IEnumerable<object[]> HardCases() =>
     [
         // Imperatives (verb at the start of a procedure step)
-        ["Check", "Check the valve before use.", true],
-        ["Test", "Test the unit daily.", true],
-        ["Log", "Log the reading in the record.", true],
-        ["Mount", "Mount the bracket on the frame.", true],
-        ["Clamp", "Clamp the hose to the pipe.", true],
-        ["Record", "Record the pressure.", true],
-        ["Filter", "Filter the fluid before use.", true],
-        ["Seal", "Seal the joint with tape.", true],
+        ["Check", "Check the valve before use.", "verb"],
+        ["Test", "Test the unit daily.", "verb"],
+        ["Log", "Log the reading in the record.", "verb"],
+        ["Mount", "Mount the bracket on the frame.", "none"],
+        ["Clamp", "Clamp the hose to the pipe.", "verb"],
+        ["Record", "Record the pressure.", "verb"],
+        ["Filter", "Filter the fluid before use.", "verb"],
+        ["Seal", "Seal the joint with tape.", "verb"],
 
         // Noun-noun compounds (the term modifies a following noun)
-        ["test", "Check the test fixture for damage.", false],
-        ["filter", "Replace the filter housing.", false],
-        ["test", "Inspect the pressure test port.", false],
-        ["load", "Read the load cell value.", false],
-        ["control", "Clean the control panel.", false],
-        ["seal", "Inspect the seal ring for cracks.", false],
-        ["brake", "Check the brake pad wear.", false],
-        ["control", "Check the flow control valve.", false],
-        ["test", "The test passed.", false],
+        ["test", "Check the test fixture for damage.", "noun"],
+        ["filter", "Replace the filter housing.", "noun"],
+        ["test", "Inspect the pressure test port.", "noun"],
+        ["load", "Read the load cell value.", "noun"],
+        ["control", "Clean the control panel.", "noun"],
+        ["seal", "Inspect the seal ring for cracks.", "noun"],
+        ["brake", "Check the brake pad wear.", "noun"],
+        ["control", "Check the flow control valve.", "noun"],
+        ["test", "The test passed.", "noun"],
 
         // Modal auxiliaries (verb after can/must/may/will/shall/should)
-        ["test", "The operator must test the unit.", true],
-        ["filter", "The pump can filter the fluid.", true],
-        ["record", "You may record the value.", true],
-        ["control", "The system will control the flow.", true],
-        ["check", "Technicians shall check the seal.", true],
-        ["seal", "The valve should seal the line.", true],
-        ["mount", "Engineers can mount the sensor.", true],
-        ["clamp", "The tool will clamp the part.", true],
+        ["test", "The operator must test the unit.", "verb"],
+        ["filter", "The pump can filter the fluid.", "verb"],
+        ["record", "You may record the value.", "verb"],
+        ["control", "The system will control the flow.", "verb"],
+        ["check", "Technicians shall check the seal.", "verb"],
+        ["seal", "The valve should seal the line.", "verb"],
+        ["mount", "Engineers can mount the sensor.", "verb"],
+        ["clamp", "The tool will clamp the part.", "verb"],
 
         // Noun after a possessive determiner
-        ["control", "Replace the control knob.", false]
+        ["control", "Replace the control knob.", "noun"]
     ];
 
     /// <summary>
@@ -75,16 +79,22 @@ public class PartOfSpeechHardCasesTests
     /// </summary>
     [Theory]
     [MemberData(nameof(HardCases))]
-    public void Resolve_HardCase_ReturnsExpectedRole(string term, string sentence, bool isVerb)
+    public void Resolve_HardCase_ReturnsExpectedRole(string term, string sentence, string expected)
     {
-        // Arrange: a resolver using the real Basic tagger
+        // Arrange: a resolver using the real tagger
         var resolver = new PartOfSpeechResolver();
 
         // Act: resolve the first occurrence of the term
         var result = resolver.Resolve(sentence, sentence.IndexOf(term, StringComparison.Ordinal), term.Length);
 
         // Assert: the expected role
-        Assert.Equal(isVerb ? PartOfSpeech.Verb : PartOfSpeech.Noun, result);
+        PartOfSpeech? role = expected switch
+        {
+            "verb" => PartOfSpeech.Verb,
+            "noun" => PartOfSpeech.Noun,
+            _ => null
+        };
+        Assert.Equal(role, result);
     }
 
     /// <summary>

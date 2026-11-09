@@ -19,7 +19,7 @@ package Ste100Mark {
         part selfTest : SelfTestSubsystem;
         part utilities : UtilitiesSubsystem;
         part yamlDotNet : YamlDotNet;
-        part wordSense : WordSense;
+        part partOfSpeech : PartOfSpeech;
         part fileSystemGlobbing : FileSystemGlobbing;
     }
 }

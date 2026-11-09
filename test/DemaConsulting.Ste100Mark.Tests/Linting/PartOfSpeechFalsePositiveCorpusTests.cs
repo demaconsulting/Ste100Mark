@@ -22,6 +22,8 @@ using DemaConsulting.Ste100Mark.Linting;
 
 namespace DemaConsulting.Ste100Mark.Tests.Linting;
 
+using PartOfSpeech = DemaConsulting.Ste100Mark.Linting.PartOfSpeech;
+
 /// <summary>
 ///     A ~100-sentence, hand-written corpus measuring <see cref="PartOfSpeechResolver"/>'s
 ///     false-positive rate against genuinely dual-class English noun/verb homographs (words with
@@ -50,7 +52,7 @@ namespace DemaConsulting.Ste100Mark.Tests.Linting;
 public class PartOfSpeechFalsePositiveCorpusTests
 {
     /// <summary>
-    ///     70 verb-only-disallowed dual-class words, each with a sentence using the word in its
+    ///     68 verb-only-disallowed dual-class words, each with a sentence using the word in its
     ///     legal noun role. Sentences deliberately vary the noun-signal shape exercised (article,
     ///     possessive, quantifier, preposition, "of"-continuation) rather than repeating one
     ///     template, so the corpus reflects the range of real prose rather than one pattern.
@@ -84,10 +86,8 @@ public class PartOfSpeechFalsePositiveCorpusTests
             ("stamp", "Check the stamp on the certificate."),
             ("mark", "The mark on the housing shows the batch number."),
             ("grade", "Confirm the grade of the material."),
-            ("rank", "Note the technician's rank on the form."),
             ("form", "Complete the form before submission."),
             ("shape", "Inspect the shape of the bracket."),
-            ("cast", "Examine the cast for cracks."),
             ("pack", "Open the pack before use."),
             ("wrap", "Remove the wrap from the assembly."),
             ("tape", "Apply the tape around the joint."),
@@ -213,6 +213,40 @@ public class PartOfSpeechFalsePositiveCorpusTests
 
         // Assert: the real resolver identifies the noun role and the legal usage produces no finding
         Assert.Equal(PartOfSpeech.Noun, ResolveRole(term, sentence));
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that legal noun usages the tagger answers below the minimum confidence ("rank" and
+    ///     "cast" in these sentences) are inconclusive from the resolver but are still not flagged,
+    ///     because the checker's own noun-signal rules (a preceding determiner) decide them.
+    /// </summary>
+    [Theory]
+    [InlineData("rank", "Note the technician's rank on the form.")]
+    [InlineData("cast", "Examine the cast for cracks.")]
+    public void Evaluate_LowConfidenceNounUsage_VerbOnlyDisallowedEntry_NotFlagged(
+        string term, string sentence)
+    {
+        // Arrange: a self-contained dictionary disallowing only the verb sense of the term
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                UseEmbedded = false,
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    [term] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = [term.ToUpperInvariant()] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment(sentence, 1, SegmentRole.Paragraph)];
+
+        // Act: execute the operation being tested
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+
+        // Assert: the resolver is inconclusive and the legal usage still produces no finding
+        Assert.Null(ResolveRole(term, sentence));
         Assert.Empty(diagnostics);
     }
 

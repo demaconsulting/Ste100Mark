@@ -7,12 +7,12 @@ package Ste100Mark {
         comment reqRef /* Requirements: docs/reqstream/ots/yamldotnet.yaml */
     }
 
-    part def WordSense {
-        doc /* Statistical word-sense tagger (DemaConsulting.WordSense.Basic) used to resolve the part of speech of dictionary term matches. */
+    part def PartOfSpeech {
+        doc /* Statistical part-of-speech tagger (DemaConsulting.PartOfSpeech) used to resolve the part of speech of dictionary term matches. */
 
-        comment designRef /* Design: docs/design/ots/wordsense.md */
-        comment verificationRef /* Verification: docs/verification/ots/wordsense.md */
-        comment reqRef /* Requirements: docs/reqstream/ots/wordsense.yaml */
+        comment designRef /* Design: docs/design/ots/part-of-speech.md */
+        comment verificationRef /* Verification: docs/verification/ots/part-of-speech.md */
+        comment reqRef /* Requirements: docs/reqstream/ots/part-of-speech.yaml */
     }
 
     part def FileSystemGlobbing {

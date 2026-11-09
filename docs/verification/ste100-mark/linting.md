@@ -248,43 +248,42 @@ sense's alternatives grouped per sense. This scenario is tested by
 
 **Ste100Mark-PartOfSpeechResolver-\* (unit requirements)**: `PartOfSpeechResolver` is verified in
 two layers. Scenarios that depend on the tagger's real answers use the real
-`DemaConsulting.WordSense.Basic` model: noun and verb usage (articles, possessives,
-quantifiers, prepositions, modals, the infinitive marker, progressive auxiliaries, plural
-nouns, noun-phrase modifiers, and a finite verb following the match), the 26 hard cases
-(imperatives, noun-noun compounds, and modals), the requested sentence of a multi-sentence
-segment, and an unknown word. Scenarios that verify the resolver's own mapping logic use a
-scripted model so the tagger's answer is controlled: one classification call per sentence with
-word and punctuation tokens, the requested occurrence of a repeated word, the inclusive
-confidence boundary at 0.45, the rejection of parts of speech other than noun and verb, a
-word with no details, multi-word matches, a model returning a wrong result count,
-per-sentence caching, argument validation, and the shared instance. These scenarios are tested
+`DemaConsulting.PartOfSpeech` tagger (`Tagger.Default`): noun and verb usage (articles,
+possessives, quantifiers, prepositions, modals, the infinitive marker, progressive auxiliaries,
+plural nouns, noun-phrase modifiers, and a finite verb following the match), the 26 hard cases
+(imperatives, noun-noun compounds, and modals; the imperative "Mount" is inconclusive at the
+0.95 threshold), the requested sentence of a multi-sentence segment, and contractions and
+hyphenated words. Scenarios that verify the resolver's own mapping logic use a scripted tagging
+function so the tagger's answer is controlled: the requested occurrence of a repeated word, the
+inclusive confidence boundary at 0.95, the rejection of parts of speech other than noun and
+verb and of low-confidence answers, a match that no token covers, multi-word matches,
+consistent answers for repeated and concurrent queries, and argument validation. These scenarios are tested
 by `Resolve_NounUsage_ReturnsNoun`, `Resolve_VerbUsage_ReturnsVerb`,
 `Resolve_HardCase_ReturnsExpectedRole`, `HardCases_ContainsTwentySixCases`,
 `Resolve_MatchInSecondSentence_UsesThatSentenceOnly`,
 `Resolve_LowercaseContinuationAfterPeriod_StaysInSameSentence`,
-`Resolve_UnknownWordWithRealModel_ReturnsNull` (real model), and, with a scripted model,
-`Resolve_Tokenization_SendsOneSentenceWithWordAndPunctuationTokens`,
+`Resolve_ContractionAndHyphenWithRealTagger_ResolvesMatch` (real tagger), and, with a scripted
+tagger, `Resolve_ContractionAndHyphen_TokenOffsetsMapToMatch`,
 `Resolve_RepeatedWord_ResolvesRequestedOccurrence`,
 `Resolve_ConfidenceThreshold_BoundaryIsInclusive`,
-`MinimumConfidence_IsBelowLowestObservedCorrectConfidence`,
-`Resolve_NonNounVerbPartOfSpeech_ReturnsNull`, `Resolve_UnknownWord_ReturnsNull`,
-`Resolve_MultiWordMatch_ReturnsNull`, `Resolve_ModelReturnsWrongResultCount_ReturnsNull`,
-`Resolve_SameSentenceTwice_ClassifiesOnce`, `Resolve_ConcurrentSameSentence_ClassifiesOnce`,
-`Resolve_EvictionWhileInFlight_ClassifiesInFlightSentenceOnce`,
-`Resolve_CapacityExceededByOne_EvictsOnlyOneEntry`,
-`Resolve_ConcurrentMisses_CacheStaysWithinCapacityPlusInFlight`,
+`MinimumConfidence_IsPackageStrictThreshold`,
+`Resolve_BelowThresholdOrOtherTag_ReturnsNull`,
+`Resolve_NonNounVerbPartOfSpeech_ReturnsNull`, `Resolve_NoTokensCoverMatch_ReturnsNull`,
+`Resolve_MultiWordMatch_ReturnsNull`,
+`Resolve_RepeatedAndConcurrentQueries_ReturnSameResult` (real tagger),
+`Resolve_ConcurrentSameSentence_ClassifiesOnce`,
 `Resolve_NullSegmentText_ThrowsArgumentNullException`,
-`Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException`,
-`Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException`,
-`Constructor_NullModel_ThrowsArgumentNullException`, and `Shared_ReturnsSameInstance`.
+`Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException`, and
+`Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException`. The unit tests of the
+resolver's internal mechanisms (the sentence cache and its eviction, the shared instance, and the
+constructor's null check) are not linked to a requirement.
 
-**System-level WordSense resolution (Ste100Mark-System-Lint)**: The published tool assembly is
-run against a configuration with a verb-only entry ("check") and a two-sense entry for a
-made-up word the tagger cannot know. The document holds a noun usage, a verb usage, and an
-unresolvable usage on separate lines. The noun usage is not reported, the verb usage is
-reported with its alternative, and the unresolvable usage is reported as ambiguous. This
-scenario is tested by
-`Ste100Mark_LintDictionaryTermWithWordSenseResolution_ReportsOnlyDisallowedOrAmbiguousUsage`.
+**System-level PartOfSpeech resolution (Ste100Mark-System-Lint)**: The published tool assembly is
+run against a configuration with a verb-only entry ("check") and a two-sense entry ("block").
+The document holds a noun usage, a verb usage, and an unresolvable usage on separate lines. The
+noun usage is not reported, the verb usage is reported with its alternative, and the
+unresolvable usage is reported as ambiguous. This scenario is tested by
+`Ste100Mark_LintDictionaryTermWithPartOfSpeechResolution_ReportsOnlyDisallowedOrAmbiguousUsage`.
 
 **Ste100Mark-Linting-DictionaryPosVerblessSegment**: End-to-end behavior through
 `DictionaryChecker`, using a fixture dictionary matching the reported ASD-STE100 corpus shape

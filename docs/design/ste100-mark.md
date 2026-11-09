@@ -23,6 +23,7 @@ flowchart TD
         SentenceAnalyzer
         StructuralRules
         DictionaryChecker
+        PartOfSpeechResolver
         DiagnosticReporter
         Linter
         RuleCatalog
@@ -47,8 +48,13 @@ flowchart TD
     StructuralRules --> SentenceAnalyzer
     StructuralRules --> Diagnostic
     DictionaryChecker --> Diagnostic
+    DictionaryChecker --> PartOfSpeechResolver
     Linter --> DiagnosticReporter
 ```
+
+The diagram shows the principal units and their main relationships; the `Linting` subsystem
+design lists every unit. `PartOfSpeechResolver` is the unit through which `DictionaryChecker`
+uses the PartOfSpeech OTS tagger to decide whether a matched term is used as a noun or a verb.
 
 `Program` is the entry point. It creates a `Context` from the `Cli` subsystem,
 dispatches to `RuleCatalog.ToJson` when `--list-rules` is passed, dispatches to
@@ -155,8 +161,8 @@ diagnostics and summaries through `DiagnosticReporter` into that context's outpu
   results files.
 - **YamlDotNet**: provides YAML deserialization for `.ste100mark.yaml` and project dictionary
   files. See *YamlDotNet*.
-- **DemaConsulting.WordSense** and **DemaConsulting.WordSense.Basic**: provide the part-of-speech
-  tagger used to resolve noun and verb usage of dictionary terms. See *WordSense*.
+- **DemaConsulting.PartOfSpeech**: provides the part-of-speech
+  tagger used to resolve noun and verb usage of dictionary terms. See *PartOfSpeech*.
 - **Microsoft.Extensions.FileSystemGlobbing**: provides glob evaluation for file selection and
   mode overrides. See *Microsoft.Extensions.FileSystemGlobbing*.
 

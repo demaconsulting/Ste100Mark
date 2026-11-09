@@ -30,8 +30,13 @@ run.
 
 - `Term`: `string` - disallowed word or phrase.
 - `Senses`: `IReadOnlyList<DictionarySense>` - one or more POS-tagged senses, in declaration
-  order. A term with exactly one sense is reported unconditionally by `DictionaryChecker`,
-  regardless of that sense's `Pos` value.
+  order. A term with exactly one sense is the sole candidate for `DictionaryChecker`: it is
+  reported plainly, with no role label, when the resolver is inconclusive or resolves a role
+  its `Pos` allows (a `Any` sense is never excluded). It is not reported when the resolver
+  confidently resolves a role that the sense's `Pos` excludes, nor when the resolver is
+  inconclusive and the entry is self-referential (a sense lists the term itself as an
+  alternative). A multi-sense term whose resolution is inconclusive is reported as one
+  ambiguous diagnostic listing every sense.
 
 **EmbeddedResourceName**: `const string` - manifest-resource name of the embedded default
 dictionary file.

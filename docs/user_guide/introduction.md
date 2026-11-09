@@ -3,7 +3,7 @@
 The diagram below shows how one `ste100mark` run reads Markdown files and configuration, lints the prose,
 and reports the findings.
 
-![Ste100Mark architecture: the ste100mark program runs the Cli, which hands Markdown files and an optional .ste100mark.yaml to the Linting subsystem (configuration, prose extraction, rules, and reporting) to produce text or JSON findings and an exit code, with SelfTest and Utilities as support, built on YamlDotNet, WordSense, and FileSystemGlobbing](architecture.svg)
+![Ste100Mark architecture: the ste100mark program runs the Cli, which hands Markdown files and an optional .ste100mark.yaml to the Linting subsystem (configuration, prose extraction, rules, and reporting) to produce text or JSON findings and an exit code, with SelfTest and Utilities as support, built on YamlDotNet, PartOfSpeech, and FileSystemGlobbing](architecture.svg)
 
 ## Purpose
 
@@ -296,25 +296,29 @@ prior to:
 A term with exactly one sense is reported using that sense unless the tagger confidently
 resolves a role incompatible with the entry's part of speech (for example a verb-only entry
 used as a noun); it is reported when the role is compatible or the result is inconclusive.
-When a term has more than one sense, Ste100Mark uses the `DemaConsulting.WordSense`
+When a term has more than one sense, Ste100Mark uses the `DemaConsulting.PartOfSpeech`
 part-of-speech tagger on the sentence that
 contains the term to decide which sense applies. A confident noun-versus-verb decision reports
 only the matching sense, whose alternatives are joined with natural "or"/Oxford-comma
 phrasing, and the diagnostic message notes the grammatical role, for example
-`Avoid 'impact'; use 'effect' instead (used as a noun).` When the tagger cannot decide (an
-unknown word, a low-confidence answer, a part of speech other than noun or verb, or a
+`Avoid 'impact'; use 'effect' instead (used as a noun).` When the tagger cannot decide (a
+low-confidence answer, a part of speech other than noun or verb, or a
 multi-word term),
 every sense is reported, grouped per part of speech and clearly labeled as ambiguous, for
 example `Ambiguous part of speech for 'impact' — possible corrections: as a noun, use
 'effect'; as a verb, use 'affect'.`
 
-The tagger is statistical, so it is not always right. An answer is accepted only when its
-confidence is at least 0.45, a threshold chosen from a corpus of 100 sentences plus 26 hard
-cases, all of which the tagger classified correctly. Known weak spots include a sentence-initial
-imperative that reads like a noun phrase (for example "Test results daily") and a verb followed
-by a number. In those cases a term can be reported with the wrong sense, or not be reported at
-all. The writing mode does not influence the decision. Add an `allow` entry or an
-`allow-in-phrase` entry to suppress a finding that you judge to be wrong.
+The tagger is statistical, so it is not always right. It is bundled with the tool and runs
+fully offline; nothing is downloaded. An answer is accepted only when its confidence is at
+least 0.95, the strict threshold documented by the tagger library. A strict threshold favors
+reporting a term as ambiguous over a wrong decision. Very short snippets and verbless
+fragments (a table cell such as "Wash pump", a heading, or a bare label) often get a
+lower-confidence answer, so a term in them can be reported as ambiguous. The tagger also
+treats a word that it does not recognize as a noun. Known weak spots include a
+sentence-initial imperative that reads like a noun phrase (for example "Test results daily")
+and a verb followed by a number. In those cases a term can be reported with the wrong sense,
+or not be reported at all. The writing mode does not influence the decision. Add an `allow`
+entry or an `allow-in-phrase` entry to suppress a finding that you judge to be wrong.
 
 A reported suggestion never includes the exact word that was just flagged as one of its own
 alternatives, for both a confidently-resolved sense and an ambiguous, multi-sense result. For

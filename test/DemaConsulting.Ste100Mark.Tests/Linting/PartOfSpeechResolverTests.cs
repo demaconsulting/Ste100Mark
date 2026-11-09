@@ -18,63 +18,70 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Text.RegularExpressions;
 using DemaConsulting.Ste100Mark.Linting;
-using Ws = DemaConsulting.WordSense;
-using WsPos = DemaConsulting.WordSense.PartOfSpeech;
 
 namespace DemaConsulting.Ste100Mark.Tests.Linting;
 
+using PartOfSpeech = DemaConsulting.Ste100Mark.Linting.PartOfSpeech;
+using Upos = DemaConsulting.PartOfSpeech.Upos;
+
 /// <summary>
 ///     Unit tests for the PartOfSpeechResolver class: scenario tests against the real
-///     <c>DemaConsulting.WordSense.Basic</c> tagger (ported from the former heuristic's test suite)
-///     and mechanism tests (tokenization, offsets, threshold, mapping, caching) against a scripted
-///     model.
+///     <c>DemaConsulting.PartOfSpeech</c> tagger (ported from the former heuristic's test suite)
+///     and mechanism tests (offsets, threshold, mapping, caching) against a scripted tagging function.
 /// </summary>
 public class PartOfSpeechResolverTests
 {
     /// <summary>
-    ///     Scripted tagger model: records every call and answers from a delegate.
+    ///     Scripted tagger: records every sentence it is asked to tag (as word and punctuation tokens)
+    ///     and answers from a delegate.
     /// </summary>
-    /// <param name="answer">Produces the results for the supplied tokens.</param>
-    private sealed class ScriptedModel(Func<string[], DemaConsulting.WordSense.WordSense[]> answer) : Ws.IWordSenseModel
+    /// <param name="answer">Produces the tag and confidence of each token for the supplied tokens.</param>
+    private sealed class ScriptedModel(Func<string[], (Upos Tag, double Confidence)[]> answer)
     {
-        /// <summary>Gets the token lists passed to every call.</summary>
+        /// <summary>Tokenizer used by the scripted tagger: a word or one punctuation character.</summary>
+        private static readonly Regex TokenRegex = new(@"[\w'-]+|[^\w\s]", RegexOptions.None, TimeSpan.FromSeconds(1));
+
+        /// <summary>Gets the token lists of every sentence tagged.</summary>
         public List<string[]> Calls { get; } = [];
 
-        /// <inheritdoc />
-        public Task EnsureModelAsync(Ws.MirrorOptions? mirror = null, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
+        /// <summary>
+        ///     Converts a scripted tagger to the tagging function used by the resolver.
+        /// </summary>
+        /// <param name="model">The scripted tagger.</param>
+        public static implicit operator Func<string, IReadOnlyList<TaggedSpan>>(ScriptedModel model) => model.Tag;
 
-        /// <inheritdoc />
-        public Task<DemaConsulting.WordSense.WordSense[]> ClassifyAsync(
-            IEnumerable<string> words, CancellationToken cancellationToken = default)
+        /// <summary>
+        ///     Tags one sentence.
+        /// </summary>
+        /// <param name="sentence">The sentence text.</param>
+        /// <returns>The tagged tokens with offsets relative to the sentence.</returns>
+        public IReadOnlyList<TaggedSpan> Tag(string sentence)
         {
-            var tokens = words.ToArray();
+            var matches = TokenRegex.Matches(sentence);
+            var tokens = matches.Select(m => m.Value).ToArray();
             lock (Calls)
             {
                 Calls.Add(tokens);
             }
 
-            return Task.FromResult(answer(tokens));
-        }
+            var tags = answer(tokens);
+            var result = new List<TaggedSpan>();
+            for (var i = 0; i < tags.Length && i < matches.Count; i++)
+            {
+                result.Add(new TaggedSpan(matches[i].Index, matches[i].Length, tags[i].Tag, tags[i].Confidence));
+            }
 
-        /// <inheritdoc />
-        public void Dispose()
-        {
+            return result;
         }
     }
 
     /// <summary>
-    ///     Builds a result for one token with the given part of speech and confidence.
+    ///     Builds a scripted tagger that tags every token as the given part of speech and confidence.
     /// </summary>
-    private static DemaConsulting.WordSense.WordSense Tag(string word, WsPos pos, double confidence) =>
-        new(word, new Ws.WordDetails($"{word}#1", word, pos, string.Empty), confidence);
-
-    /// <summary>
-    ///     Builds a scripted model that tags every token as the given part of speech and confidence.
-    /// </summary>
-    private static ScriptedModel Uniform(WsPos pos, double confidence) =>
-        new(tokens => tokens.Select(t => Tag(t, pos, confidence)).ToArray());
+    private static ScriptedModel Uniform(Upos pos, double confidence) =>
+        new(tokens => tokens.Select(_ => (pos, confidence)).ToArray());
 
     /// <summary>
     ///     Scenarios where the real tagger resolves the match as a noun.
@@ -86,17 +93,11 @@ public class PartOfSpeechResolverTests
         ["impact", "This impact matters."],
         ["impact", "Consider the size of impact on the system."],
         ["impacts", "Several impacts appeared later."],
-        ["impact", "The metering impact moves to the tower."],
         ["impact", "Install a custom impact in the holder."],
         ["impact", "Consider impact of weather on delays."],
-        ["pump", "Wash pump"],
-        ["pump", "Instructions to wash pump parts."],
         ["test", "The breadboard is a laboratory test fixture."],
         ["duty", "Pump rate is set by the duty cycle."],
-        ["Block", "Block 0 failed the self-test."],
-        ["Trigger", "Trigger not issued correctly by the controller."],
         ["backup", "Schedule the backup modules for every shift."],
-        ["mix", "Check the coolant mix ratio before startup."],
         ["port", "Configure the serial port settings before first use."],
         ["use", "Keep the valve in use during the test."],
         ["test", "Check the test fixture for damage."],
@@ -114,9 +115,22 @@ public class PartOfSpeechResolverTests
         ["Wash", "Wash the probe."],
         ["wash", "Instructions to wash pump parts."],
         ["cover", "One supply is enough to cover the indicative load."],
-        ["Function", "Function the panel before use."],
         ["Hold", "Hold at the end of the stroke while the column settles"],
         ["Check", "Check the valve before use."]
+    ];
+
+    /// <summary>
+    ///     Scenarios where the real tagger is below the minimum confidence or chooses another part of speech.
+    /// </summary>
+    public static IEnumerable<object[]> InconclusiveScenarios() =>
+    [
+        ["impact", "The metering impact moves to the tower."],
+        ["pump", "Wash pump"],
+        ["pump", "Instructions to wash pump parts."],
+        ["mix", "Check the coolant mix ratio before startup."],
+        ["Block", "Block 0 failed the self-test."],
+        ["Trigger", "Trigger not issued correctly by the controller."],
+        ["Function", "Function the panel before use."]
     ];
 
     /// <summary>
@@ -126,7 +140,7 @@ public class PartOfSpeechResolverTests
     [MemberData(nameof(NounScenarios))]
     public void Resolve_NounUsage_ReturnsNoun(string term, string sentence)
     {
-        // Arrange: a resolver using the real Basic tagger
+        // Arrange: a resolver using the real tagger
         var resolver = new PartOfSpeechResolver();
 
         // Act: resolve the first occurrence of the term
@@ -143,7 +157,7 @@ public class PartOfSpeechResolverTests
     [MemberData(nameof(VerbScenarios))]
     public void Resolve_VerbUsage_ReturnsVerb(string term, string sentence)
     {
-        // Arrange: a resolver using the real Basic tagger
+        // Arrange: a resolver using the real tagger
         var resolver = new PartOfSpeechResolver();
 
         // Act: resolve the first occurrence of the term
@@ -151,6 +165,64 @@ public class PartOfSpeechResolverTests
 
         // Assert: confident verb
         Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that low-confidence or non-noun/verb answers of the real tagger are inconclusive.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(InconclusiveScenarios))]
+    public void Resolve_BelowThresholdOrOtherTag_ReturnsNull(string term, string sentence)
+    {
+        // Arrange: a resolver using the real tagger
+        var resolver = new PartOfSpeechResolver();
+
+        // Act: resolve the first occurrence of the term
+        var result = resolver.Resolve(sentence, sentence.IndexOf(term, StringComparison.Ordinal), term.Length);
+
+        // Assert: inconclusive
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    ///     Test that the real tagger reports a confidence at or above the minimum for the noun and verb
+    ///     scenarios, and below it (or a different part of speech) for the inconclusive scenarios.
+    /// </summary>
+    [Fact]
+    public void Tagger_Default_ConfidenceSeparatesResolvedFromInconclusiveScenarios()
+    {
+        // Arrange: the scenario sets, each tagged directly by the real tagger
+        static DemaConsulting.PartOfSpeech.TaggedToken TokenOf(string term, string sentence)
+        {
+            var start = sentence.IndexOf(term, StringComparison.Ordinal);
+            return DemaConsulting.PartOfSpeech.Tagger.Default.Tag(sentence)
+                .SelectMany(s => s.Tokens)
+                .Single(t => t.Start == start && t.Length == term.Length);
+        }
+
+        // Act and Assert: resolved scenarios are a confident noun or verb
+        foreach (var scenario in NounScenarios())
+        {
+            var token = TokenOf((string)scenario[0], (string)scenario[1]);
+            Assert.Equal(Upos.Noun, token.Tag);
+            Assert.True(token.Confidence >= PartOfSpeechResolver.MinimumConfidence, (string)scenario[1]);
+        }
+
+        foreach (var scenario in VerbScenarios())
+        {
+            var token = TokenOf((string)scenario[0], (string)scenario[1]);
+            Assert.Equal(Upos.Verb, token.Tag);
+            Assert.True(token.Confidence >= PartOfSpeechResolver.MinimumConfidence, (string)scenario[1]);
+        }
+
+        // Act and Assert: inconclusive scenarios are not a confident noun or verb
+        foreach (var scenario in InconclusiveScenarios())
+        {
+            var token = TokenOf((string)scenario[0], (string)scenario[1]);
+            var confidentNounOrVerb = token.Tag is Upos.Noun or Upos.Verb
+                && token.Confidence >= PartOfSpeechResolver.MinimumConfidence;
+            Assert.False(confidentNounOrVerb, (string)scenario[1]);
+        }
     }
 
     /// <summary>
@@ -175,23 +247,46 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
-    ///     Test that only one sentence is sent to the model per call, tokenized into words and
-    ///     punctuation with contractions and hyphenated words kept whole.
+    ///     Test that only one sentence is sent to the tagger per call and that the offsets of a
+    ///     contraction and a hyphenated word map the match to the right token.
     /// </summary>
     [Fact]
-    public void Resolve_Tokenization_SendsOneSentenceWithWordAndPunctuationTokens()
+    public void Resolve_ContractionAndHyphen_TokenOffsetsMapToMatch()
     {
         // Arrange: a two-sentence segment with a contraction and a hyphenated word
-        var model = Uniform(WsPos.Noun, 0.9);
-        var resolver = new PartOfSpeechResolver(model);
+        var seen = new List<string>();
+        var resolver = new PartOfSpeechResolver(sentence =>
+        {
+            seen.Add(sentence);
+            return [new TaggedSpan(0, 5, Upos.Aux, 0.99), new TaggedSpan(6, 3, Upos.Verb, 0.99)];
+        });
         const string text = "Don't use well-known tools, please. Next sentence.";
 
         // Act: execute the operation being tested
-        resolver.Resolve(text, text.IndexOf("tools", StringComparison.Ordinal), 5);
+        var result = resolver.Resolve(text, text.IndexOf("use", StringComparison.Ordinal), 3);
 
-        // Assert: exactly one call with only the first sentence's tokens
-        var call = Assert.Single(model.Calls);
-        Assert.Equal(["Don't", "use", "well-known", "tools", ",", "please", "."], call);
+        // Assert: exactly one call with only the first sentence, and the offsets map to the verb
+        Assert.Equal("Don't use well-known tools, please.", Assert.Single(seen));
+        Assert.Equal(PartOfSpeech.Verb, result);
+    }
+
+    /// <summary>
+    ///     Test that the real tagger handles a contraction and a hyphenated word before the match.
+    /// </summary>
+    [Fact]
+    public void Resolve_ContractionAndHyphenWithRealTagger_ResolvesMatch()
+    {
+        // Arrange: the real tagger splits the contraction into two tokens
+        var resolver = new PartOfSpeechResolver();
+        const string text = "Don't use well-known tools, please.";
+
+        // Act: resolve a verb and a noun after the contraction
+        var verb = resolver.Resolve(text, text.IndexOf("use", StringComparison.Ordinal), 3);
+        var noun = resolver.Resolve(text, text.IndexOf("tools", StringComparison.Ordinal), 5);
+
+        // Assert: offsets map to the right tokens
+        Assert.Equal(PartOfSpeech.Verb, verb);
+        Assert.Equal(PartOfSpeech.Noun, noun);
     }
 
     /// <summary>
@@ -202,15 +297,15 @@ public class PartOfSpeechResolverTests
     {
         // Arrange: tagger answers Verb only for the second "run" token
         var seen = 0;
-        DemaConsulting.WordSense.WordSense TagToken(string t)
+        (Upos Tag, double Confidence) TagToken(string t)
         {
             if (t != "run")
             {
-                return Tag(t, WsPos.Adverb, 0.9);
+                return (Upos.Adv, 0.9);
             }
 
             seen++;
-            return Tag(t, seen == 2 ? WsPos.Verb : WsPos.Noun, 0.9);
+            return (seen == 2 ? Upos.Verb : Upos.Noun, 0.99);
         }
 
         var model = new ScriptedModel(tokens => tokens.Select(TagToken).ToArray());
@@ -233,8 +328,8 @@ public class PartOfSpeechResolverTests
     public void Resolve_ConfidenceThreshold_BoundaryIsInclusive()
     {
         // Arrange: one resolver just below the threshold and one exactly at it
-        var below = new PartOfSpeechResolver(Uniform(WsPos.Noun, PartOfSpeechResolver.MinimumConfidence - 0.01));
-        var at = new PartOfSpeechResolver(Uniform(WsPos.Noun, PartOfSpeechResolver.MinimumConfidence));
+        var below = new PartOfSpeechResolver(Uniform(Upos.Noun, PartOfSpeechResolver.MinimumConfidence - 0.01));
+        var at = new PartOfSpeechResolver(Uniform(Upos.Noun, PartOfSpeechResolver.MinimumConfidence));
 
         // Act: execute the operation being tested
         var belowResult = below.Resolve("The test passed.", 4, 4);
@@ -246,26 +341,25 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
-    ///     Test that the documented minimum confidence keeps every correct answer observed in the
-    ///     corpus (the lowest correct confidence observed was 0.4926).
+    ///     Test that the minimum confidence is the strict threshold documented by the package.
     /// </summary>
     [Fact]
-    public void MinimumConfidence_IsBelowLowestObservedCorrectConfidence()
+    public void MinimumConfidence_IsPackageStrictThreshold()
     {
-        // Arrange/Act/Assert: the constant is below the empirical minimum and above zero
-        Assert.InRange(PartOfSpeechResolver.MinimumConfidence, 0.01, 0.4926);
+        // Arrange/Act/Assert: the constant is the strict threshold
+        Assert.Equal(0.95, PartOfSpeechResolver.MinimumConfidence);
     }
 
     /// <summary>
     ///     Test that parts of speech other than noun and verb map to inconclusive.
     /// </summary>
     [Theory]
-    [InlineData(WsPos.Adjective)]
-    [InlineData(WsPos.Adverb)]
-    [InlineData(WsPos.Auxiliary)]
-    [InlineData(WsPos.Determiner)]
-    [InlineData(WsPos.Preposition)]
-    public void Resolve_NonNounVerbPartOfSpeech_ReturnsNull(WsPos pos)
+    [InlineData(Upos.Adj)]
+    [InlineData(Upos.Adv)]
+    [InlineData(Upos.Aux)]
+    [InlineData(Upos.Det)]
+    [InlineData(Upos.Adp)]
+    public void Resolve_NonNounVerbPartOfSpeech_ReturnsNull(Upos pos)
     {
         // Arrange: a confident tagger answer of the given part of speech
         var resolver = new PartOfSpeechResolver(Uniform(pos, 0.99));
@@ -278,34 +372,16 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
-    ///     Test that a word the real tagger does not know is inconclusive.
+    ///     Test that a match no token covers is inconclusive.
     /// </summary>
     [Fact]
-    public void Resolve_UnknownWordWithRealModel_ReturnsNull()
+    public void Resolve_NoTokensCoverMatch_ReturnsNull()
     {
-        // Arrange: a resolver using the real Basic tagger and a made-up word it cannot know
-        var resolver = new PartOfSpeechResolver();
-        const string sentence = "The zzqxorb passed.";
-
-        // Act: resolve the made-up word
-        var result = resolver.Resolve(sentence, sentence.IndexOf("zzqxorb", StringComparison.Ordinal), 7);
-
-        // Assert: inconclusive
-        Assert.Null(result);
-    }
-
-    /// <summary>
-    ///     Test that a word the tagger does not know (no details) is inconclusive.
-    /// </summary>
-    [Fact]
-    public void Resolve_UnknownWord_ReturnsNull()
-    {
-        // Arrange: a tagger that returns no chosen sense
-        var model = new ScriptedModel(tokens => tokens.Select(t => new DemaConsulting.WordSense.WordSense(t, null, 0)).ToArray());
-        var resolver = new PartOfSpeechResolver(model);
+        // Arrange: a tagger that returns no tokens at all
+        var resolver = new PartOfSpeechResolver(_ => []);
 
         // Act: execute the operation being tested
-        var result = resolver.Resolve("The widget passed.", 4, 6);
+        var result = resolver.Resolve("The test passed.", 4, 4);
 
         // Assert: inconclusive
         Assert.Null(result);
@@ -318,27 +394,11 @@ public class PartOfSpeechResolverTests
     public void Resolve_MultiWordMatch_ReturnsNull()
     {
         // Arrange: a confident noun for every token
-        var resolver = new PartOfSpeechResolver(Uniform(WsPos.Noun, 0.99));
+        var resolver = new PartOfSpeechResolver(Uniform(Upos.Noun, 0.99));
         const string text = "Do this prior to the test.";
 
         // Act: execute the operation being tested
         var result = resolver.Resolve(text, text.IndexOf("prior to", StringComparison.Ordinal), "prior to".Length);
-
-        // Assert: inconclusive
-        Assert.Null(result);
-    }
-
-    /// <summary>
-    ///     Test that a model result count that does not match the token count is inconclusive.
-    /// </summary>
-    [Fact]
-    public void Resolve_ModelReturnsWrongResultCount_ReturnsNull()
-    {
-        // Arrange: a model that returns no results at all
-        var resolver = new PartOfSpeechResolver(new ScriptedModel(_ => []));
-
-        // Act: execute the operation being tested
-        var result = resolver.Resolve("The test passed.", 4, 4);
 
         // Assert: inconclusive
         Assert.Null(result);
@@ -351,7 +411,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_SameSentenceTwice_ClassifiesOnce()
     {
         // Arrange: a scripted model counting calls
-        var model = Uniform(WsPos.Noun, 0.9);
+        var model = Uniform(Upos.Noun, 0.99);
         var resolver = new PartOfSpeechResolver(model);
         const string text = "The test passed.";
 
@@ -376,7 +436,7 @@ public class PartOfSpeechResolverTests
         {
             Interlocked.Increment(ref calls);
             gate.Wait(TimeSpan.FromSeconds(5));
-            return tokens.Select(t => Tag(t, WsPos.Noun, 0.9)).ToArray();
+            return tokens.Select(_ => (Upos.Noun, 0.99)).ToArray();
         });
         var resolver = new PartOfSpeechResolver(model);
         const string text = "The test passed.";
@@ -409,7 +469,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_LowercaseContinuationAfterPeriod_StaysInSameSentence()
     {
         // Arrange: a scripted model and an abbreviation followed by a lowercase continuation
-        var model = Uniform(WsPos.Verb, 0.9);
+        var model = Uniform(Upos.Verb, 0.99);
         var resolver = new PartOfSpeechResolver(model);
         const string text = "Use e.g. test the valve.";
 
@@ -429,7 +489,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_NullSegmentText_ThrowsArgumentNullException()
     {
         // Arrange: a resolver
-        var resolver = new PartOfSpeechResolver(Uniform(WsPos.Noun, 0.9));
+        var resolver = new PartOfSpeechResolver(Uniform(Upos.Noun, 0.99));
 
         // Act / Assert: a null argument throws
         Assert.Throws<ArgumentNullException>(() => resolver.Resolve(null!, 0, 1));
@@ -442,7 +502,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException()
     {
         // Arrange: a resolver
-        var resolver = new PartOfSpeechResolver(Uniform(WsPos.Noun, 0.9));
+        var resolver = new PartOfSpeechResolver(Uniform(Upos.Noun, 0.99));
 
         // Act / Assert: an out-of-range match throws
         Assert.Throws<ArgumentOutOfRangeException>(() => resolver.Resolve("short", 3, 10));
@@ -456,7 +516,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException()
     {
         // Arrange: a resolver
-        var resolver = new PartOfSpeechResolver(Uniform(WsPos.Noun, 0.9));
+        var resolver = new PartOfSpeechResolver(Uniform(Upos.Noun, 0.99));
 
         // Act / Assert: index + length would overflow, but the range is still rejected
         Assert.Throws<ArgumentOutOfRangeException>(() => resolver.Resolve("short", 3, int.MaxValue));
@@ -482,7 +542,7 @@ public class PartOfSpeechResolverTests
                 release.Wait(TimeSpan.FromSeconds(5));
             }
 
-            return tokens.Select(t => Tag(t, WsPos.Noun, 0.9)).ToArray();
+            return tokens.Select(_ => (Upos.Noun, 0.99)).ToArray();
         });
         var resolver = new PartOfSpeechResolver(model, 2);
         resolver.Resolve("Alpha one.", 0, 5);
@@ -514,7 +574,7 @@ public class PartOfSpeechResolverTests
     public void Resolve_CapacityExceededByOne_EvictsOnlyOneEntry()
     {
         // Arrange: capacity 3, filled with three sentences
-        var model = Uniform(WsPos.Noun, 0.9);
+        var model = Uniform(Upos.Noun, 0.99);
         var resolver = new PartOfSpeechResolver(model, 3);
         string[] sentences = ["Alpha one.", "Beta two.", "Gamma three."];
         foreach (var s in sentences)
@@ -570,7 +630,7 @@ public class PartOfSpeechResolverTests
                 }
             }
 
-            return tokens.Select(t => Tag(t, WsPos.Noun, 0.9)).ToArray();
+            return tokens.Select(_ => (Upos.Noun, 0.99)).ToArray();
         });
         resolver = new PartOfSpeechResolver(model, capacity);
         resolver.Resolve("Alpha one.", 0, 5);
@@ -612,13 +672,13 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
-    ///     Test that a null model is rejected by the constructor.
+    ///     Test that a null tagging function is rejected by the constructor.
     /// </summary>
     [Fact]
-    public void Constructor_NullModel_ThrowsArgumentNullException()
+    public void Constructor_NullTagger_ThrowsArgumentNullException()
     {
-        // Act / Assert: a null model throws
-        Assert.Throws<ArgumentNullException>(() => new PartOfSpeechResolver(null!));
+        // Act / Assert: a null tagging function throws
+        Assert.Throws<ArgumentNullException>(() => new PartOfSpeechResolver((Func<string, IReadOnlyList<TaggedSpan>>)null!));
     }
 
     /// <summary>
@@ -629,5 +689,26 @@ public class PartOfSpeechResolverTests
     {
         // Act / Assert: the process-wide resolver is created once
         Assert.Same(PartOfSpeechResolver.Shared, PartOfSpeechResolver.Shared);
+    }
+
+    /// <summary>
+    ///     Test that repeated and parallel resolution of the same match with the real tagger always
+    ///     gives the same answer.
+    /// </summary>
+    [Fact]
+    public void Resolve_RepeatedAndConcurrentQueries_ReturnSameResult()
+    {
+        // Arrange: a resolver using the real tagger and a match with a confident verb answer
+        var resolver = new PartOfSpeechResolver();
+        const string text = "Wash the probe.";
+
+        // Act: resolve the same match repeatedly and from several threads
+        var first = resolver.Resolve(text, 0, 4);
+        var results = new PartOfSpeech?[32];
+        Parallel.For(0, results.Length, i => results[i] = resolver.Resolve(text, 0, 4));
+
+        // Assert: every answer equals the first
+        Assert.Equal(PartOfSpeech.Verb, first);
+        Assert.All(results, r => Assert.Equal(first, r));
     }
 }

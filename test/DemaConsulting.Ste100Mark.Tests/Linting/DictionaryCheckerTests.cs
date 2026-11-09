@@ -22,6 +22,8 @@ using DemaConsulting.Ste100Mark.Linting;
 
 namespace DemaConsulting.Ste100Mark.Tests.Linting;
 
+using PartOfSpeech = DemaConsulting.Ste100Mark.Linting.PartOfSpeech;
+
 /// <summary>
 ///     Unit tests for the DictionaryChecker class.
 /// </summary>
@@ -313,7 +315,8 @@ public class DictionaryCheckerTests
     public void Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged()
     {
         // Arrange: a project-supplied entry with adjective and verb senses only (no noun sense).
-        // In "Set the reverse to neutral." the tagger confidently resolves a noun, which matches neither.
+        // In "Set the reverse to neutral." a confident noun role is injected (the real tagger answers
+        // 0.92 here, below the minimum confidence), which matches neither sense.
         var config = new LintConfig
         {
             Dictionary = new DictionaryConfig
@@ -332,7 +335,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Set the reverse to neutral.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: new FixedPartOfSpeechResolver(PartOfSpeech.Noun));
 
         // Assert: the confident noun role matches neither the adjective nor verb sense
         Assert.Empty(diagnostics);
@@ -696,12 +699,13 @@ public class DictionaryCheckerTests
     [Fact]
     public void Evaluate_VerblessTableCellNounPhrase_NotFlagged()
     {
-        // Arrange: "Wash pump" - a verbless noun-phrase cell
+        // Arrange: "Wash pump" - a verbless noun-phrase cell. The real tagger is inconclusive on such
+        // short fragments, so a resolver that confidently reports a noun verifies the checker rule.
         var dictionary = VerblessSegmentFixtureDictionary();
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Wash pump", 1, SegmentRole.TableRow)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: new FixedPartOfSpeechResolver(PartOfSpeech.Noun));
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -714,12 +718,13 @@ public class DictionaryCheckerTests
     [Fact]
     public void Evaluate_VerblessTableHeaderCell_NotFlagged()
     {
-        // Arrange: "Function" as a bare table header label
+        // Arrange: "Function" as a bare table header label; a resolver that confidently reports a noun
+        // verifies the checker rule (the real tagger is inconclusive on a single word)
         var dictionary = VerblessSegmentFixtureDictionary();
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Function", 1, SegmentRole.TableRow)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: new FixedPartOfSpeechResolver(PartOfSpeech.Noun));
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -732,12 +737,13 @@ public class DictionaryCheckerTests
     [Fact]
     public void Evaluate_VerblessListItemNounPhrase_NotFlagged()
     {
-        // Arrange: "Probe geometry and diameter." - no finite verb anywhere in the fragment
+        // Arrange: "Probe geometry and diameter." - no finite verb anywhere in the fragment; a resolver
+        // that confidently reports a noun verifies the checker rule (the real tagger is inconclusive)
         var dictionary = VerblessSegmentFixtureDictionary();
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Probe geometry and diameter.", 1, SegmentRole.ListItem)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: new FixedPartOfSpeechResolver(PartOfSpeech.Noun));
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -769,12 +775,13 @@ public class DictionaryCheckerTests
     [Fact]
     public void Evaluate_VerblessHeadingFragment_NotFlagged()
     {
-        // Arrange: "Wash Tower" - a heading fragment with no finite verb anywhere
+        // Arrange: "Wash Tower" - a heading fragment with no finite verb anywhere; a resolver that
+        // confidently reports a noun verifies the checker rule (the real tagger is inconclusive)
         var dictionary = VerblessSegmentFixtureDictionary();
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Wash Tower", 1, SegmentRole.Heading)];
 
         // Act: execute the operation being tested
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, resolver: new FixedPartOfSpeechResolver(PartOfSpeech.Noun));
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);

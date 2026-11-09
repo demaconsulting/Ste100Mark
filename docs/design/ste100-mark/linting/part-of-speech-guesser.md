@@ -10,7 +10,7 @@ the `STE100-ADV-INGFORM` advisory in `StructuralRules`. It decides whether a wor
 participial adjective (the advisory does not flag it).
 
 Dictionary-term part-of-speech selection is no longer performed here; `PartOfSpeechResolver`
-does that using the WordSense tagger. This unit is retained for one reason: a word-level
+does that using the PartOfSpeech tagger. This unit is retained for one reason: a word-level
 tagger tags a gerund that has a direct object (for example "before testing the gauge") as a
 verb, but the advisory must treat that gerund as not flagged. The rule-based heuristic makes
 that distinction, so replacing it with the tagger caused six `-ing` form regression tests to
