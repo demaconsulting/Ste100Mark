@@ -91,8 +91,9 @@ At this threshold the corpus (`PartOfSpeechFalsePositiveCorpusTests`) resolves a
 is the exception: it is answered below the threshold and is inconclusive). Two further legal
 noun usages, "rank" and "cast", are tested separately as low-confidence cases
 (`Evaluate_LowConfidenceNounUsage_VerbOnlyDisallowedEntry_NotFlagged`): the resolver is
-inconclusive for them, but they are still not flagged, because the checker's own noun-signal
-rules decide them.
+inconclusive for them, but they are still not flagged, because their dictionary entries are
+single-sense and self-referential, and the checker does not report such an entry when the
+role is inconclusive.
 
 #### Known limitations
 
