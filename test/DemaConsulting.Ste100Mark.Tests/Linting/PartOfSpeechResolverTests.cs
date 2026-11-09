@@ -185,6 +185,47 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
+    ///     Test that the real tagger reports a confidence at or above the minimum for the noun and verb
+    ///     scenarios, and below it (or a different part of speech) for the inconclusive scenarios.
+    /// </summary>
+    [Fact]
+    public void Tagger_Default_ConfidenceSeparatesResolvedFromInconclusiveScenarios()
+    {
+        // Arrange: the scenario sets, each tagged directly by the real tagger
+        static DemaConsulting.PartOfSpeech.TaggedToken TokenOf(string term, string sentence)
+        {
+            var start = sentence.IndexOf(term, StringComparison.Ordinal);
+            return DemaConsulting.PartOfSpeech.Tagger.Default.Tag(sentence)
+                .SelectMany(s => s.Tokens)
+                .Single(t => t.Start == start && t.Length == term.Length);
+        }
+
+        // Act and Assert: resolved scenarios are a confident noun or verb
+        foreach (var scenario in NounScenarios())
+        {
+            var token = TokenOf((string)scenario[0], (string)scenario[1]);
+            Assert.Equal(Upos.Noun, token.Tag);
+            Assert.True(token.Confidence >= PartOfSpeechResolver.MinimumConfidence, (string)scenario[1]);
+        }
+
+        foreach (var scenario in VerbScenarios())
+        {
+            var token = TokenOf((string)scenario[0], (string)scenario[1]);
+            Assert.Equal(Upos.Verb, token.Tag);
+            Assert.True(token.Confidence >= PartOfSpeechResolver.MinimumConfidence, (string)scenario[1]);
+        }
+
+        // Act and Assert: inconclusive scenarios are not a confident noun or verb
+        foreach (var scenario in InconclusiveScenarios())
+        {
+            var token = TokenOf((string)scenario[0], (string)scenario[1]);
+            var confidentNounOrVerb = token.Tag is Upos.Noun or Upos.Verb
+                && token.Confidence >= PartOfSpeechResolver.MinimumConfidence;
+            Assert.False(confidentNounOrVerb, (string)scenario[1]);
+        }
+    }
+
+    /// <summary>
     ///     Test that a match in the second sentence of a segment is resolved from that sentence only
     ///     and its offset is mapped correctly.
     /// </summary>
@@ -648,5 +689,26 @@ public class PartOfSpeechResolverTests
     {
         // Act / Assert: the process-wide resolver is created once
         Assert.Same(PartOfSpeechResolver.Shared, PartOfSpeechResolver.Shared);
+    }
+
+    /// <summary>
+    ///     Test that repeated and parallel resolution of the same match with the real tagger always
+    ///     gives the same answer.
+    /// </summary>
+    [Fact]
+    public void Resolve_RepeatedAndConcurrentQueries_ReturnSameResult()
+    {
+        // Arrange: a resolver using the real tagger and a match with a confident verb answer
+        var resolver = new PartOfSpeechResolver();
+        const string text = "Wash the probe.";
+
+        // Act: resolve the same match repeatedly and from several threads
+        var first = resolver.Resolve(text, 0, 4);
+        var results = new PartOfSpeech?[32];
+        Parallel.For(0, results.Length, i => results[i] = resolver.Resolve(text, 0, 4));
+
+        // Assert: every answer equals the first
+        Assert.Equal(PartOfSpeech.Verb, first);
+        Assert.All(results, r => Assert.Equal(first, r));
     }
 }

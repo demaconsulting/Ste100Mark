@@ -101,29 +101,17 @@ sections:
         tests:
           - Resolve_MultiWordMatch_ReturnsNull
 
-      - id: Ste100Mark-PartOfSpeechResolver-SentenceReuse
+      - id: Ste100Mark-PartOfSpeechResolver-ConsistentResults
         title: >-
-          The PartOfSpeechResolver class shall classify a given sentence only once, however many
-          dictionary-term matches the sentence contains.
+          The PartOfSpeechResolver class shall give the same resolution for the same segment text
+          and match however many times, and from however many threads, it is asked.
         justification: |
-          Prose commonly holds several dictionary-term matches in one sentence, and classifying
-          a sentence is costly. Reusing the classification keeps lint runs fast on large
-          document sets.
+          Prose commonly holds several dictionary-term matches in one sentence, and lint runs
+          check files in parallel. A resolution that varied between repeated or concurrent
+          queries would make the lint findings non-deterministic.
         tests:
-          - Resolve_SameSentenceTwice_ClassifiesOnce
+          - Resolve_RepeatedAndConcurrentQueries_ReturnSameResult
           - Resolve_ConcurrentSameSentence_ClassifiesOnce
-          - Resolve_EvictionWhileInFlight_ClassifiesInFlightSentenceOnce
-          - Resolve_CapacityExceededByOne_EvictsOnlyOneEntry
-          - Resolve_ConcurrentMisses_CacheStaysWithinCapacityPlusInFlight
-
-      - id: Ste100Mark-PartOfSpeechResolver-SharedInstance
-        title: >-
-          The PartOfSpeechResolver class shall provide a single shared default instance.
-        justification: |
-          Creating the classifier model is costly. One shared default instance lets every lint run
-          in the process pay that cost only once.
-        tests:
-          - Shared_ReturnsSameInstance
 
       - id: Ste100Mark-PartOfSpeechResolver-NullSegmentText
         title: >-
@@ -143,12 +131,3 @@ sections:
         tests:
           - Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException
           - Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException
-
-      - id: Ste100Mark-PartOfSpeechResolver-NullTagger
-        title: >-
-          The PartOfSpeechResolver class shall reject a null tagging function at construction.
-        justification: |
-          A resolver without a tagger cannot resolve anything. Failing fast at
-          construction exposes the programming error immediately instead of at first use.
-        tests:
-          - Constructor_NullTagger_ThrowsArgumentNullException

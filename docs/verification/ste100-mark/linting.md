@@ -257,7 +257,7 @@ hyphenated words. Scenarios that verify the resolver's own mapping logic use a s
 function so the tagger's answer is controlled: the requested occurrence of a repeated word, the
 inclusive confidence boundary at 0.95, the rejection of parts of speech other than noun and
 verb and of low-confidence answers, a match that no token covers, multi-word matches,
-per-sentence caching, argument validation, and the shared instance. These scenarios are tested
+consistent answers for repeated and concurrent queries, and argument validation. These scenarios are tested
 by `Resolve_NounUsage_ReturnsNoun`, `Resolve_VerbUsage_ReturnsVerb`,
 `Resolve_HardCase_ReturnsExpectedRole`, `HardCases_ContainsTwentySixCases`,
 `Resolve_MatchInSecondSentence_UsesThatSentenceOnly`,
@@ -270,14 +270,13 @@ tagger, `Resolve_ContractionAndHyphen_TokenOffsetsMapToMatch`,
 `Resolve_BelowThresholdOrOtherTag_ReturnsNull`,
 `Resolve_NonNounVerbPartOfSpeech_ReturnsNull`, `Resolve_NoTokensCoverMatch_ReturnsNull`,
 `Resolve_MultiWordMatch_ReturnsNull`,
-`Resolve_SameSentenceTwice_ClassifiesOnce`, `Resolve_ConcurrentSameSentence_ClassifiesOnce`,
-`Resolve_EvictionWhileInFlight_ClassifiesInFlightSentenceOnce`,
-`Resolve_CapacityExceededByOne_EvictsOnlyOneEntry`,
-`Resolve_ConcurrentMisses_CacheStaysWithinCapacityPlusInFlight`,
+`Resolve_RepeatedAndConcurrentQueries_ReturnSameResult` (real tagger),
+`Resolve_ConcurrentSameSentence_ClassifiesOnce`,
 `Resolve_NullSegmentText_ThrowsArgumentNullException`,
-`Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException`,
-`Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException`,
-`Constructor_NullTagger_ThrowsArgumentNullException`, and `Shared_ReturnsSameInstance`.
+`Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException`, and
+`Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException`. The unit tests of the
+resolver's internal mechanisms (the sentence cache and its eviction, the shared instance, and the
+constructor's null check) are not linked to a requirement.
 
 **System-level PartOfSpeech resolution (Ste100Mark-System-Lint)**: The published tool assembly is
 run against a configuration with a verb-only entry ("check") and a two-sense entry ("block").

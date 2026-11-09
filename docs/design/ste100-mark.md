@@ -23,6 +23,7 @@ flowchart TD
         SentenceAnalyzer
         StructuralRules
         DictionaryChecker
+        PartOfSpeechResolver
         DiagnosticReporter
         Linter
         RuleCatalog
@@ -47,8 +48,13 @@ flowchart TD
     StructuralRules --> SentenceAnalyzer
     StructuralRules --> Diagnostic
     DictionaryChecker --> Diagnostic
+    DictionaryChecker --> PartOfSpeechResolver
     Linter --> DiagnosticReporter
 ```
+
+The diagram shows the principal units and their main relationships; the `Linting` subsystem
+design lists every unit. `PartOfSpeechResolver` is the unit through which `DictionaryChecker`
+uses the PartOfSpeech OTS tagger to decide whether a matched term is used as a noun or a verb.
 
 `Program` is the entry point. It creates a `Context` from the `Cli` subsystem,
 dispatches to `RuleCatalog.ToJson` when `--list-rules` is passed, dispatches to

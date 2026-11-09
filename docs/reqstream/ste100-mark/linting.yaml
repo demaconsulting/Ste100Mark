@@ -248,11 +248,9 @@ sections:
           - Ste100Mark-PartOfSpeechResolver-SentenceScope
           - Ste100Mark-PartOfSpeechResolver-RepeatedWord
           - Ste100Mark-PartOfSpeechResolver-MinimumConfidence
-          - Ste100Mark-PartOfSpeechResolver-SentenceReuse
-          - Ste100Mark-PartOfSpeechResolver-SharedInstance
+          - Ste100Mark-PartOfSpeechResolver-ConsistentResults
           - Ste100Mark-PartOfSpeechResolver-NullSegmentText
           - Ste100Mark-PartOfSpeechResolver-MatchOutsideText
-          - Ste100Mark-PartOfSpeechResolver-NullTagger
           - Ste100Mark-OTS-PartOfSpeech
         tests:
           - Evaluate_InjectedResolverConfidentVerb_ReportsOnlyVerbSense
