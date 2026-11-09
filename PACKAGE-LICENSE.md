@@ -2,9 +2,10 @@ SPDX-License-Identifier: MIT AND CC-BY-4.0 AND CC-BY-3.0-US
 
 # License of the DemaConsulting.Ste100Mark Package
 
-The NuGet package `DemaConsulting.Ste100Mark` contains the code of the tool and the assemblies it depends on. The code of
-the tool is licensed under the MIT License. The tool depends on the package `DemaConsulting.PartOfSpeech`, whose
-assembly embeds language data from third parties that is licensed under the terms below. The first line of this file is
+The NuGet package `DemaConsulting.Ste100Mark` contains the code of the tool and bundles the assemblies it depends on.
+The code of the tool is licensed under the MIT License. The tool depends on the package `DemaConsulting.PartOfSpeech`,
+whose assembly is bundled in this package and embeds language data from third parties that is licensed under the terms
+below. The first line of this file is
 the SPDX license expression that covers the whole package; it is a hint for license scanners, and this file is the
 license. nuget.org accepts only license expressions that the Open Source Initiative or the Free Software Foundation
 approve, and `CC-BY-3.0-US` is neither, so the package names this file instead of an expression.

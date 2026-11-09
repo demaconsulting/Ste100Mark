@@ -85,11 +85,14 @@ violation or reports a false one, whereas an inconclusive answer only makes the 
 the term as ambiguous. `MinimumConfidence_IsPackageStrictThreshold` guards the value, and
 `Resolve_ConfidenceThreshold_BoundaryIsInclusive` verifies the boundary behavior.
 
-At this threshold the 100-sentence corpus (`PartOfSpeechFalsePositiveCorpusTests`) resolves 68
-of its 70 noun rows and all 30 verb rows, and 25 of the 26 hard cases
-(`PartOfSpeechHardCasesTests`; the imperative "Mount the bracket on the frame." is answered
-below the threshold). The two remaining noun rows ("rank" and "cast") are inconclusive but are
-still not flagged, because the checker's own noun-signal rules decide them.
+At this threshold the corpus (`PartOfSpeechFalsePositiveCorpusTests`) resolves all 68 rows of
+`LegalNounUsageCases` as nouns and all 30 rows of `LegalVerbUsageCases` as verbs, and 25 of the
+26 hard cases (`PartOfSpeechHardCasesTests`; the imperative "Mount the bracket on the frame."
+is the exception: it is answered below the threshold and is inconclusive). Two further legal
+noun usages, "rank" and "cast", are tested separately as low-confidence cases
+(`Evaluate_LowConfidenceNounUsage_VerbOnlyDisallowedEntry_NotFlagged`): the resolver is
+inconclusive for them, but they are still not flagged, because the checker's own noun-signal
+rules decide them.
 
 #### Known limitations
 

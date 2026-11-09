@@ -7,7 +7,7 @@ package Ste100Mark {
         comment reqRef /* Requirements: docs/reqstream/ots/yamldotnet.yaml */
     }
 
-    part def PartOfSpeechTagger {
+    part def PartOfSpeech {
         doc /* Statistical part-of-speech tagger (DemaConsulting.PartOfSpeech) used to resolve the part of speech of dictionary term matches. */
 
         comment designRef /* Design: docs/design/ots/part-of-speech.md */

@@ -373,8 +373,9 @@ guidelines on reporting bugs, suggesting features, and submitting pull requests.
 
 Copyright (c) DEMA Consulting. The code is licensed under the MIT License. See [LICENSE][link-license] for details.
 
-The NuGet package also contains the `DemaConsulting.PartOfSpeech` library, whose assembly embeds language data
-adapted from Open English WordNet (CC BY 4.0) and the Manually Annotated Sub-Corpus (CC BY 3.0 US). The license of
+The NuGet package also bundles the `DemaConsulting.PartOfSpeech` library (a dependency of the tool), whose assembly
+embeds language data adapted from Open English WordNet (CC BY 4.0) and the Manually Annotated Sub-Corpus (CC BY 3.0
+US). The license of
 the package is [PACKAGE-LICENSE.md][link-package-license], and the required attribution is in
 [THIRD-PARTY-NOTICES.md][link-third-party-notices].
 

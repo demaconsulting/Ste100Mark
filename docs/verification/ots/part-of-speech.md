@@ -19,10 +19,12 @@ the Linting subsystem's passing tests. Each scenario below names a test that run
 mapping logic (for example `Resolve_NoTokensCoverMatch_ReturnsNull`, which scripts a tagger that
 returns no tokens) verify the resolver rather than the library, so they are not evidence for this
 OTS item. A passing test run for all scenarios constitutes evidence that the tagger returns the
-expected part of speech at or above the 0.95 minimum confidence for the legal-usage corpus (68 of
-the 70 noun rows and all 30 verb rows; the other two noun rows are inconclusive but still not
-flagged) and the 26 hard cases, and that low-confidence or other-tag answers are reported as
-inconclusive.
+expected part of speech at or above the 0.95 minimum confidence for the legal-usage corpus (all
+68 rows of `LegalNounUsageCases` and all 30 rows of `LegalVerbUsageCases`) and for 25 of the 26
+hard cases (the exception is "Mount", which is inconclusive), and that low-confidence or
+other-tag answers are reported as inconclusive. Two further legal noun usages, "rank" and
+"cast", are tested separately as low-confidence cases: the tagger answers them below the
+minimum confidence, so the resolver is inconclusive, and they are still not flagged.
 
 ### Test Scenarios
 
@@ -64,12 +66,32 @@ that is therefore inconclusive.
 
 **Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
 
+#### Tagger_Default_ConfidenceSeparatesResolvedFromInconclusiveScenarios
+
+**Scenario**: The real tagger tags the noun, verb, and inconclusive scenario sets directly,
+without the resolver.
+
+**Expected**: Noun and verb scenarios are tagged as a noun or verb at or above the minimum
+confidence; inconclusive scenarios are not a confident noun or verb.
+
+**Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
+
 #### Evaluate_LegalNounUsage_VerbOnlyDisallowedEntry_NotFlagged
 
 **Scenario**: The corpus of legal noun usages of verb-only disallowed entries is linted using the
 real tagger.
 
 **Expected**: The tagger classifies each usage as a noun, so no usage is flagged.
+
+**Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
+
+#### Evaluate_LowConfidenceNounUsage_VerbOnlyDisallowedEntry_NotFlagged
+
+**Scenario**: Two legal noun usages that the real tagger answers below the minimum confidence
+("rank" in "Note the technician's rank on the form." and "cast" in "Examine the cast for
+cracks.") are linted against a verb-only disallowed entry.
+
+**Expected**: The resolver is inconclusive (null) and the usage is still not flagged.
 
 **Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
 
