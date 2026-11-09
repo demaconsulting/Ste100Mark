@@ -421,14 +421,14 @@ public class IntegrationTests
     /// <summary>
     ///     Test that dictionary part-of-speech resolution through the real linter separates a
     ///     disallowed verb usage from a legal noun usage of the same word, and reports every sense
-    ///     as ambiguous when the tagger cannot decide.
+    ///     as ambiguous when the tagger is not confident.
     /// </summary>
     [Fact]
-    public void Ste100Mark_LintDictionaryTermWithWordSenseResolution_ReportsOnlyDisallowedOrAmbiguousUsage()
+    public void Ste100Mark_LintDictionaryTermWithPartOfSpeechResolution_ReportsOnlyDisallowedOrAmbiguousUsage()
     {
-        // Arrange: a configuration with a verb-only entry ("check") and a two-sense entry for a
-        // made-up word the tagger cannot know ("zzqxorb"), and a document with a noun usage, a
-        // verb usage, and an unresolvable usage on separate lines
+        // Arrange: a configuration with a verb-only entry ("check") and a two-sense entry ("block"),
+        // and a document with a noun usage, a verb usage, and a usage the tagger answers with low
+        // confidence ("Block 0" is tagged as a proper noun) on separate lines
         var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
         try
         {
@@ -440,7 +440,7 @@ public class IntegrationTests
                 "    check:\n" +
                 "      - pos: verb\n" +
                 "        alternatives: [inspect]\n" +
-                "    zzqxorb:\n" +
+                "    block:\n" +
                 "      - pos: noun\n" +
                 "        alternatives: [valve]\n" +
                 "      - pos: verb\n" +
@@ -450,19 +450,19 @@ public class IntegrationTests
                 "# Title\n\n" +
                 "The check passed.\n\n" +
                 "Check the valve before use.\n\n" +
-                "The zzqxorb passed.\n");
+                "Block 0 failed the self-test.\n");
 
             // Act: run the linter against the file
             var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "doc.md");
 
             // Assert: the noun usage (line 3) is not reported, the verb usage (line 5) is reported
-            // with its verb alternative, and the unresolvable usage (line 7) is reported as ambiguous
+            // with its verb alternative, and the low-confidence usage (line 7) is reported as ambiguous
             Assert.NotEqual(0, exitCode);
             Assert.DoesNotContain("doc.md:3", output);
             Assert.Contains("doc.md:5", output);
             Assert.Contains("use 'inspect' instead", output);
             Assert.Contains("doc.md:7", output);
-            Assert.Contains("Ambiguous part of speech for 'zzqxorb'", output);
+            Assert.Contains("Ambiguous part of speech for 'Block'", output);
         }
         finally
         {

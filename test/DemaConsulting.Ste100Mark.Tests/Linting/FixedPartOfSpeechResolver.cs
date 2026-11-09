@@ -22,6 +22,8 @@ using DemaConsulting.Ste100Mark.Linting;
 
 namespace DemaConsulting.Ste100Mark.Tests.Linting;
 
+using PartOfSpeech = DemaConsulting.Ste100Mark.Linting.PartOfSpeech;
+
 /// <summary>
 ///     Test double for <see cref="IPartOfSpeechResolver"/> that always returns one fixed answer.
 /// </summary>

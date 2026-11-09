@@ -20,24 +20,32 @@
 
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using DemaConsulting.WordSense;
-using DemaConsulting.WordSense.Basic;
-using WsPos = DemaConsulting.WordSense.PartOfSpeech;
+using DemaConsulting.PartOfSpeech;
 
 namespace DemaConsulting.Ste100Mark.Linting;
 
 /// <summary>
-///     <see cref="IPartOfSpeechResolver"/> backed by the <c>DemaConsulting.WordSense.Basic</c> context-aware
-///     part-of-speech tagger.
+///     One token of a tagged sentence: its offsets within the sentence text, tag and confidence.
+/// </summary>
+/// <param name="Start">The zero-based start offset of the token within the sentence text.</param>
+/// <param name="Length">The length of the token.</param>
+/// <param name="Tag">The universal part-of-speech tag chosen for the token.</param>
+/// <param name="Confidence">The confidence (0 to 1) of the chosen tag.</param>
+internal readonly record struct TaggedSpan(int Start, int Length, Upos Tag, double Confidence);
+
+/// <summary>
+///     <see cref="IPartOfSpeechResolver"/> backed by the <c>DemaConsulting.PartOfSpeech</c> context-aware
+///     part-of-speech tagger (<see cref="Tagger.Default"/>).
 /// </summary>
 /// <remarks>
-///     The segment is split into sentences; the sentence containing the occurrence is tokenized
-///     with <c>[\w'-]+|[^\w\s]</c> and classified in a single <c>ClassifyAsync</c> call. The token that
-///     covers the occurrence is mapped to <see cref="PartOfSpeech.Noun"/> or
-///     <see cref="PartOfSpeech.Verb"/> only when the tagger chose a sense whose confidence is at least
-///     <see cref="MinimumConfidence"/>; every other outcome (unknown word, low confidence, any other
-///     part of speech, an occurrence spanning several tokens) is inconclusive (<see langword="null"/>).
-///     The model is thread-safe and fully in-memory (no download), and per-sentence results are cached.
+///     The segment is split into sentences; the sentence containing the occurrence is tokenized and tagged
+///     by the package in a single call. The token that covers the occurrence is mapped to
+///     <see cref="PartOfSpeech.Noun"/> or <see cref="PartOfSpeech.Verb"/> only when the tagger's
+///     confidence is at least <see cref="MinimumConfidence"/>; every other outcome (low confidence, any
+///     other part of speech, an occurrence spanning several tokens) is inconclusive
+///     (<see langword="null"/>). The package tags words that are not in its lexicon as nouns, so unknown
+///     words cannot be detected. The tagger is thread-safe and fully in-memory (no download), and
+///     per-sentence results are cached.
 /// </remarks>
 internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 {
@@ -45,20 +53,17 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     ///     Minimum tagger confidence (0 to 1) for a noun or verb answer to be accepted.
     /// </summary>
     /// <remarks>
-    ///     Chosen empirically from the 100-sentence false-positive corpus and 26 additional hard cases
-    ///     (imperatives, noun-noun compounds, modals; see the design document): all 126 sentences were
-    ///     classified correctly, the lowest confidence of a correct noun or verb answer was 0.4926, and
-    ///     no incorrect noun or verb answer was observed in that set at any confidence. The value is set
-    ///     just below that lowest correct confidence, so that no correct answer in the set is lost while
-    ///     near-random answers are still rejected.
+    ///     This is the strict threshold documented by the package: on its open test split it answers
+    ///     83.7% of decisions with 2.4 harmful errors per 1000 answered decisions. In this project's
+    ///     110-sample hand check no error was found at a confidence of 0.95 or higher, whereas
+    ///     low-confidence VERB answers on noun-noun compounds were wrong about half the time. A strict
+    ///     value is preferred because a wrong answer hides a real violation or reports a false one, while
+    ///     an inconclusive answer only makes the checker report the term as ambiguous.
     /// </remarks>
-    internal const double MinimumConfidence = 0.45;
+    internal const double MinimumConfidence = 0.95;
 
     /// <summary>Maximum number of cached sentence classifications before completed entries are evicted.</summary>
     private const int MaxCacheEntries = 4096;
-
-    /// <summary>Regex timeout applied to every pattern used by this class.</summary>
-    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
 
     /// <summary>
     ///     Sentence boundary, shared with <see cref="SentenceAnalyzer"/> so both agree on where a sentence
@@ -66,16 +71,12 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// </summary>
     private static readonly Regex SentenceBoundaryRegex = SentenceAnalyzer.SentenceSplitRegex;
 
-    /// <summary>Tokenizer: a word (letters, digits, apostrophes, hyphens) or one punctuation character.</summary>
-    private static readonly Regex TokenRegex =
-        new(@"[\w'-]+|[^\w\s]", RegexOptions.Compiled, RegexTimeout);
-
     /// <summary>The lazily created process-wide default resolver.</summary>
     private static readonly Lazy<PartOfSpeechResolver> SharedInstance =
         new(() => new PartOfSpeechResolver(), LazyThreadSafetyMode.ExecutionAndPublication);
 
-    /// <summary>The tagger model.</summary>
-    private readonly IWordSenseModel _model;
+    /// <summary>The tagging function: sentence text to tagged tokens (offsets relative to that text).</summary>
+    private readonly Func<string, IReadOnlyList<TaggedSpan>> _tag;
 
     /// <summary>Cache entry count at which completed entries are evicted.</summary>
     private readonly int _maxCacheEntries;
@@ -91,33 +92,34 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class using the
-    ///     <see cref="BasicWordSenseModel"/>.
+    ///     <see cref="Tagger.Default"/>.
     /// </summary>
     public PartOfSpeechResolver()
-        : this(new BasicWordSenseModel())
+        : this(TagWithDefaultTagger)
     {
     }
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class using the given model.
+    ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class using the given
+    ///     tagging function.
     /// </summary>
-    /// <param name="model">The tagger model; its lifetime is the lifetime of this resolver.</param>
-    internal PartOfSpeechResolver(IWordSenseModel model)
-        : this(model, MaxCacheEntries)
+    /// <param name="tag">The tagging function; it must be thread-safe.</param>
+    internal PartOfSpeechResolver(Func<string, IReadOnlyList<TaggedSpan>> tag)
+        : this(tag, MaxCacheEntries)
     {
     }
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class using the given model
-    ///     and cache capacity.
+    ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class using the given
+    ///     tagging function and cache capacity.
     /// </summary>
-    /// <param name="model">The tagger model; its lifetime is the lifetime of this resolver.</param>
+    /// <param name="tag">The tagging function; it must be thread-safe.</param>
     /// <param name="maxCacheEntries">Entry count at which completed cache entries are evicted.</param>
-    internal PartOfSpeechResolver(IWordSenseModel model, int maxCacheEntries)
+    internal PartOfSpeechResolver(Func<string, IReadOnlyList<TaggedSpan>> tag, int maxCacheEntries)
     {
-        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(tag);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxCacheEntries);
-        _model = model;
+        _tag = tag;
         _maxCacheEntries = maxCacheEntries;
     }
 
@@ -272,49 +274,57 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     }
 
     /// <summary>
-    ///     Tokenizes and classifies one sentence.
+    ///     Tags one sentence and maps every token to its resolved role.
     /// </summary>
     private SentenceTags Classify(string sentence)
     {
-        var matches = TokenRegex.Matches(sentence);
-        var spans = new (int Start, int Length)[matches.Count];
-        var words = new string[matches.Count];
-        for (var i = 0; i < matches.Count; i++)
+        var tokens = _tag(sentence);
+        var spans = new (int Start, int Length)[tokens.Count];
+        var roles = new PartOfSpeech?[tokens.Count];
+        for (var i = 0; i < tokens.Count; i++)
         {
-            spans[i] = (matches[i].Index, matches[i].Length);
-            words[i] = matches[i].Value;
-        }
-
-        var roles = new PartOfSpeech?[matches.Count];
-
-        // The Basic model completes synchronously, so waiting here cannot deadlock or block on I/O.
-        var results = _model.ClassifyAsync(words).GetAwaiter().GetResult();
-        if (results.Length == words.Length)
-        {
-            for (var i = 0; i < results.Length; i++)
-            {
-                roles[i] = MapRole(results[i]);
-            }
+            spans[i] = (tokens[i].Start, tokens[i].Length);
+            roles[i] = MapRole(tokens[i]);
         }
 
         return new SentenceTags(spans, roles);
     }
 
     /// <summary>
-    ///     Maps one tagger result to a repository part of speech, or <see langword="null"/> when it is not
+    ///     Tags a sentence with the shared package tagger, flattening every sentence it returns.
+    /// </summary>
+    /// <remarks>
+    ///     Token offsets index the string passed in, so they are relative to the sentence text.
+    /// </remarks>
+    private static List<TaggedSpan> TagWithDefaultTagger(string sentence)
+    {
+        var result = new List<TaggedSpan>();
+        foreach (var tagged in Tagger.Default.Tag(sentence))
+        {
+            foreach (var token in tagged.Tokens)
+            {
+                result.Add(new TaggedSpan(token.Start, token.Length, token.Tag, token.Confidence));
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Maps one tagged token to a repository part of speech, or <see langword="null"/> when it is not
     ///     a confident noun or verb.
     /// </summary>
-    private static PartOfSpeech? MapRole(DemaConsulting.WordSense.WordSense result)
+    private static PartOfSpeech? MapRole(TaggedSpan token)
     {
-        if (result.Details is null || result.Confidence < MinimumConfidence)
+        if (token.Confidence < MinimumConfidence)
         {
             return null;
         }
 
-        return result.Details.PartOfSpeech switch
+        return token.Tag switch
         {
-            WsPos.Noun => PartOfSpeech.Noun,
-            WsPos.Verb => PartOfSpeech.Verb,
+            Upos.Noun => PartOfSpeech.Noun,
+            Upos.Verb => PartOfSpeech.Verb,
             _ => null
         };
     }

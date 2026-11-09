@@ -37,5 +37,5 @@ includes:
   - docs/reqstream/ots/fileassert.yaml
   - docs/reqstream/ots/sysml2tools.yaml
   - docs/reqstream/ots/yamldotnet.yaml
-  - docs/reqstream/ots/wordsense.yaml
+  - docs/reqstream/ots/part-of-speech.yaml
   - docs/reqstream/ots/file-system-globbing.yaml

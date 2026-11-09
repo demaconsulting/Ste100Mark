@@ -16,7 +16,7 @@ self-validation, and continuous-compliance documentation.
 The diagram below shows how one `ste100mark` run reads Markdown files and configuration, lints the prose,
 and reports the findings.
 
-![Ste100Mark architecture: the ste100mark program runs the Cli, which hands Markdown files and an optional .ste100mark.yaml to the Linting subsystem (configuration, prose extraction, rules, and reporting) to produce text or JSON findings and an exit code, with SelfTest and Utilities as support, built on YamlDotNet, WordSense, and FileSystemGlobbing][architecture]
+![Ste100Mark architecture: the ste100mark program runs the Cli, which hands Markdown files and an optional .ste100mark.yaml to the Linting subsystem (configuration, prose extraction, rules, and reporting) to produce text or JSON findings and an exit code, with SelfTest and Utilities as support, built on YamlDotNet, PartOfSpeech, and FileSystemGlobbing][architecture]
 
 ## Features
 
@@ -231,16 +231,18 @@ A term with exactly one sense (any `pos` value) is reported using that sense unl
 tagger confidently resolves a role incompatible with the entry's part of speech (for example a
 verb-only entry used as a noun); it is reported when the role is compatible or the result is
 inconclusive. When a term has more than one sense, Ste100Mark uses the
-`DemaConsulting.WordSense` part-of-speech tagger on
+`DemaConsulting.PartOfSpeech` part-of-speech tagger on
 the sentence that contains the term to decide which sense applies. When the tagger can
-confidently tell noun from verb usage apart (confidence of at least 0.45), only the matching
+confidently tell noun from verb usage apart (confidence of at least 0.95), only the matching
 sense is reported, its alternatives are joined with natural "or"/Oxford-comma phrasing, and
 the diagnostic message notes the grammatical role, for example: `Avoid 'impact'; use
 'effect' instead (used as a noun).` When the tagger cannot decide, every sense is reported,
 grouped per part of speech and clearly labeled as ambiguous, for example: `Ambiguous part of
 speech for 'impact' — possible corrections: as a noun, use 'effect'; as a verb, use
 'affect'.` The tagger is statistical and can be wrong, for example for a sentence-initial
-imperative that reads like a noun phrase.
+imperative that reads like a noun phrase. The tagger is bundled with the tool and runs fully
+offline. It is also not told which words are unknown, so a word it does not recognize is
+treated as a noun.
 
 **Why the real ASD-STE100 dictionary is not included:** The official ASD-STE100 Part 2
 Dictionary is commercially-licensed, copyrighted content owned by ASD (Aerospace, Security
@@ -369,7 +371,12 @@ guidelines on reporting bugs, suggesting features, and submitting pull requests.
 
 ## License
 
-Copyright (c) DEMA Consulting. Licensed under the MIT License. See [LICENSE][link-license] for details.
+Copyright (c) DEMA Consulting. The code is licensed under the MIT License. See [LICENSE][link-license] for details.
+
+The NuGet package also contains the `DemaConsulting.PartOfSpeech` library, whose assembly embeds language data
+adapted from Open English WordNet (CC BY 4.0) and the Manually Annotated Sub-Corpus (CC BY 3.0 US). The license of
+the package is [PACKAGE-LICENSE.md][link-package-license], and the required attribution is in
+[THIRD-PARTY-NOTICES.md][link-third-party-notices].
 
 By contributing to this project, you agree that your contributions will be licensed under the MIT License.
 
@@ -389,6 +396,8 @@ By contributing to this project, you agree that your contributions will be licen
 [link-stars]: https://github.com/demaconsulting/Ste100Mark/stargazers
 [link-contributors]: https://github.com/demaconsulting/Ste100Mark/graphs/contributors
 [link-license]: https://github.com/demaconsulting/Ste100Mark/blob/main/LICENSE
+[link-package-license]: https://github.com/demaconsulting/Ste100Mark/blob/main/PACKAGE-LICENSE.md
+[link-third-party-notices]: https://github.com/demaconsulting/Ste100Mark/blob/main/THIRD-PARTY-NOTICES.md
 [link-build]: https://github.com/demaconsulting/Ste100Mark/actions/workflows/build_on_push.yaml
 [link-quality]: https://sonarcloud.io/dashboard?id=demaconsulting_Ste100Mark
 [link-security]: https://sonarcloud.io/dashboard?id=demaconsulting_Ste100Mark

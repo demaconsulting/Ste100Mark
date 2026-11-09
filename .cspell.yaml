@@ -14,6 +14,17 @@ language: en
 
 # Project-specific technical terms and tool names
 words:
+  - clitics
+  - Moby
+  - Treebank
+  - Christiane
+  - Fellbaum
+  - Rebecca
+  - Passonneau
+  - OANC
+  - LREC
+  - Crae
+  - Tatoeba
   - backticked
   - Blockquotes
   - buildmark
@@ -67,7 +78,6 @@ words:
   - venv
   - versionmark
   - Weasyprint
-  - wordsense
   - yamldotnet
   - yamlfix
 

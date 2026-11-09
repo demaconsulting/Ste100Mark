@@ -271,12 +271,12 @@ reviews:
       - "docs/design/ots/weasyprint.md"
       - "docs/verification/ots/weasyprint.md"
 
-  - id: OTS-WordSense
-    title: Review of WordSense OTS verification evidence
+  - id: OTS-PartOfSpeech
+    title: Review of PartOfSpeech OTS verification evidence
     paths:
-      - "docs/reqstream/ots/wordsense.yaml"
-      - "docs/design/ots/wordsense.md"
-      - "docs/verification/ots/wordsense.md"
+      - "docs/reqstream/ots/part-of-speech.yaml"
+      - "docs/design/ots/part-of-speech.md"
+      - "docs/verification/ots/part-of-speech.md"
 
   - id: OTS-xUnit
     title: Review of xUnit OTS verification evidence

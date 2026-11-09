@@ -1,6 +1,6 @@
 package Ste100Mark {
     part def PartOfSpeechResolver {
-        doc /* Resolves noun/verb usage of a dictionary term match by classifying its sentence with the WordSense tagger. */
+        doc /* Resolves noun/verb usage of a dictionary term match by classifying its sentence with the PartOfSpeech tagger. */
 
         comment sourceRef /* Source: src/DemaConsulting.Ste100Mark/Linting/PartOfSpeechResolver.cs (and IPartOfSpeechResolver.cs) */
         comment testRef /* Test: test/DemaConsulting.Ste100Mark.Tests/Linting/PartOfSpeechResolverTests.cs */

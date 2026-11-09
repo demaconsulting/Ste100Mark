@@ -15,7 +15,7 @@
     <Authors>DEMA Consulting</Authors>
     <Company>DEMA Consulting</Company>
     <Description>ASD-STE100 Issue 9 Markdown prose linter</Description>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseFile>PACKAGE-LICENSE.md</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/demaconsulting/Ste100Mark</PackageProjectUrl>
     <RepositoryUrl>https://github.com/demaconsulting/Ste100Mark</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -49,8 +49,7 @@
   <!-- Runtime Dependencies -->
   <ItemGroup>
     <PackageReference Include="DemaConsulting.TestResults" Version="1.10.0" />
-    <PackageReference Include="DemaConsulting.WordSense" Version="0.1.0-beta.1" />
-    <PackageReference Include="DemaConsulting.WordSense.Basic" Version="0.1.0-beta.1" />
+    <PackageReference Include="DemaConsulting.PartOfSpeech" Version="0.1.0-beta.1" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.13" />
   </ItemGroup>
@@ -91,6 +90,8 @@
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     <None Include="..\..\Icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\PACKAGE-LICENSE.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

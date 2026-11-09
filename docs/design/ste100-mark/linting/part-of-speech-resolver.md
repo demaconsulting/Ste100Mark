@@ -7,8 +7,9 @@
 `PartOfSpeechResolver` decides whether a matched dictionary term is used as a noun or a verb at
 a specific point in prose, so that `DictionaryChecker` can select the correct
 part-of-speech-tagged sense of a multi-sense `DictionaryEntry`. It implements the internal
-`IPartOfSpeechResolver` interface and delegates the tagging to the `DemaConsulting.WordSense`
-OTS library (the `BasicWordSenseModel`). It replaces an earlier regex-based heuristic.
+`IPartOfSpeechResolver` interface and delegates the tagging to the `DemaConsulting.PartOfSpeech`
+OTS library (`Tagger.Default`). It replaces an earlier tagger library and, before that, a
+regex-based heuristic.
 
 The resolver only ever returns `Noun`, `Verb`, or `null` (inconclusive). Entries with only
 adjective or adverb senses therefore resolve as ambiguous, which is the conservative behavior
@@ -20,7 +21,7 @@ for those cases.
 segmentText, int matchIndex, int matchLength)`. `DictionaryChecker` depends on the interface so
 tests can inject a scripted or fixed resolver.
 
-**MinimumConfidence**: `internal const double` (0.45). The minimum tagger confidence for a noun
+**MinimumConfidence**: `internal const double` (0.95). The minimum tagger confidence for a noun
 or verb answer to be accepted. See *Threshold selection* below.
 
 **SentenceBoundaryRegex**: shared with `SentenceAnalyzer` (`SentenceSplitRegex`, a single source
@@ -29,14 +30,17 @@ quote, opening parenthesis, backtick, asterisk, underscore, or the end of text. 
 continuation (for example `e.g. test the valve`) therefore stays in one sentence. A segment is
 split into sentences so a match is classified within its own sentence only.
 
-**TokenRegex**: `[\w'-]+|[^\w\s]` - tokenizes a sentence into words (letters, digits,
-apostrophes, hyphens) and single punctuation characters.
+**TaggedSpan**: `internal readonly record struct` of a token's `Start`, `Length`, `Upos` tag, and
+`Confidence`. Offsets are relative to the sentence text that was tagged.
 
-**Model**: the `IWordSenseModel` used for tagging. The public constructor creates a
-`BasicWordSenseModel`; an internal constructor accepts any model for tests. The model is
-in-memory and thread-safe and needs no download.
+**Tagging function**: a `Func<string, IReadOnlyList<TaggedSpan>>` that tags one sentence. The
+public constructor uses `Tagger.Default` (the package tokenizes the sentence itself, splits
+contractions and clitics, keeps hyphenated words whole, and the resolver flattens the tokens of
+every sentence the package returns); an internal constructor accepts any function for tests. The
+tagger is in-memory and thread-safe and needs no download.
 
-**Shared**: lazily created process-wide instance, so the model is built once per process.
+**Shared**: lazily created process-wide instance, so the tagger is used through one resolver and
+one cache per process.
 
 **Cache**: a `ConcurrentDictionary` of per-sentence `Lazy` token spans and roles (thread-safe
 `ExecutionAndPublication`), keyed by sentence text. Hits are served without a lock. Miss management (re-check,
@@ -61,44 +65,45 @@ so a later call retries.
 - *Returns*: `PartOfSpeech?` - `Noun` or `Verb` when the tagger confidently chose that part of
   speech for the token that covers the match; `null` otherwise.
 - *Preconditions*: `segmentText` is not null; the match lies within the segment text.
-- *Postconditions*: The sentence that holds the match is tokenized and classified with a single
-  `ClassifyAsync` call. A `WordSense` result with `Details` equal to null (an unknown word) is
-  inconclusive. A result whose confidence is below `MinimumConfidence` is inconclusive. A
-  `Noun` or `Verb` part of speech maps to the repository's `PartOfSpeech`; every other part of
-  speech (adjective, adverb, determiner, and so on) is inconclusive. A match that spans more
-  than one token (a multi-word term) is inconclusive. A model that returns a wrong number of
-  results is inconclusive.
+- *Postconditions*: The sentence that holds the match is tagged with a single `Tagger.Tag` call.
+  A token whose confidence is below `MinimumConfidence` is inconclusive. A `Noun` or `Verb` tag
+  maps to the repository's `PartOfSpeech`; every other tag (adjective, adverb, determiner,
+  proper noun, and so on) is inconclusive. A match that spans more than one token (a multi-word
+  term) is inconclusive, as is a match that no token covers. The package does not report unknown
+  words: a word that is not in its lexicon is tagged as a noun, so it cannot be detected.
 
-**GetTags**: Tokenizes one sentence, classifies it (synchronously waiting on the completed
-task of the Basic model), maps each result to a role, and caches the outcome.
+**GetTags**: Tags one sentence, maps each token to a role, and caches the outcome.
 
 #### Threshold selection
 
-`MinimumConfidence` was chosen empirically. A temporary harness dumped the tagger's confidence
-for the target word of every sentence of the 100-sentence false-positive corpus
-(`PartOfSpeechFalsePositiveCorpusTests`) and of 26 additional hard cases
-(`PartOfSpeechHardCasesTests`: imperatives, noun-noun compounds, and modals). All 126 sentences
-were classified correctly. The lowest confidence of a correct noun or verb answer was 0.4926
-(`process` as a verb), followed by 0.4990 (`brace` as a noun). No incorrect noun or verb answer
-was observed in that set at any confidence, so within the set the threshold does not change
-accuracy. The value 0.45 is set just below the lowest correct confidence, so that no correct
-answer in the set is lost while near-random answers are still rejected.
-`MinimumConfidence_IsBelowLowestObservedCorrectConfidence` guards that relationship.
+`MinimumConfidence` is the strict threshold documented by the `DemaConsulting.PartOfSpeech`
+package: on the package's open test split it answers 83.7% of decisions with 2.4 harmful errors
+per 1000 answered decisions. In the project's own hand check of 110 samples, no error was found
+at a confidence of 0.95 or higher, while low-confidence VERB answers on noun-noun compounds were
+wrong about half the time. A strict value is preferred because a wrong answer either hides a real
+violation or reports a false one, whereas an inconclusive answer only makes the checker report
+the term as ambiguous. `MinimumConfidence_IsPackageStrictThreshold` guards the value, and
+`Resolve_ConfidenceThreshold_BoundaryIsInclusive` verifies the boundary behavior.
 
-The 26 hard cases were authored for this change, because the case list from the original
-spike was not recoverable.
+At this threshold the 100-sentence corpus (`PartOfSpeechFalsePositiveCorpusTests`) resolves 68
+of its 70 noun rows and all 30 verb rows, and 25 of the 26 hard cases
+(`PartOfSpeechHardCasesTests`; the imperative "Mount the bracket on the frame." is answered
+below the threshold). The two remaining noun rows ("rank" and "cast") are inconclusive but are
+still not flagged, because the checker's own noun-signal rules decide them.
 
 #### Known limitations
 
-The tagger is a statistical model and is wrong for some inputs. Wrong answers observed outside
-the 126-sentence set are not removable by any threshold that keeps all 126 correct:
+The tagger is a statistical model and is wrong or unsure for some inputs:
 
-- A sentence-initial imperative that looks like a noun phrase ("Test results daily") is read as
-  a noun (confidence 0.98).
-- A verb followed by a number ("Blocks 1 to 5 use 0.12 ohms", "set 0.12 ohms") is read as a
-  noun (0.73 and 0.4987). "set 5 V" is a verb at 0.40 and is dropped by the threshold.
-- Some noun-modifier uses are read as adjectives (for example "signal" in "signal cable") and
-  are therefore inconclusive.
+- Short verbless fragments (a table cell such as "Wash pump", a heading such as "Wash Tower", or
+  a bare label such as "Function") and some imperatives are often answered below the threshold,
+  so the term is reported as ambiguous or, for a single-sense entry, reported.
+- A noun-noun compound can be tagged as a verb at low confidence; such answers are rejected by
+  the threshold.
+- Words that are not in the lexicon are tagged as nouns, so a noun-only restriction on an
+  unknown word cannot be told from a known noun.
+- A sentence-initial imperative that looks like a noun phrase ("Test results daily") can still be
+  read as a noun with high confidence.
 
 When the answer is wrong in the noun direction, a verb use of a verb-only entry is not
 reported; when it is inconclusive, every sense is reported as ambiguous. The mode (Procedure or
@@ -108,12 +113,13 @@ Descriptive) no longer influences the part of speech.
 
 `Resolve` throws `ArgumentNullException` for a null `segmentText` and
 `ArgumentOutOfRangeException` for a match outside the text. The internal constructor throws
-`ArgumentNullException` for a null model. Regex timeouts are bounded to one second per pattern
-match. Failures of the model propagate to the caller.
+`ArgumentNullException` for a null tagging function. Failures of the tagger propagate to the
+caller. The only regular expression is the shared sentence-boundary pattern, which has its own
+timeout.
 
 #### Dependencies
 
-- **WordSense** (OTS) - `BasicWordSenseModel` and `ClassifyAsync`.
+- **PartOfSpeech** (OTS) - `Tagger.Default`, `Tagger.Tag`, and `TaggedToken`.
 - **.NET BCL** - `Regex` and concurrent collections.
 
 #### Callers

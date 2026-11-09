@@ -44,7 +44,7 @@ combinations. Temporary files and directories are created and cleaned up within 
 - Dictionary-term lint results depend on resolved part of speech: a legal noun usage of a
   verb-only term is not reported, a disallowed usage is reported with its alternative, and an
   unresolvable usage is reported as ambiguous, as asserted by
-  `Ste100Mark_LintDictionaryTermWithWordSenseResolution_ReportsOnlyDisallowedOrAmbiguousUsage`.
+  `Ste100Mark_LintDictionaryTermWithPartOfSpeechResolution_ReportsOnlyDisallowedOrAmbiguousUsage`.
 
 ## Test Scenarios
 
@@ -116,8 +116,8 @@ non-zero code and the combined output includes the missing file name, demonstrat
 missing-configuration failure path. This scenario is tested by
 `Ste100Mark_LintWithMissingConfigFile_ReturnsNonZeroWithErrorMessage`.
 
-**Ste100Mark_LintDictionaryTermWithWordSenseResolution_ReportsOnlyDisallowedOrAmbiguousUsage**:
-Lint mode runs against a dictionary term whose sense is restricted to one part of speech; a legal
+**Ste100Mark_LintDictionaryTermWithPartOfSpeechResolution_ReportsOnlyDisallowedOrAmbiguousUsage**:
+Lint mode runs against dictionary terms whose senses are restricted to one part of speech; a legal
 noun usage is not reported, a disallowed verb usage is reported with its alternative, and a
-usage of a word the classifier does not know is reported as ambiguous. This scenario is tested by
-`Ste100Mark_LintDictionaryTermWithWordSenseResolution_ReportsOnlyDisallowedOrAmbiguousUsage`.
+usage the tagger cannot resolve with confidence is reported as ambiguous. This scenario is tested by
+`Ste100Mark_LintDictionaryTermWithPartOfSpeechResolution_ReportsOnlyDisallowedOrAmbiguousUsage`.

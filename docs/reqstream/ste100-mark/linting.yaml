@@ -242,7 +242,7 @@ sections:
           approved alternatives (for example "impact" as a noun versus as a verb). Reporting
           the wrong sense's alternative would be misleading. A resolution is confident when the
           part-of-speech tagger chose a noun or a verb for the matched word, within its own
-          sentence, with a confidence of at least 0.45.
+          sentence, with a confidence of at least 0.95.
         children:
           - Ste100Mark-PartOfSpeechResolver-NounVerbResolution
           - Ste100Mark-PartOfSpeechResolver-SentenceScope
@@ -252,8 +252,8 @@ sections:
           - Ste100Mark-PartOfSpeechResolver-SharedInstance
           - Ste100Mark-PartOfSpeechResolver-NullSegmentText
           - Ste100Mark-PartOfSpeechResolver-MatchOutsideText
-          - Ste100Mark-PartOfSpeechResolver-NullModel
-          - Ste100Mark-OTS-WordSense
+          - Ste100Mark-PartOfSpeechResolver-NullTagger
+          - Ste100Mark-OTS-PartOfSpeech
         tests:
           - Evaluate_InjectedResolverConfidentVerb_ReportsOnlyVerbSense
           - Evaluate_MultiSenseTerm_NounContext_ReportsNounSense
@@ -274,7 +274,7 @@ sections:
           technical writing is dense with noun phrases built from modifiers (for example "the
           metering probe"). Reporting a term used in a role it does not restrict is a false
           positive that erodes trust in the dictionary check. Only a confident resolution (a
-          noun or verb answer of at least 0.45 confidence) may suppress a match.
+          noun or verb answer of at least 0.95 confidence) may suppress a match.
         children:
           - Ste100Mark-PartOfSpeechResolver-NounVerbResolution
         tests:
@@ -290,8 +290,8 @@ sections:
           every remaining sense of the disallowed term, labeled as ambiguous when the term has
           more than one sense.
         justification: |
-          A resolution is inconclusive when the word is unknown to the tagger, the confidence is
-          below 0.45, the tagger chose a part of speech other than noun or verb, or the match
+          A resolution is inconclusive when the confidence is
+          below 0.95, the tagger chose a part of speech other than noun or verb, or the match
           covers more than one word. The subsystem must not guess in these cases. It must fall
           back to reporting every remaining sense, clearly labeled as ambiguous, so the author
           can choose the correct alternative.
@@ -300,7 +300,6 @@ sections:
           - Ste100Mark-PartOfSpeechResolver-UnknownWord
           - Ste100Mark-PartOfSpeechResolver-OtherPartOfSpeech
           - Ste100Mark-PartOfSpeechResolver-MultiWordMatch
-          - Ste100Mark-PartOfSpeechResolver-UnusableTaggerResult
         tests:
           - Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel
           - Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous
