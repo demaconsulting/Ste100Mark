@@ -120,7 +120,7 @@
       "dependsOn": [
         "format",
         "lint markdown",
-        "spell check",
+        "textlint",
         "lint yaml"
       ],
       "dependsOrder": "parallel",
