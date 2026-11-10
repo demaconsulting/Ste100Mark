@@ -1,5 +1,5 @@
 ---
-# Spell-Checking
+# Spell-Checking with TextLint
 #
 # PURPOSE:
 # - Maintain professional documentation and code quality
@@ -12,72 +12,59 @@
 version: "0.2"
 language: en
 
+# The files TextLint spell-checks
+enableGlobDot: true
+files:
+  - "**/*.{md,yaml,yml,json,cs,cpp,hpp,h,txt}"
+
 # Project-specific technical terms and tool names
 words:
-  - clitics
-  - Moby
-  - Treebank
-  - Christiane
-  - Fellbaum
-  - Rebecca
-  - Passonneau
-  - OANC
-  - LREC
-  - Crae
-  - Tatoeba
   - backticked
-  - Blockquotes
-  - buildmark
-  - canvasnet
-  - buildtransitive
-  - zzqxorb
   - catenative
   - Catenative
+  - Christiane
   - COMPLEXVERB
-  - contentfiles
-  - dcterms
+  - Crae
   - deenergized
-  - DEMA
   - Defence
+  - DEMA
   - Dema
   - demaconsulting
-  - doctitle
-  - docversion
-  - errorlevel
-  - fileassert
+  - DEMACONSULTINGNUGETKEY
+  - endeavour
+  - Fellbaum
   - froobnicate
   - INGFORM
   - licence
-  - LINQ
+  - LREC
   - metacharacter
-  - metacharacters
-  - xunit
-  - nameof
+  - Moby
+  - ncipollo
+  - nestings
+  - netstandard
   - nominalized
-  - pagetitle
-  - Pandoc
+  - OANC
   - parentheticals
-  - Postconditions
+  - Parentheticals
+  - Passonneau
   - prenominal
-  - Qube
-  - reqstream
-  - reviewmark
+  - Sarif
+  - sarif
   - SARIF
-  - sarifmark
-  - setlocal
+  - Setext
+  - shopt
+  - slnx
   - snupkg
-  - sonarmark
-  - sysml
-  - sysml2tools
-  - ste100mark
-  - undercounts
+  - sonarscanner
+  - Tatoeba
+  - thirdparty
+  - Treebank
+  - unidirectionality
   - unioned
   - unioning
   - unpowered
   - utilise
   - venv
-  - versionmark
-  - Weasyprint
   - yamldotnet
   - yamlfix
 

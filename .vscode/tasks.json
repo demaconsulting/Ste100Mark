@@ -89,13 +89,11 @@
       }
     },
     {
-      "label": "spell check",
-      "command": "npx",
+      "label": "textlint",
+      "command": "dotnet",
       "type": "shell",
       "args": [
-        "cspell",
-        "\"**/*.{cs,md,json,yaml,yml}\"",
-        "--no-progress"
+        "textlint"
       ],
       "problemMatcher": [],
       "presentation": {
@@ -122,7 +120,7 @@
       "dependsOn": [
         "format",
         "lint markdown",
-        "spell check",
+        "textlint",
         "lint yaml"
       ],
       "dependsOrder": "parallel",

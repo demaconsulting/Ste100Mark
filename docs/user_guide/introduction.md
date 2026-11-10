@@ -31,7 +31,7 @@ compliance evidence generated through the repository's documented CI requirement
 
 - **Requirements Traceability**: Requirements link to passing tests as defined by the
   requirements set, while tests may also exist without requirement links
-- **Linting Enforcement**: markdownlint, cspell, and yamllint are enforced before any build proceeds
+- **Linting Enforcement**: markdownlint, TextLint, and yamllint are enforced before any build proceeds
 - **Automated Audit Documentation**: ReqStream generates the trace matrix and related compliance
   reports as part of the documented requirements pipeline
 - **CodeQL and SonarCloud**: Security and quality analysis runs on every build

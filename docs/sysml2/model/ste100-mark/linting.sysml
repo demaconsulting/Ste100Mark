@@ -1,10 +1,15 @@
 package Ste100Mark {
+    private import SoftwareItemMetadata::*;
+
     part def LintingSubsystem {
         doc /* Markdown linting, configuration, dictionary merge, and diagnostic reporting. */
 
-        comment designRef /* Design: docs/design/ste100-mark/linting.md */
-        comment verificationRef /* Verification: docs/verification/ste100-mark/linting.md */
-        comment reqRef /* Requirements: docs/reqstream/ste100-mark/linting.yaml */
+        metadata info : SoftwareInfo {
+            description = "Markdown linting, configuration, dictionary merge, and diagnostic reporting.";
+            designFiles = ("docs/design/ste100-mark/linting.md");
+            verificationFiles = ("docs/verification/ste100-mark/linting.md");
+            requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");
+        }
 
         part severity : Severity;
         part diagnostic : Diagnostic;
