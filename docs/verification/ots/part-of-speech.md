@@ -90,13 +90,13 @@ minimum confidence and that is therefore inconclusive.
 
 #### Tagger_Default_ConfidenceSeparatesResolvedFromInconclusiveScenarios
 
-**Scenario**: The real tagger tags the noun, verb, determiner, and inconclusive scenario sets directly,
-without the resolver.
+**Scenario**: The real tagger tags the noun, verb, adjective-and-adverb, and inconclusive
+scenario sets directly, without the resolver.
 
 **Expected**: Noun, verb, adjective, and adverb scenarios are tagged as a noun, verb,
-adjective, or adverb at or above the minimum confidence; confident determiner scenarios are
-preserved as resolver-only determiner evidence; inconclusive scenarios are not a confident
-noun, verb, adjective, adverb, or determiner.
+adjective, or adverb at or above the minimum confidence; inconclusive scenarios are not a
+confident noun, verb, adjective, or adverb. Determiner evidence is covered separately by
+`Resolve_DeterminerUsage_ReturnsDeterminerRole`.
 
 **Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
 

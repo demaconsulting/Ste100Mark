@@ -261,9 +261,9 @@ the distinct determiner role and suppresses the adjective-only sense. This scena
 `Evaluate_LegalNounUsage_VerbOnlyDisallowedEntry_NotFlagged`,
 `Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged`,
 `Evaluate_DefaultResolver_NounUsageOfVerbOnlyEntry_NotFlagged`,
-`Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged`, and
+`Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged`,
 `Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged`,
-`Evaluate_ApprovedAdjectiveNoReplacement_IsNotFlagged`, and
+`Evaluate_ApprovedAdjectiveNoReplacement_IsNotFlagged`,
 `Evaluate_ApprovedAdverbNoReplacement_IsNotFlagged`, and
 `Evaluate_DefaultResolver_DeterminerUsageOfAdjectiveEntry_NotFlagged`.
 
