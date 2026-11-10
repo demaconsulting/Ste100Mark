@@ -37,7 +37,7 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     term). Multi-word terms match across the segment's normalized single-space-separated text.
 ///     A term is always evaluated through <see cref="IPartOfSpeechResolver.Resolve"/>, even when it
 ///     has only one sense: when the resolver confidently resolves a grammatical role (noun, verb,
-///     adjective, or adverb) that none of the entry's senses restrict, the term is not being used in a
+///     adjective, adverb, or resolver-only determiner) that none of the entry's senses restrict, the term is not being used in a
 ///     disallowed role at this location and no diagnostic is reported. When the resolved role matches
 ///     one sense, that sense's alternative(s) are reported (labeled with the resolved part of
 ///     speech only when the entry has more than one sense, so a single-sense entry's message

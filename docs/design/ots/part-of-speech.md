@@ -7,7 +7,8 @@ OTS software item (package `DemaConsulting.PartOfSpeech`).
 
 PartOfSpeech is chosen as the part-of-speech tagger for the project. It tags each token of a
 sentence with a Universal POS tag and a confidence, so that the `Linting` subsystem can decide
-whether a matched dictionary term is used as a noun, verb, adjective, or adverb. It replaces an earlier tagger
+whether a matched dictionary term is used as a noun, verb, adjective, or adverb, while preserving confident
+determiner evidence for resolver-only handling. It replaces an earlier tagger
 library and, before that, a regex-based heuristic.
 
 ### Features Used
@@ -32,7 +33,9 @@ splits the prose segment into sentences with the repository's own sentence rule,
 string that was passed in, so they are relative to the sentence text; the resolver flattens the
 tokens of every returned sentence. Only a `Noun`, `Verb`, `Adjective`, or `Adverb` tag at or above the resolver's minimum
 confidence (0.95, the strict threshold documented by the package) is mapped to the repository's own
-`PartOfSpeech`; every other answer is inconclusive. The package does not report unknown words: a
+`PartOfSpeech`; a confident determiner maps to the resolver-only `PartOfSpeech.Determiner` result,
+which rules out role-specific dictionary senses but is not a dictionary role. Other unsupported
+answers are inconclusive. The package does not report unknown words: a
 word that is not in its lexicon is tagged as a noun, so such a word cannot be detected. The
 library is beta software, so its package version is pinned exactly in the project file and
 upgrades are reviewed deliberately.

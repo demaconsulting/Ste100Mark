@@ -13,7 +13,8 @@ sections:
             justification: |
               DemaConsulting.PartOfSpeech (Tagger.Default) is the context-aware part-of-speech tagger
               used by the Linting subsystem to decide whether a dictionary term is used in a supported
-              grammatical role. Passing tests that tag noun, verb, adjective, and adverb usages
+              grammatical role. Passing tests that tag noun, verb, adjective, and adverb usages,
+              preserve confident determiner evidence, and
               (including a corpus of legal usages and a set of hard cases such as imperatives and
               noun-noun compounds), and that treat
               low-confidence answers as inconclusive, confirm the library returns the correct part

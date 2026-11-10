@@ -162,7 +162,8 @@ diagnostics and summaries through `DiagnosticReporter` into that context's outpu
 - **YamlDotNet**: provides YAML deserialization for `.ste100mark.yaml` and project dictionary
   files. See *YamlDotNet*.
 - **DemaConsulting.PartOfSpeech**: provides the part-of-speech
-  tagger used to resolve noun, verb, adjective, and adverb usage of dictionary terms. See *PartOfSpeech*.
+  tagger used to resolve noun, verb, adjective, and adverb usage of dictionary terms and preserve
+  confident determiner evidence. See *PartOfSpeech*.
 - **Microsoft.Extensions.FileSystemGlobbing**: provides glob evaluation for file selection and
   mode overrides. See *Microsoft.Extensions.FileSystemGlobbing*.
 

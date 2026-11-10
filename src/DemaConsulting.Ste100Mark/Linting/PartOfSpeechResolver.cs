@@ -315,7 +315,9 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 
     /// <summary>
     ///     Maps one tagged token to a repository part of speech, or <see langword="null"/> when it is not
-    ///     a confident noun, verb, adjective, or adverb.
+    ///     a confident noun, verb, adjective, or adverb. A confident determiner is preserved as
+    ///     resolver-only evidence and is not a dictionary sense role; all other unsupported tags are
+    ///     inconclusive.
     /// </summary>
     private static PartOfSpeech? MapRole(TaggedSpan token)
     {

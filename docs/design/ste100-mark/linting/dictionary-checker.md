@@ -34,7 +34,8 @@ negative lookbehind/lookahead for `\w` and `-`, with spaces widened to `\s+`.
 **Sense selection**: every match (including single-sense terms) is resolved by calling
 `IPartOfSpeechResolver.Resolve` with the segment text and match position. A confident
 `Noun`, `Verb`, `Adjective`, or `Adverb` resolution narrows the candidate senses to those matching that role (plus any
-`Any`-pos sense); when the resolution is confident but matches no sense in the schema, the term is
+`Any`-pos sense). A confident resolver-only `Determiner` similarly rules out all role-specific
+senses while retaining `Any`; when the resolution is confident but matches no sense in the schema, the term is
 not being used in a role ASD-STE100 restricts here, and no diagnostic is reported at all. An
 inconclusive resolution keeps every sense as a candidate. Exactly one surviving candidate is
 reported confidently (labeled with the sense's `Pos` in the message only when the entry has

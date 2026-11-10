@@ -64,7 +64,8 @@ so a later call retries.
 - *Parameters*: `string segmentText` - full prose text of the segment; `int matchIndex` -
   0-based character offset of the match; `int matchLength` - length of the matched span.
 - *Returns*: `PartOfSpeech?` - `Noun`, `Verb`, `Adjective`, or `Adverb` when the tagger confidently
-  chose that part of speech for the token that covers the match; `null` otherwise.
+  chose that part of speech for the token that covers the match; resolver-only `Determiner` for a
+  confident determiner; `null` otherwise.
 - *Preconditions*: `segmentText` is not null; the match lies within the segment text.
 - *Postconditions*: The sentence that holds the match is tagged with a single `Tagger.Tag` call.
   A token whose confidence is below `MinimumConfidence` is inconclusive. A supported tag maps to

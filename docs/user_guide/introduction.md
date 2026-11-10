@@ -298,15 +298,20 @@ resolves a role incompatible with the entry's part of speech (for example a verb
 used as a noun); it is reported when the role is compatible or the result is inconclusive.
 When a term has more than one sense, Ste100Mark uses the `DemaConsulting.PartOfSpeech`
 part-of-speech tagger on the sentence that
-contains the term to decide which sense applies. A confident noun-versus-verb decision reports
+contains the term to decide which sense applies. A confident noun, verb, adjective, or adverb decision reports
 only the matching sense, whose alternatives are joined with natural "or"/Oxford-comma
 phrasing, and the diagnostic message notes the grammatical role, for example
 `Avoid 'impact'; use 'effect' instead (used as a noun).` When the tagger cannot decide (a
-low-confidence answer, a part of speech other than noun, verb, adjective, or adverb, or a
+low-confidence answer, a part of speech other than noun, verb, adjective, adverb, or determiner, or a
 multi-word term),
 every sense is reported, grouped per part of speech and clearly labeled as ambiguous, for
 example `Ambiguous part of speech for 'impact' — possible corrections: as a noun, use
 'effect'; as a verb, use 'affect'.`
+
+A confident determiner is a separate resolver result, not a dictionary sense role. It rules out
+role-specific senses, so a determiner use such as `any` is not flagged against an adjective-only
+entry. Only unsupported tags, low-confidence results, and multi-word matches use the ambiguous
+fallback.
 
 The tagger is statistical, so it is not always right. It is bundled with the tool and runs
 fully offline; nothing is downloaded. An answer is accepted only when its confidence is at

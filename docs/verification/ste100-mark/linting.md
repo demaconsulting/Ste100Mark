@@ -264,7 +264,8 @@ the distinct determiner role and suppresses the adjective-only sense. This scena
 `Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged`, and
 `Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged`,
 `Evaluate_ApprovedAdjectiveNoReplacement_IsNotFlagged`, and
-`Evaluate_ApprovedAdverbNoReplacement_IsNotFlagged`.
+`Evaluate_ApprovedAdverbNoReplacement_IsNotFlagged`, and
+`Evaluate_DefaultResolver_DeterminerUsageOfAdjectiveEntry_NotFlagged`.
 
 **Ste100Mark-Linting-DictionaryPos-Ambiguous**: When the resolver is inconclusive, every
 remaining sense is reported. A single-sense term is reported with its one sense and no

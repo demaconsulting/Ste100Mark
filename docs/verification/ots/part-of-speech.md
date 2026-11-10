@@ -7,8 +7,8 @@ Requirements for this OTS item are defined in the PartOfSpeech OTS Software Requ
 
 PartOfSpeech is the part-of-speech tagging library used by the Linting subsystem. Through
 `Tagger.Default.Tag` it tags the tokens of a sentence, so the project can tell noun, verb,
-adjective, and adverb usage of a dictionary term apart. Correct noun, verb, adjective, and
-adverb answers for representative technical
+adjective, and adverb usage of a dictionary term apart and preserve confident determiner evidence.
+Correct noun, verb, adjective, adverb, and determiner answers for representative technical
 sentences, and inconclusive results for low-confidence answers, confirm the library is
 functioning correctly for the project's usage.
 
@@ -72,7 +72,8 @@ real tagger.
 **Scenario**: Each of 26 hard cases (imperatives, noun-noun compounds, and modals) is tagged by
 the real tagger.
 
-**Expected**: Every case resolves to the expected noun, verb, adjective, or adverb role,
+**Expected**: Every case resolves to the expected noun, verb, adjective, or adverb role, or to the
+resolver-only determiner result for a confident determiner,
 except one imperative ("Mount the bracket on the frame.") that the tagger answers below the
 minimum confidence and that is therefore inconclusive.
 
@@ -89,12 +90,13 @@ minimum confidence and that is therefore inconclusive.
 
 #### Tagger_Default_ConfidenceSeparatesResolvedFromInconclusiveScenarios
 
-**Scenario**: The real tagger tags the noun, verb, and inconclusive scenario sets directly,
+**Scenario**: The real tagger tags the noun, verb, determiner, and inconclusive scenario sets directly,
 without the resolver.
 
 **Expected**: Noun, verb, adjective, and adverb scenarios are tagged as a noun, verb,
-adjective, or adverb at or above the minimum confidence; inconclusive scenarios are not a
-confident noun, verb, adjective, or adverb.
+adjective, or adverb at or above the minimum confidence; confident determiner scenarios are
+preserved as resolver-only determiner evidence; inconclusive scenarios are not a confident
+noun, verb, adjective, adverb, or determiner.
 
 **Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
 
