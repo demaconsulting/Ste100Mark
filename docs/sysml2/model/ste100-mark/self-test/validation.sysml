@@ -1,11 +1,16 @@
 package Ste100Mark {
+    private import SoftwareItemMetadata::*;
+
     part def Validation {
         doc /* Orchestrates the self-validation test suite and reports pass/fail results. */
 
-        comment sourceRef /* Source: src/DemaConsulting.Ste100Mark/SelfTest/Validation.cs */
-        comment testRef /* Test: test/DemaConsulting.Ste100Mark.Tests/SelfTest/ValidationTests.cs */
-        comment designRef /* Design: docs/design/ste100-mark/self-test/validation.md */
-        comment verificationRef /* Verification: docs/verification/ste100-mark/self-test/validation.md */
-        comment reqRef /* Requirements: docs/reqstream/ste100-mark/self-test/validation.yaml */
+        metadata info : SoftwareInfo {
+            description = "Orchestrates the self-validation test suite and reports pass/fail results.";
+            sourceFiles = ("src/DemaConsulting.Ste100Mark/SelfTest/Validation.cs");
+            testFiles = ("test/DemaConsulting.Ste100Mark.Tests/SelfTest/ValidationTests.cs");
+            designFiles = ("docs/design/ste100-mark/self-test/validation.md");
+            verificationFiles = ("docs/verification/ste100-mark/self-test/validation.md");
+            requirementFiles = ("docs/reqstream/ste100-mark/self-test/validation.yaml");
+        }
     }
 }

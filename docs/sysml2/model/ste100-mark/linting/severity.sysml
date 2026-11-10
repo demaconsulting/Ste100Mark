@@ -1,10 +1,17 @@
 package Ste100Mark {
+    private import SoftwareItemMetadata::*;
+
     part def Severity {
         doc /* Closed severity set shared by configuration, diagnostics, and exit-code logic. */
 
-        comment sourceRef /* Source: src/DemaConsulting.Ste100Mark/Linting/Severity.cs */
-        comment designRef /* Design: docs/design/ste100-mark/linting/severity.md */
-        comment verificationRef /* Verification: docs/verification/ste100-mark/linting.md (verified through subsystem-level scenarios) */
-        comment reqRef /* Requirements: docs/reqstream/ste100-mark/linting.yaml (documented as part of the linting subsystem) */
+        // Verification: verified through subsystem-level scenarios
+        // Requirements: documented as part of the linting subsystem
+        metadata info : SoftwareInfo {
+            description = "Closed severity set shared by configuration, diagnostics, and exit-code logic.";
+            sourceFiles = ("src/DemaConsulting.Ste100Mark/Linting/Severity.cs");
+            designFiles = ("docs/design/ste100-mark/linting/severity.md");
+            verificationFiles = ("docs/verification/ste100-mark/linting.md");
+            requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");
+        }
     }
 }

@@ -89,13 +89,11 @@
       }
     },
     {
-      "label": "spell check",
-      "command": "npx",
+      "label": "textlint",
+      "command": "dotnet",
       "type": "shell",
       "args": [
-        "cspell",
-        "\"**/*.{cs,md,json,yaml,yml}\"",
-        "--no-progress"
+        "textlint"
       ],
       "problemMatcher": [],
       "presentation": {
