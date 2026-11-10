@@ -42,11 +42,13 @@ internal readonly record struct TaggedSpan(int Start, int Length, Upos Tag, doub
 ///     by the package in a single call. The token that covers the occurrence is mapped to
 ///     <see cref="PartOfSpeech.Noun"/>, <see cref="PartOfSpeech.Verb"/>, <see cref="PartOfSpeech.Adjective"/>,
 ///     or <see cref="PartOfSpeech.Adverb"/> only when the tagger's
-///     confidence is at least <see cref="MinimumConfidence"/>; every other outcome (low confidence, any
-///     other part of speech, an occurrence spanning several tokens) is inconclusive
-///     (<see langword="null"/>). The package tags words that are not in its lexicon as nouns, so unknown
-///     words cannot be detected. The tagger is thread-safe and fully in-memory (no download), and
-///     per-sentence results are cached.
+///     confidence is at least <see cref="MinimumConfidence"/>. A confident determiner is preserved as
+///     <see cref="PartOfSpeech.Determiner"/> so the checker can distinguish it from every dictionary
+///     sense role; determiner is resolver evidence only and is not accepted in dictionary configuration.
+///     Other unsupported outcomes (low confidence, any other part of speech, or an occurrence spanning
+///     several tokens) are inconclusive (<see langword="null"/>). The package tags words that are not
+///     in its lexicon as nouns, so unknown words cannot be detected. The tagger is thread-safe and fully
+///     in-memory (no download), and per-sentence results are cached.
 /// </remarks>
 internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 {

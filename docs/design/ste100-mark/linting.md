@@ -102,7 +102,7 @@ Design*, *PartOfSpeechGuesser Design*, *PartOfSpeechResolver Design*, *RuleCatal
 > `src/DemaConsulting.Ste100Mark/Linting/DefaultDictionary.yaml` is a small,
 > originally-authored, representative example. It is **not** the official ASD-STE100 Part 2
 > Dictionary. Each term carries one or more part-of-speech-tagged senses (noun/verb/adjective/adverb/
-> adjective/adverb/any); a term with a single sense is reported unless the resolved role is
+> noun/verb/adjective/adverb/any); a term with a single sense is reported unless the resolved role is
 > confidently incompatible with its part of speech, while a multi-sense term is disambiguated
 > by `PartOfSpeechResolver` at lint time. Projects that
 > require true ASD-STE100 Issue 9 compliance must supply your organization's licensed

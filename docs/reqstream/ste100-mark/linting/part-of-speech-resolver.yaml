@@ -82,15 +82,17 @@ sections:
 
       - id: Ste100Mark-PartOfSpeechResolver-OtherPartOfSpeech
         title: >-
-          The PartOfSpeechResolver class shall report a match as inconclusive when the
-          part-of-speech classifier classifies the matched word as any part of speech other than a
-          noun, verb, adjective, or adverb.
+          The PartOfSpeechResolver class shall preserve a confident determiner result as
+          Determiner and report a match as inconclusive for every other part of speech outside
+          noun, verb, adjective, adverb, and determiner.
         justification: |
-          Dictionary senses restrict only the noun, verb, adjective, and adverb roles that the checker resolves.
-          A determiner or other unsupported answer cannot select or rule out a sense, so the
-          conservative ambiguous report applies.
+          Determiner is useful resolver evidence because it is distinct from every supported
+          dictionary sense role: it rules out all role-specific senses without becoming a
+          configurable dictionary role. Other unsupported answers provide no reliable sense
+          selection, so the conservative ambiguous report applies.
         tests:
-          - Resolve_NonNounVerbPartOfSpeech_ReturnsNull
+          - Resolve_DeterminerUsage_ReturnsDeterminerRole
+          - Resolve_UnsupportedPartOfSpeech_ReturnsNull
 
       - id: Ste100Mark-PartOfSpeechResolver-MultiWordMatch
         title: >-

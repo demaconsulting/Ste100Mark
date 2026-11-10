@@ -12,8 +12,9 @@ OTS library (`Tagger.Default`). It replaces an earlier tagger library and, befor
 regex-based heuristic.
 
 The resolver returns `Noun`, `Verb`, `Adjective`, or `Adverb` when the tagger is at least 0.95
-confident. Determiner and other unsupported tags remain `null` (inconclusive), preserving
-conservative behavior where the tagger cannot provide a supported dictionary role.
+confident. It preserves a confident `Determiner` result as resolver evidence distinct from
+dictionary sense roles; that result rules out all role-specific senses without being a valid
+dictionary configuration value. Other unsupported tags remain `null` (inconclusive).
 
 #### Data Model
 
@@ -67,8 +68,8 @@ so a later call retries.
 - *Preconditions*: `segmentText` is not null; the match lies within the segment text.
 - *Postconditions*: The sentence that holds the match is tagged with a single `Tagger.Tag` call.
   A token whose confidence is below `MinimumConfidence` is inconclusive. A supported tag maps to
-  the repository's `PartOfSpeech`; every other tag (including determiner, proper noun, and so on)
-  is inconclusive. A match that spans more than one token (a multi-word
+  the repository's `PartOfSpeech`; a confident determiner maps to the resolver-only
+  `Determiner` role, while every other unsupported tag is inconclusive. A match that spans more than one token (a multi-word
   term) is inconclusive, as is a match that no token covers. The package does not report unknown
   words: a word that is not in its lexicon is tagged as a noun, so it cannot be detected.
 

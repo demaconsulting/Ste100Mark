@@ -29,9 +29,10 @@ N/A - standard test environment.
 
 **Ste100Mark-Linting-PartOfSpeechSupportedRoles**: Twelve real-tagger sentence scenarios verify
 confident adjective and adverb resolution at the 0.95 boundary, while the observed determiner
-tag for `Any` remains inconclusive. `Resolve_AdjectiveOrAdverbUsage_ReturnsMatchingRole`,
+tag for `Any` is preserved as the distinct `Determiner` resolver role.
+`Resolve_AdjectiveOrAdverbUsage_ReturnsMatchingRole`,
 `Tagger_Default_ConfidenceSeparatesResolvedFromInconclusiveScenarios`, and
-`Resolve_DeterminerUsage_RemainsInconclusive` provide the evidence.
+`Resolve_DeterminerUsage_ReturnsDeterminerRole` provide the evidence.
 
 **Ste100Mark-Linting-DictionaryRoleSelection**: An adjective use of `last` selects only the
 adjective replacement. The real tagger also suppresses the approved adjective `open` and adverb
@@ -255,8 +256,8 @@ resolver) and a multi-sense entry with no noun sense in a confident noun context
 not flagged. Confident adjective and adverb suppression is verified through the real production
 tagger with `open` in `The valve is open.` and `slowly` in `The valve closes slowly.`, each with
 only its own approved replacement and therefore no actionable replacement. The separate `any`
-scenario remains determiner evidence: the real tagger reports `DET`, so it proves inconclusive
-handling only and is not adjective-suppression evidence. This scenario is tested by
+scenario remains determiner evidence: the real tagger reports `DET`, so the resolver preserves
+the distinct determiner role and suppresses the adjective-only sense. This scenario is tested by
 `Evaluate_LegalNounUsage_VerbOnlyDisallowedEntry_NotFlagged`,
 `Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged`,
 `Evaluate_DefaultResolver_NounUsageOfVerbOnlyEntry_NotFlagged`,
@@ -297,7 +298,8 @@ tagger, `Resolve_ContractionAndHyphen_TokenOffsetsMapToMatch`,
 `Resolve_ConfidenceThreshold_BoundaryIsInclusive`,
 `MinimumConfidence_IsPackageStrictThreshold`,
 `Resolve_BelowThresholdOrOtherTag_ReturnsNull`,
-`Resolve_NonNounVerbPartOfSpeech_ReturnsNull`, `Resolve_NoTokensCoverMatch_ReturnsNull`,
+`Resolve_DeterminerUsage_ReturnsDeterminerRole`, `Resolve_UnsupportedPartOfSpeech_ReturnsNull`,
+`Resolve_NoTokensCoverMatch_ReturnsNull`,
 `Resolve_MultiWordMatch_ReturnsNull`,
 `Resolve_RepeatedAndConcurrentQueries_ReturnSameResult` (real tagger),
 `Resolve_ConcurrentSameSentence_ClassifiesOnce`,

@@ -46,7 +46,10 @@ internal enum PartOfSpeech
     /// <summary>The sense applies when the term is used as an adverb.</summary>
     Adverb,
 
-    /// <summary>The tagger identified a confident determiner usage, which is not a dictionary sense role.</summary>
+    /// <summary>
+    ///     The resolver identified a confident determiner usage. This is resolver evidence, not a
+    ///     valid dictionary sense role, and dictionary configuration rejects it.
+    /// </summary>
     Determiner
 }
 
@@ -294,6 +297,12 @@ internal sealed class LintDictionary
         if (raw is null || raw.Count == 0)
         {
             return [];
+        }
+
+        if (raw.Any(sense => sense.Pos == PartOfSpeech.Determiner))
+        {
+            throw new InvalidOperationException(
+                "The 'determiner' part-of-speech value is resolver-only and is not valid in dictionary configuration. Use any, noun, verb, adjective, or adverb.");
         }
 
         return raw

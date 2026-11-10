@@ -114,6 +114,30 @@ public class LintDictionaryTests
     }
 
     /// <summary>
+    ///     Test that the resolver-only determiner role cannot become a dictionary sense role.
+    /// </summary>
+    [Fact]
+    public void Load_InlineDeterminerRole_ThrowsClearConfigurationError()
+    {
+        // Arrange: attempt to configure resolver evidence as a dictionary sense
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["any"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Determiner }]
+                }
+            }
+        };
+
+        // Act / Assert: reject the resolver-only value with an actionable message
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => LintDictionary.Load(config, Directory.GetCurrentDirectory()));
+        Assert.Contains("resolver-only", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Test that an inline disallow entry fully replaces an embedded entry's sense list with
     ///     the same term, including collapsing a multi-sense embedded term down to a single
     ///     inline-supplied sense ("last writer wins by term" semantics for the new sense-list
