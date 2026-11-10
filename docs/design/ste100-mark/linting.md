@@ -33,13 +33,15 @@ The source folder contains twelve primary behavioral units plus two supporting v
 - `LintDictionary` - merged effective dictionary built from the embedded baseline,
   project-supplied dictionary file, and inline allow/disallow/ignore lists, with each term
   carrying one or more part-of-speech-tagged senses.
-- `PartOfSpeechResolver` - resolves whether a matched term is used as a noun or a verb at its
+- `PartOfSpeechResolver` - resolves whether a matched term is used as a noun, verb, adjective, or adverb at its
   match site, used to select the applicable sense(s) of a multi-sense dictionary entry. It
   implements the internal `IPartOfSpeechResolver` interface and delegates to the
   `DemaConsulting.PartOfSpeech` OTS tagger (`Tagger.Default`): the sentence containing the
-  match is tagged in one call, and a noun or verb answer at or above a
-  documented minimum confidence (0.95) is accepted, while every other outcome is
-  inconclusive. `DictionaryChecker` calls it for general noun/verb sense selection.
+  match is tagged in one call, and a noun, verb, adjective, or adverb answer at or above a
+  documented minimum confidence (0.95) is accepted. A confident determiner is preserved as the
+  resolver-only `Determiner` result and rules out role-specific senses; other unsupported outcomes are
+  inconclusive. `DictionaryChecker` calls it for general noun/verb/adjective/adverb sense selection and
+  resolver-only determiner evidence.
 - `PartOfSpeechGuesser` - lightweight, deterministic regex/rule-based heuristic retained
   solely for the `-ing`-form advisory. Its `GuessIngFormRole` method is called by
   `StructuralRules`'s `-ing`-form check to distinguish a genuine present-participle verb use
@@ -101,8 +103,8 @@ Design*, *PartOfSpeechGuesser Design*, *PartOfSpeechResolver Design*, *RuleCatal
 > **Dictionary notice:** The embedded default dictionary in
 > `src/DemaConsulting.Ste100Mark/Linting/DefaultDictionary.yaml` is a small,
 > originally-authored, representative example. It is **not** the official ASD-STE100 Part 2
-> Dictionary. Each term carries one or more part-of-speech-tagged senses (noun/verb/
-> adjective/adverb/any); a term with a single sense is reported unless the resolved role is
+> Dictionary. Each term carries one or more part-of-speech-tagged senses (noun/verb/adjective/adverb/any);
+> a term with a single sense is reported unless the resolved role is
 > confidently incompatible with its part of speech, while a multi-sense term is disambiguated
 > by `PartOfSpeechResolver` at lint time. Projects that
 > require true ASD-STE100 Issue 9 compliance must supply your organization's licensed

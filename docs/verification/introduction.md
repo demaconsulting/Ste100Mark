@@ -22,7 +22,7 @@ This document covers the verification design for the following software items:
   - **Cli** subsystem
     - **Context** — argument parser and I/O owner
   - **Linting** subsystem
-    - **PartOfSpeechResolver** — PartOfSpeech-based noun/verb resolution
+    - **PartOfSpeechResolver** — PartOfSpeech-based noun, verb, adjective, adverb, and resolver-only determiner resolution
   - **SelfTest** subsystem
     - **Validation** — self-validation test runner
   - **Utilities** subsystem

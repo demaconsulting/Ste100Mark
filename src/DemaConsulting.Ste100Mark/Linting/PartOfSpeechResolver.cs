@@ -40,17 +40,20 @@ internal readonly record struct TaggedSpan(int Start, int Length, Upos Tag, doub
 /// <remarks>
 ///     The segment is split into sentences; the sentence containing the occurrence is tokenized and tagged
 ///     by the package in a single call. The token that covers the occurrence is mapped to
-///     <see cref="PartOfSpeech.Noun"/> or <see cref="PartOfSpeech.Verb"/> only when the tagger's
-///     confidence is at least <see cref="MinimumConfidence"/>; every other outcome (low confidence, any
-///     other part of speech, an occurrence spanning several tokens) is inconclusive
-///     (<see langword="null"/>). The package tags words that are not in its lexicon as nouns, so unknown
-///     words cannot be detected. The tagger is thread-safe and fully in-memory (no download), and
-///     per-sentence results are cached.
+///     <see cref="PartOfSpeech.Noun"/>, <see cref="PartOfSpeech.Verb"/>, <see cref="PartOfSpeech.Adjective"/>,
+///     or <see cref="PartOfSpeech.Adverb"/> only when the tagger's
+///     confidence is at least <see cref="MinimumConfidence"/>. A confident determiner is preserved as
+///     <see cref="PartOfSpeech.Determiner"/> so the checker can distinguish it from every dictionary
+///     sense role; determiner is resolver evidence only and is not accepted in dictionary configuration.
+///     Other unsupported outcomes (low confidence, any other part of speech, or an occurrence spanning
+///     several tokens) are inconclusive (<see langword="null"/>). The package tags words that are not
+///     in its lexicon as nouns, so unknown words cannot be detected. The tagger is thread-safe and fully
+///     in-memory (no download), and per-sentence results are cached.
 /// </remarks>
 internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 {
     /// <summary>
-    ///     Minimum tagger confidence (0 to 1) for a noun or verb answer to be accepted.
+    ///     Minimum tagger confidence (0 to 1) for a supported answer to be accepted.
     /// </summary>
     /// <remarks>
     ///     This is the strict threshold documented by the package: on its open test split it answers
@@ -312,7 +315,9 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 
     /// <summary>
     ///     Maps one tagged token to a repository part of speech, or <see langword="null"/> when it is not
-    ///     a confident noun or verb.
+    ///     a confident noun, verb, adjective, or adverb. A confident determiner is preserved as
+    ///     resolver-only evidence and is not a dictionary sense role; all other unsupported tags are
+    ///     inconclusive.
     /// </summary>
     private static PartOfSpeech? MapRole(TaggedSpan token)
     {
@@ -325,6 +330,9 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
         {
             Upos.Noun => PartOfSpeech.Noun,
             Upos.Verb => PartOfSpeech.Verb,
+            Upos.Adj => PartOfSpeech.Adjective,
+            Upos.Adv => PartOfSpeech.Adverb,
+            Upos.Det => PartOfSpeech.Determiner,
             _ => null
         };
     }

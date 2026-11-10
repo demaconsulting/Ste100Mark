@@ -1586,4 +1586,270 @@ public class DictionaryCheckerTests
         // Assert: no finding
         Assert.Empty(diagnostics);
     }
+
+    /// <summary>
+    ///     Test that a confident determiner tag does not report a role-specific dictionary sense.
+    /// </summary>
+    [Fact]
+    public void Evaluate_DefaultResolver_DeterminerUsageOfAdjectiveEntry_NotFlagged()
+    {
+        // Arrange: "any" is tagged as a determiner, not as the adjective sense in this entry.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                UseEmbedded = false,
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["any"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Adjective, Alternatives = ["SOME"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Any other loss of link is a failure.", 1, SegmentRole.Paragraph)];
+
+        // Act: evaluate through the production resolver and real tagger
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+
+        // Assert: the confident determiner usage is outside the configured adjective sense
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that an adjective resolution selects the adjective replacement and never leaks a
+    ///     verb suggestion from the same dictionary entry.
+    /// </summary>
+    [Fact]
+    public void Evaluate_AdjectiveResolution_Last_ReportsAdjectiveReplacementOnly()
+    {
+        // Arrange: "last" has distinct adjective and verb senses.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                UseEmbedded = false,
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["last"] =
+                    [
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Adjective, Alternatives = ["PREVIOUS"] },
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["END"] }
+                    ]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("The last device in the chain is the valve.", 1, SegmentRole.Paragraph)];
+
+        // Act: use DictionaryChecker's production default, which delegates to Tagger.Default
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+
+        // Assert: only the adjective replacement is offered
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Contains("PREVIOUS", diagnostic.Message);
+        Assert.DoesNotContain("END", diagnostic.Message);
+        Assert.Contains("adjective", diagnostic.Message);
+    }
+
+    /// <summary>
+    ///     Test that a confident adjective with only its own approved replacement is suppressed.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ApprovedAdjectiveNoReplacement_IsNotFlagged()
+    {
+        // Arrange: a self-referential adjective sense has no actionable replacement.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                UseEmbedded = false,
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["open"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Adjective, Alternatives = ["OPEN"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("The valve is open.", 1, SegmentRole.Paragraph)];
+
+        // Act: use DictionaryChecker's production default, which delegates to Tagger.Default
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+
+        // Assert: confidently tagged adjective with no replacement is suppressed
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a confident adverb with only its own approved replacement is suppressed.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ApprovedAdverbNoReplacement_IsNotFlagged()
+    {
+        // Arrange: a self-referential adverb sense has no actionable replacement.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                UseEmbedded = false,
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["slowly"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Adverb, Alternatives = ["SLOWLY"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("The valve closes slowly.", 1, SegmentRole.Paragraph)];
+
+        // Act: use DictionaryChecker's production default, which delegates to Tagger.Default
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+
+        // Assert: confidently tagged adverb with no replacement is suppressed
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that the production tagger selects each supported adjective or adverb sense and
+    ///     does not leak an alternative from an unrelated sense.
+    /// </summary>
+    [Theory]
+    [InlineData("intermediate", "The probe stays at the intermediate position.", "MIDDLE", "adjective", "USE")]
+    [InlineData("complete", "Press the complete set of keys.", "FINISH", "adjective", "END")]
+    [InlineData("next", "The next valve failed.", "FOLLOWING", "adjective", "PROCEED")]
+    [InlineData("later", "The valve failed later.", "AFTERWARDS", "adverb", "DELAY")]
+    public void Evaluate_DefaultResolver_UnapprovedAdjectiveOrAdverb_ReportsMatchingSense(
+        string term,
+        string sentence,
+        string expectedSuggestion,
+        string expectedRole,
+        string excludedSuggestion)
+    {
+        // Arrange: the entry has distinct adjective/adverb and verb senses, so the real tagger's
+        // role selection must determine which replacement is reported.
+        var adjectiveOrAdverb = term == "later" ? PartOfSpeech.Adverb : PartOfSpeech.Adjective;
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                UseEmbedded = false,
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    [term] =
+                    [
+                        new DictionarySenseYaml { Pos = adjectiveOrAdverb, Alternatives = [expectedSuggestion] },
+                        new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = [excludedSuggestion] }
+                    ]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment(sentence, 1, SegmentRole.Paragraph)];
+
+        // Act: evaluate without injecting a resolver, exercising Tagger.Default through the shared resolver
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+
+        // Assert: exactly the matching role and replacement are reported
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("STE100-DICT", diagnostic.RuleCode);
+        Assert.Equal(expectedSuggestion, diagnostic.Suggestion);
+        Assert.Contains(expectedSuggestion, diagnostic.Message);
+        Assert.Contains($"used as a {expectedRole}", diagnostic.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("used as a verb", diagnostic.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(excludedSuggestion, diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that an unapproved role-independent occurrence is reported by the production
+    ///     resolver without introducing a false role-specific alternative.
+    /// </summary>
+    [Fact]
+    public void Evaluate_DefaultResolver_UnapprovedBoth_ReportsGeneralSuggestion()
+    {
+        // Arrange: "both" is used in its determiner context and the entry is role-independent.
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                UseEmbedded = false,
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["both"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["EACH"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Both valves failed.", 1, SegmentRole.Paragraph)];
+
+        // Act: evaluate without injecting a resolver, exercising Tagger.Default through the shared resolver
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+
+        // Assert: the role-independent correction is reported exactly once
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("STE100-DICT", diagnostic.RuleCode);
+        Assert.Equal("EACH", diagnostic.Suggestion);
+        Assert.Contains("EACH", diagnostic.Message);
+        Assert.DoesNotContain("verb", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    ///     Test that the production checker applies the default resolver to every adjective and
+    ///     adverb sentence in the evidence set, preserving approved suppressions and selecting
+    ///     the matching role for actionable findings.
+    /// </summary>
+    [Theory]
+    [InlineData("open", "The valve is open.", "adjective", "OPEN", false)]
+    [InlineData("open", "Keep the access panel open.", "adjective", "OPEN", false)]
+    [InlineData("open", "The protective cover is open.", "adjective", "OPEN", false)]
+    [InlineData("open", "Leave the drain port open.", "adjective", "OPEN", false)]
+    [InlineData("open", "Verify that the bypass is open.", "adjective", "OPEN", false)]
+    [InlineData("open", "The inspection door stays open.", "adjective", "OPEN", false)]
+    [InlineData("open", "Ensure the valve is open.", "adjective", "OPEN", false)]
+    [InlineData("slowly", "The valve closes slowly.", "adverb", "SLOWLY", false)]
+    [InlineData("carefully", "Adjust the valve carefully.", "adverb", "WITH CARE", true)]
+    [InlineData("correctly", "Install the seal correctly.", "adverb", "RIGHT", true)]
+    [InlineData("directly", "Connect the hose directly.", "adverb", "STRAIGHT", true)]
+    [InlineData("clearly", "Mark the switch clearly.", "adverb", "PLAINLY", true)]
+    public void Evaluate_DefaultResolver_AdjectiveAndAdverbEvidence_SelectsOrSuppresses(
+        string term,
+        string sentence,
+        string expectedRole,
+        string alternative,
+        bool expectsFinding)
+    {
+        // Arrange: use one role-specific sense so the result depends on the default production
+        // resolver rather than an injected test resolver.
+        var role = expectedRole == "adjective" ? PartOfSpeech.Adjective : PartOfSpeech.Adverb;
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                UseEmbedded = false,
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    [term] = [new DictionarySenseYaml { Pos = role, Alternatives = [alternative] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment(sentence, 1, SegmentRole.Paragraph)];
+
+        // Act: evaluate through DictionaryChecker without supplying a resolver.
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
+
+        // Assert: approved alternatives suppress the finding; actionable alternatives retain the
+        // role-specific production finding.
+        if (expectsFinding)
+        {
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Equal("STE100-DICT", diagnostic.RuleCode);
+            Assert.Equal(alternative, diagnostic.Suggestion);
+            Assert.Contains(alternative, diagnostic.Message, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Empty(diagnostics);
+        }
+    }
 }

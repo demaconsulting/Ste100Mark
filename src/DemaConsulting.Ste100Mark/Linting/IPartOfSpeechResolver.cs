@@ -34,8 +34,10 @@ internal interface IPartOfSpeechResolver
     /// <param name="matchIndex">Zero-based index in <paramref name="segmentText"/> where the occurrence starts.</param>
     /// <param name="matchLength">Length of the occurrence in characters.</param>
     /// <returns>
-    ///     <see cref="PartOfSpeech.Noun"/> or <see cref="PartOfSpeech.Verb"/> when the role is resolved
-    ///     with sufficient confidence; otherwise <see langword="null"/> (inconclusive).
+    ///     A confident dictionary role (<see cref="PartOfSpeech.Noun"/>, <see cref="PartOfSpeech.Verb"/>,
+    ///     <see cref="PartOfSpeech.Adjective"/>, or <see cref="PartOfSpeech.Adverb"/>), the resolver-only
+    ///     <see cref="PartOfSpeech.Determiner"/> result for a confident determiner, or
+    ///     <see langword="null"/> (inconclusive) for other outcomes.
     /// </returns>
     PartOfSpeech? Resolve(string segmentText, int matchIndex, int matchLength);
 }

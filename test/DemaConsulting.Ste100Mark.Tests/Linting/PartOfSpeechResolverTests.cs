@@ -120,6 +120,33 @@ public class PartOfSpeechResolverTests
     ];
 
     /// <summary>
+    ///     Scenarios where the real tagger confidently resolves adjective and adverb usage.
+    /// </summary>
+    public static IEnumerable<object[]> AdjectiveAndAdverbScenarios() =>
+    [
+        ["open", "The valve is open."],
+        ["open", "Keep the access panel open."],
+        ["open", "The protective cover is open."],
+        ["open", "Leave the drain port open."],
+        ["open", "Verify that the bypass is open."],
+        ["open", "The inspection door stays open."],
+        ["open", "Ensure the valve is open."],
+        ["slowly", "The valve closes slowly."],
+        ["carefully", "Adjust the valve carefully."],
+        ["correctly", "Install the seal correctly."],
+        ["directly", "Connect the hose directly."],
+        ["clearly", "Mark the switch clearly."]
+    ];
+
+    /// <summary>
+    ///     The real tagger's determiner evidence for the ambiguous word "any".
+    /// </summary>
+    public static IEnumerable<object[]> DeterminerScenarios() =>
+    [
+        ["Any", "Any valve can fail."]
+    ];
+
+    /// <summary>
     ///     Scenarios where the real tagger is below the minimum confidence or chooses another part of speech.
     /// </summary>
     public static IEnumerable<object[]> InconclusiveScenarios() =>
@@ -168,6 +195,46 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
+    ///     Test that confident adjective and adverb usage is mapped to the matching repository role.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(AdjectiveAndAdverbScenarios))]
+    public void Resolve_AdjectiveOrAdverbUsage_ReturnsMatchingRole(string term, string sentence)
+    {
+        // Arrange: a resolver using the real tagger
+        var resolver = new PartOfSpeechResolver();
+
+        // Act: resolve the first occurrence of the term
+        var result = resolver.Resolve(sentence, sentence.IndexOf(term, StringComparison.Ordinal), term.Length);
+
+        // Assert: the confident tag maps to the corresponding dictionary role
+        Assert.Equal(term == "open" ? PartOfSpeech.Adjective : PartOfSpeech.Adverb, result);
+    }
+
+    /// <summary>
+    ///     Test that the observed determiner tag for "any" is kept separate from supported
+    ///     dictionary sense roles so the checker can suppress a non-role usage.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(DeterminerScenarios))]
+    public void Resolve_DeterminerUsage_ReturnsDeterminerRole(string term, string sentence)
+    {
+        // Arrange: the real tagger and the token observed in its sentence context
+        var resolver = new PartOfSpeechResolver();
+        var start = sentence.IndexOf(term, StringComparison.OrdinalIgnoreCase);
+        var token = DemaConsulting.PartOfSpeech.Tagger.Default.Tag(sentence)
+            .SelectMany(s => s.Tokens)
+            .Single(t => t.Start == start && t.Length == term.Length);
+
+        // Act: resolve the determiner occurrence
+        var result = resolver.Resolve(sentence, start, term.Length);
+
+        // Assert: determiner output is preserved so the checker can rule out every supported sense
+        Assert.Equal(Upos.Det, token.Tag);
+        Assert.Equal(PartOfSpeech.Determiner, result);
+    }
+
+    /// <summary>
     ///     Test that low-confidence or non-noun/verb answers of the real tagger are inconclusive.
     /// </summary>
     [Theory]
@@ -200,7 +267,7 @@ public class PartOfSpeechResolverTests
                 .Single(t => t.Start == start && t.Length == term.Length);
         }
 
-        // Act and Assert: resolved scenarios are a confident noun or verb
+        // Act and Assert: resolved scenarios are confident supported roles
         foreach (var scenario in NounScenarios())
         {
             var token = TokenOf((string)scenario[0], (string)scenario[1]);
@@ -212,6 +279,13 @@ public class PartOfSpeechResolverTests
         {
             var token = TokenOf((string)scenario[0], (string)scenario[1]);
             Assert.Equal(Upos.Verb, token.Tag);
+            Assert.True(token.Confidence >= PartOfSpeechResolver.MinimumConfidence, (string)scenario[1]);
+        }
+
+        foreach (var scenario in AdjectiveAndAdverbScenarios())
+        {
+            var token = TokenOf((string)scenario[0], (string)scenario[1]);
+            Assert.Contains(token.Tag, new[] { Upos.Adj, Upos.Adv });
             Assert.True(token.Confidence >= PartOfSpeechResolver.MinimumConfidence, (string)scenario[1]);
         }
 
@@ -351,15 +425,13 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
-    ///     Test that parts of speech other than noun and verb map to inconclusive.
+    ///     Test that unsupported parts of speech other than the preserved determiner role map to
+    ///     inconclusive.
     /// </summary>
     [Theory]
-    [InlineData(Upos.Adj)]
-    [InlineData(Upos.Adv)]
     [InlineData(Upos.Aux)]
-    [InlineData(Upos.Det)]
     [InlineData(Upos.Adp)]
-    public void Resolve_NonNounVerbPartOfSpeech_ReturnsNull(Upos pos)
+    public void Resolve_UnsupportedPartOfSpeech_ReturnsNull(Upos pos)
     {
         // Arrange: a confident tagger answer of the given part of speech
         var resolver = new PartOfSpeechResolver(Uniform(pos, 0.99));

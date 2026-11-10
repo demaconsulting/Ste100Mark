@@ -1,11 +1,12 @@
 ---
 # Software Unit Requirements for the PartOfSpeechResolver Class
 #
-# The PartOfSpeechResolver class decides whether a matched dictionary term is used as a noun
-# or a verb at a specific point in prose. A resolution is "confident" only when the part-of-speech
-# classifier chose a noun or verb for the matched word, in the context of its own sentence, with a
+# The PartOfSpeechResolver class decides whether a matched dictionary term is used in a supported
+# grammatical role at a specific point in prose. A resolution is "confident" only when the part-of-speech
+# classifier chose a noun, verb, adjective, or adverb for the matched word, or confidently chose a determiner as
+# resolver-only evidence, in the context of its own sentence, with a
 # confidence of at least 0.95 (the minimum confidence, set by the MinimumConfidence requirement).
-# Every other outcome is "inconclusive". The unit has no OTS child requirement: the OTS PartOfSpeech
+# Other unsupported outcomes are "inconclusive". The unit has no OTS child requirement: the OTS PartOfSpeech
 # requirement is a child of the Linting subsystem requirement Ste100Mark-Linting-DictionaryPos.
 
 sections:
@@ -14,18 +15,19 @@ sections:
       - id: Ste100Mark-PartOfSpeechResolver-NounVerbResolution
         title: >-
           The PartOfSpeechResolver class shall resolve a single-word dictionary-term match as a
-          noun or a verb when the part-of-speech classifier classifies the word, in the context of
-          its sentence, as a noun or verb with at least the minimum confidence.
+          noun, verb, adjective, or adverb when the part-of-speech classifier classifies the word, in the context of
+          its sentence, as a noun, verb, adjective, or adverb with at least the minimum confidence.
         justification: |
           Dictionary senses are restricted to a grammatical role, so the checker needs a
-          trustworthy noun or verb answer for the matched word. The classifier classifies the
+          trustworthy noun, verb, adjective, or adverb answer for the matched word. The classifier classifies the
           word using its sentence context, which recognizes noun phrases built from modifiers
-          and imperative verbs that adjacent-word rules miss. A noun or verb answer at or
+          and imperative verbs that adjacent-word rules miss. A noun, verb, adjective, or adverb answer at or
           above the minimum confidence is "confident" and is the only kind of answer the
           checker may use to select or suppress a sense.
         tests:
           - Resolve_NounUsage_ReturnsNoun
           - Resolve_VerbUsage_ReturnsVerb
+          - Resolve_AdjectiveOrAdverbUsage_ReturnsMatchingRole
           - Resolve_HardCase_ReturnsExpectedRole
           - HardCases_ContainsTwentySixCases
 
@@ -73,7 +75,7 @@ sections:
           The PartOfSpeechResolver class shall report a match as inconclusive when no tagged
           token covers the matched word.
         justification: |
-          Without a tagged token for the matched word there is no answer, so any noun or verb
+          Without a tagged token for the matched word there is no answer, so any noun, verb, adjective, or adverb
           result would be a guess. The checker must fall back to reporting every sense as
           ambiguous.
         tests:
@@ -81,15 +83,17 @@ sections:
 
       - id: Ste100Mark-PartOfSpeechResolver-OtherPartOfSpeech
         title: >-
-          The PartOfSpeechResolver class shall report a match as inconclusive when the
-          part-of-speech classifier classifies the matched word as any part of speech other than a
-          noun or a verb.
+          The PartOfSpeechResolver class shall preserve a confident determiner result as
+          Determiner and report a match as inconclusive for every other part of speech outside
+          noun, verb, adjective, adverb, and determiner.
         justification: |
-          Dictionary senses restrict only the noun and verb roles that the checker resolves.
-          An adjective, adverb, or other answer cannot select or rule out a noun or verb
-          sense, so the conservative ambiguous report applies.
+          Determiner is useful resolver evidence because it is distinct from every supported
+          dictionary sense role: it rules out all role-specific senses without becoming a
+          configurable dictionary role. Other unsupported answers provide no reliable sense
+          selection, so the conservative ambiguous report applies.
         tests:
-          - Resolve_NonNounVerbPartOfSpeech_ReturnsNull
+          - Resolve_DeterminerUsage_ReturnsDeterminerRole
+          - Resolve_UnsupportedPartOfSpeech_ReturnsNull
 
       - id: Ste100Mark-PartOfSpeechResolver-MultiWordMatch
         title: >-
