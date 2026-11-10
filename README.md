@@ -233,10 +233,11 @@ verb-only entry used as a noun); it is reported when the role is compatible or t
 inconclusive. When a term has more than one sense, Ste100Mark uses the
 `DemaConsulting.PartOfSpeech` part-of-speech tagger on
 the sentence that contains the term to decide which sense applies. When the tagger can
-confidently tell noun from verb usage apart (confidence of at least 0.95), only the matching
+confidently tell noun, verb, adjective, or adverb usage apart (confidence of at least 0.95), only the matching
 sense is reported, its alternatives are joined with natural "or"/Oxford-comma phrasing, and
 the diagnostic message notes the grammatical role, for example: `Avoid 'impact'; use
-'effect' instead (used as a noun).` When the tagger cannot decide, every sense is reported,
+'effect' instead (used as a noun).` Determiner and other unsupported tags remain inconclusive;
+when the tagger cannot decide, every sense is reported,
 grouped per part of speech and clearly labeled as ambiguous, for example: `Ambiguous part of
 speech for 'impact' — possible corrections: as a noun, use 'effect'; as a verb, use
 'affect'.` The tagger is statistical and can be wrong, for example for a sentence-initial

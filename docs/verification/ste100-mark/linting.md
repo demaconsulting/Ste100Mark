@@ -27,6 +27,29 @@ N/A - standard test environment.
 
 ### Test Scenarios
 
+**Ste100Mark-Linting-PartOfSpeechSupportedRoles**: Twelve real-tagger sentence scenarios verify
+confident adjective and adverb resolution at the 0.95 boundary, while the observed determiner
+tag for `Any` remains inconclusive. `Resolve_AdjectiveOrAdverbUsage_ReturnsMatchingRole`,
+`Tagger_Default_ConfidenceSeparatesResolvedFromInconclusiveScenarios`, and
+`Resolve_DeterminerUsage_RemainsInconclusive` provide the evidence.
+
+**Ste100Mark-Linting-DictionaryRoleSelection**: An adjective use of `last` selects only the
+adjective replacement. The real tagger also suppresses the approved adjective `open` and adverb
+`slowly` entries when their only alternatives are the approved spellings.
+`Evaluate_AdjectiveResolution_Last_ReportsAdjectiveReplacementOnly` and
+`Evaluate_ApprovedAdjectiveNoReplacement_IsNotFlagged` omit an injected resolver and therefore
+exercise `Tagger.Default` through `DictionaryChecker`; the corresponding adverb suppression is
+covered by `Evaluate_ApprovedAdverbNoReplacement_IsNotFlagged`. The complete twelve-sentence
+production before/after record is preserved in the production adjective/adverb evidence report.
+
+**Ste100Mark-Linting-DictionaryRoleFindings**: The real tagger produces one
+`STE100-DICT` finding with only the matching role and replacement for unapproved adjective uses
+of `intermediate`, `complete`, and `next`, an adverb use of `later`, and the role-independent
+determiner use of `both`. `Evaluate_DefaultResolver_UnapprovedAdjectiveOrAdverb_ReportsMatchingSense`,
+`Evaluate_DefaultResolver_AdjectiveAndAdverbEvidence_SelectsOrSuppresses`, and
+`Evaluate_DefaultResolver_UnapprovedBoth_ReportsGeneralSuggestion` provide the evidence and assert
+that unrelated suggestions are absent.
+
 **Ste100Mark-Linting-WordLimits**: Sentence splitting and Rule 4.1 counting are verified for
 normal punctuation, colon termination, parentheticals, hyphenated words, number-plus-unit
 spans, quoted text, title-style sequences, and procedure-versus-descriptive limits. This
@@ -229,12 +252,18 @@ resolution does not fit any sense. The 100-sentence false-positive corpus (run w
 tagger) confirms that legal noun usages of verb-only entries and legal verb usages of noun-only
 entries are not flagged; a single-sense verb-only entry in a confident noun context (fixed
 resolver) and a multi-sense entry with no noun sense in a confident noun context are likewise
-not flagged. This scenario is tested by
+not flagged. Confident adjective and adverb suppression is verified through the real production
+tagger with `open` in `The valve is open.` and `slowly` in `The valve closes slowly.`, each with
+only its own approved replacement and therefore no actionable replacement. The separate `any`
+scenario remains determiner evidence: the real tagger reports `DET`, so it proves inconclusive
+handling only and is not adjective-suppression evidence. This scenario is tested by
 `Evaluate_LegalNounUsage_VerbOnlyDisallowedEntry_NotFlagged`,
 `Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged`,
 `Evaluate_DefaultResolver_NounUsageOfVerbOnlyEntry_NotFlagged`,
 `Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged`, and
-`Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged`.
+`Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged`,
+`Evaluate_ApprovedAdjectiveNoReplacement_IsNotFlagged`, and
+`Evaluate_ApprovedAdverbNoReplacement_IsNotFlagged`.
 
 **Ste100Mark-Linting-DictionaryPos-Ambiguous**: When the resolver is inconclusive, every
 remaining sense is reported. A single-sense term is reported with its one sense and no
@@ -248,7 +277,7 @@ sense's alternatives grouped per sense. This scenario is tested by
 
 **Ste100Mark-PartOfSpeechResolver-\* (unit requirements)**: `PartOfSpeechResolver` is verified in
 two layers. Scenarios that depend on the tagger's real answers use the real
-`DemaConsulting.PartOfSpeech` tagger (`Tagger.Default`): noun and verb usage (articles,
+`DemaConsulting.PartOfSpeech` tagger (`Tagger.Default`): noun, verb, adjective, and adverb usage (articles,
 possessives, quantifiers, prepositions, modals, the infinitive marker, progressive auxiliaries,
 plural nouns, noun-phrase modifiers, and a finite verb following the match), the 26 hard cases
 (imperatives, noun-noun compounds, and modals; the imperative "Mount" is inconclusive at the

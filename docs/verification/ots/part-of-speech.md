@@ -6,8 +6,9 @@ Requirements for this OTS item are defined in the PartOfSpeech OTS Software Requ
 ### Required Functionality
 
 PartOfSpeech is the part-of-speech tagging library used by the Linting subsystem. Through
-`Tagger.Default.Tag` it tags the tokens of a sentence, so the project can tell a noun usage of a
-dictionary term from a verb usage. Correct noun and verb answers for representative technical
+`Tagger.Default.Tag` it tags the tokens of a sentence, so the project can tell noun, verb,
+adjective, and adverb usage of a dictionary term apart. Correct noun, verb, adjective, and
+adverb answers for representative technical
 sentences, and inconclusive results for low-confidence answers, confirm the library is
 functioning correctly for the project's usage.
 
@@ -37,6 +38,26 @@ real tagger.
 
 **Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
 
+#### Resolve_AdjectiveOrAdverbUsage_ReturnsMatchingRole
+
+**Scenario**: Representative adjective and adverb usages are tagged by the real tagger and
+resolved through the adjective/adverb evidence test.
+
+**Expected**: The resolver returns the matching adjective or adverb role at or above the
+minimum confidence.
+
+**Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
+
+#### Evaluate_DefaultResolver_AdjectiveAndAdverbEvidence_SelectsOrSuppresses
+
+**Scenario**: The full checker evaluates the adjective/adverb evidence corpus with the real
+tagger and shipped checker path.
+
+**Expected**: Approved adjective/adverb senses are suppressed and unapproved senses report only
+the matching role-specific suggestion.
+
+**Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
+
 #### Resolve_VerbUsage_ReturnsVerb
 
 **Scenario**: A dictionary term is used as a verb in a technical sentence and is tagged by the
@@ -51,9 +72,9 @@ real tagger.
 **Scenario**: Each of 26 hard cases (imperatives, noun-noun compounds, and modals) is tagged by
 the real tagger.
 
-**Expected**: Every case resolves to the expected noun or verb role, except one imperative
-("Mount the bracket on the frame.") that the tagger answers below the minimum confidence and
-that is therefore inconclusive.
+**Expected**: Every case resolves to the expected noun, verb, adjective, or adverb role,
+except one imperative ("Mount the bracket on the frame.") that the tagger answers below the
+minimum confidence and that is therefore inconclusive.
 
 **Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
 
@@ -71,8 +92,9 @@ that is therefore inconclusive.
 **Scenario**: The real tagger tags the noun, verb, and inconclusive scenario sets directly,
 without the resolver.
 
-**Expected**: Noun and verb scenarios are tagged as a noun or verb at or above the minimum
-confidence; inconclusive scenarios are not a confident noun or verb.
+**Expected**: Noun, verb, adjective, and adverb scenarios are tagged as a noun, verb,
+adjective, or adverb at or above the minimum confidence; inconclusive scenarios are not a
+confident noun, verb, adjective, or adverb.
 
 **Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
 

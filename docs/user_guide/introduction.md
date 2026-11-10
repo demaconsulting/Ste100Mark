@@ -302,7 +302,7 @@ contains the term to decide which sense applies. A confident noun-versus-verb de
 only the matching sense, whose alternatives are joined with natural "or"/Oxford-comma
 phrasing, and the diagnostic message notes the grammatical role, for example
 `Avoid 'impact'; use 'effect' instead (used as a noun).` When the tagger cannot decide (a
-low-confidence answer, a part of speech other than noun or verb, or a
+low-confidence answer, a part of speech other than noun, verb, adjective, or adverb, or a
 multi-word term),
 every sense is reported, grouped per part of speech and clearly labeled as ambiguous, for
 example `Ambiguous part of speech for 'impact' — possible corrections: as a noun, use
@@ -333,7 +333,7 @@ noun modifier (not a verb) because the sentence context supports the noun readin
 A table's column-header row (for example a "Hazard"/"Use" header above a table of data rows)
 and a bold admonition label at the very start of a block (for example `**Caution.**`) are
 treated as short labels, not prose sentences, and are skipped entirely by `STE100-DICT` and
-`STE100-ADV-INGFORM` - a bare label word is routinely a noun/verb-looking word out of any
+`STE100-ADV-INGFORM` - a bare label word is routinely a noun/verb/adjective/adverb-looking word out of any
 sentence context, and flagging it would be noise rather than a genuine finding. The same word
 appearing in an ordinary sentence elsewhere in the document, or in a table's data row rather
 than its header row, is still checked normally.

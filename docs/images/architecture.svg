@@ -64,7 +64,7 @@
       <text x="253" y="474" font-size="12" fill="#475569">YAML configuration</text>
       <rect x="347" y="428" width="166" height="60" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
       <text x="430" y="454" font-size="15" font-weight="600" fill="#334155">PartOfSpeech</text>
-      <text x="430" y="474" font-size="12" fill="#475569">Embedded noun/verb tagger</text>
+      <text x="430" y="474" font-size="12" fill="#475569">Embedded noun/verb/adjective/adverb tagger</text>
       <rect x="524" y="428" width="166" height="60" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
       <text x="607" y="454" font-size="15" font-weight="600" fill="#334155">FileSystemGlobbing</text>
       <text x="607" y="474" font-size="12" fill="#475569">File selection globs</text>

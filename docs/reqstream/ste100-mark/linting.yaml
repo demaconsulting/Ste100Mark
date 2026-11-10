@@ -238,10 +238,10 @@ sections:
           disallowed term using only the part-of-speech-tagged sense that matches the resolved
           role (together with any role-independent sense).
         justification: |
-          A single disallowed term can have distinct noun and verb senses with different
+          A single disallowed term can have distinct noun, verb, adjective, and adverb senses with different
           approved alternatives (for example "impact" as a noun versus as a verb). Reporting
           the wrong sense's alternative would be misleading. A resolution is confident when the
-          part-of-speech tagger chose a noun or a verb for the matched word, within its own
+          part-of-speech tagger chose a noun, verb, adjective, or adverb for the matched word, within its own
           sentence, with a confidence of at least 0.95.
         children:
           - Ste100Mark-PartOfSpeechResolver-NounVerbResolution
@@ -262,6 +262,9 @@ sections:
           - Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr
           - Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage
           - Evaluate_ConfidentSingleSenseTermWithNoAlternatives_SuggestionAndCitationsAreNull
+          - Evaluate_AdjectiveResolution_Last_ReportsAdjectiveReplacementOnly
+          - Evaluate_DefaultResolver_UnapprovedAdjectiveOrAdverb_ReportsMatchingSense
+          - Evaluate_DefaultResolver_UnapprovedBoth_ReportsGeneralSuggestion
 
       - id: Ste100Mark-Linting-DictionaryPos-Suppression
         title: >-
@@ -272,7 +275,7 @@ sections:
           technical writing is dense with noun phrases built from modifiers (for example "the
           metering probe"). Reporting a term used in a role it does not restrict is a false
           positive that erodes trust in the dictionary check. Only a confident resolution (a
-          noun or verb answer of at least 0.95 confidence) may suppress a match.
+          noun, verb, adjective, or adverb answer of at least 0.95 confidence) may suppress a match.
         children:
           - Ste100Mark-PartOfSpeechResolver-NounVerbResolution
         tests:
@@ -281,6 +284,8 @@ sections:
           - Evaluate_DefaultResolver_NounUsageOfVerbOnlyEntry_NotFlagged
           - Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged
           - Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged
+          - Evaluate_ApprovedAdjectiveNoReplacement_IsNotFlagged
+          - Evaluate_ApprovedAdverbNoReplacement_IsNotFlagged
 
       - id: Ste100Mark-Linting-DictionaryPos-Ambiguous
         title: >-
@@ -289,7 +294,7 @@ sections:
           more than one sense.
         justification: |
           A resolution is inconclusive when the confidence is
-          below 0.95, the tagger chose a part of speech other than noun or verb, or the match
+          below 0.95, the tagger chose a part of speech other than noun, verb, adjective, or adverb, or the match
           covers more than one word. The subsystem must not guess in these cases. It must fall
           back to reporting every remaining sense, clearly labeled as ambiguous, so the author
           can choose the correct alternative.

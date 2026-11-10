@@ -40,7 +40,8 @@ internal readonly record struct TaggedSpan(int Start, int Length, Upos Tag, doub
 /// <remarks>
 ///     The segment is split into sentences; the sentence containing the occurrence is tokenized and tagged
 ///     by the package in a single call. The token that covers the occurrence is mapped to
-///     <see cref="PartOfSpeech.Noun"/> or <see cref="PartOfSpeech.Verb"/> only when the tagger's
+///     <see cref="PartOfSpeech.Noun"/>, <see cref="PartOfSpeech.Verb"/>, <see cref="PartOfSpeech.Adjective"/>,
+///     or <see cref="PartOfSpeech.Adverb"/> only when the tagger's
 ///     confidence is at least <see cref="MinimumConfidence"/>; every other outcome (low confidence, any
 ///     other part of speech, an occurrence spanning several tokens) is inconclusive
 ///     (<see langword="null"/>). The package tags words that are not in its lexicon as nouns, so unknown
@@ -50,7 +51,7 @@ internal readonly record struct TaggedSpan(int Start, int Length, Upos Tag, doub
 internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 {
     /// <summary>
-    ///     Minimum tagger confidence (0 to 1) for a noun or verb answer to be accepted.
+    ///     Minimum tagger confidence (0 to 1) for a supported answer to be accepted.
     /// </summary>
     /// <remarks>
     ///     This is the strict threshold documented by the package: on its open test split it answers
@@ -312,7 +313,7 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 
     /// <summary>
     ///     Maps one tagged token to a repository part of speech, or <see langword="null"/> when it is not
-    ///     a confident noun or verb.
+    ///     a confident noun, verb, adjective, or adverb.
     /// </summary>
     private static PartOfSpeech? MapRole(TaggedSpan token)
     {
@@ -325,6 +326,9 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
         {
             Upos.Noun => PartOfSpeech.Noun,
             Upos.Verb => PartOfSpeech.Verb,
+            Upos.Adj => PartOfSpeech.Adjective,
+            Upos.Adv => PartOfSpeech.Adverb,
+            Upos.Det => PartOfSpeech.Determiner,
             _ => null
         };
     }

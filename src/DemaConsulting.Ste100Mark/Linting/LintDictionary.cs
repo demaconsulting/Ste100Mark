@@ -44,7 +44,10 @@ internal enum PartOfSpeech
     Adjective,
 
     /// <summary>The sense applies when the term is used as an adverb.</summary>
-    Adverb
+    Adverb,
+
+    /// <summary>The tagger identified a confident determiner usage, which is not a dictionary sense role.</summary>
+    Determiner
 }
 
 /// <summary>

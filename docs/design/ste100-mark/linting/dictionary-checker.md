@@ -33,7 +33,7 @@ negative lookbehind/lookahead for `\w` and `-`, with spaces widened to `\s+`.
 
 **Sense selection**: every match (including single-sense terms) is resolved by calling
 `IPartOfSpeechResolver.Resolve` with the segment text and match position. A confident
-`Noun` or `Verb` resolution narrows the candidate senses to those matching that role (plus any
+`Noun`, `Verb`, `Adjective`, or `Adverb` resolution narrows the candidate senses to those matching that role (plus any
 `Any`-pos sense); when the resolution is confident but matches no sense in the schema, the term is
 not being used in a role ASD-STE100 restricts here, and no diagnostic is reported at all. An
 inconclusive resolution keeps every sense as a candidate. Exactly one surviving candidate is
@@ -67,7 +67,7 @@ code span in the same segment is still flagged normally.
 
 **Table-header exclusion**: a segment whose `Role` is `SegmentRole.TableHeader` is skipped in
 its entirety, before any term matching runs. Table column header cells (for example "Hazard" or
-"Use") are short labels, not prose sentences, and are routinely a bare noun/verb-looking word
+"Use") are short labels, not prose sentences, and are routinely a bare noun/verb/adjective/adverb-looking word
 out of any sentence context - the same reasoning `StructuralRules.EvaluateIngForm` applies to
 headings and table headers for the `-ing`-form advisory.
 

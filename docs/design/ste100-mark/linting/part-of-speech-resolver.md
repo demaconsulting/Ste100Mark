@@ -4,16 +4,16 @@
 
 #### Purpose
 
-`PartOfSpeechResolver` decides whether a matched dictionary term is used as a noun or a verb at
+`PartOfSpeechResolver` decides whether a matched dictionary term is used as a noun, verb, adjective, or adverb at
 a specific point in prose, so that `DictionaryChecker` can select the correct
 part-of-speech-tagged sense of a multi-sense `DictionaryEntry`. It implements the internal
 `IPartOfSpeechResolver` interface and delegates the tagging to the `DemaConsulting.PartOfSpeech`
 OTS library (`Tagger.Default`). It replaces an earlier tagger library and, before that, a
 regex-based heuristic.
 
-The resolver only ever returns `Noun`, `Verb`, or `null` (inconclusive). Entries with only
-adjective or adverb senses therefore resolve as ambiguous, which is the conservative behavior
-for those cases.
+The resolver returns `Noun`, `Verb`, `Adjective`, or `Adverb` when the tagger is at least 0.95
+confident. Determiner and other unsupported tags remain `null` (inconclusive), preserving
+conservative behavior where the tagger cannot provide a supported dictionary role.
 
 #### Data Model
 
@@ -21,8 +21,8 @@ for those cases.
 segmentText, int matchIndex, int matchLength)`. `DictionaryChecker` depends on the interface so
 tests can inject a scripted or fixed resolver.
 
-**MinimumConfidence**: `internal const double` (0.95). The minimum tagger confidence for a noun
-or verb answer to be accepted. See *Threshold selection* below.
+**MinimumConfidence**: `internal const double` (0.95). The minimum tagger confidence for a
+supported answer to be accepted. See *Threshold selection* below.
 
 **SentenceBoundaryRegex**: shared with `SentenceAnalyzer` (`SentenceSplitRegex`, a single source
 of truth): whitespace after `.`, `!`, `?`, or `:` that is followed by an uppercase letter, digit,
@@ -62,13 +62,13 @@ so a later call retries.
 
 - *Parameters*: `string segmentText` - full prose text of the segment; `int matchIndex` -
   0-based character offset of the match; `int matchLength` - length of the matched span.
-- *Returns*: `PartOfSpeech?` - `Noun` or `Verb` when the tagger confidently chose that part of
-  speech for the token that covers the match; `null` otherwise.
+- *Returns*: `PartOfSpeech?` - `Noun`, `Verb`, `Adjective`, or `Adverb` when the tagger confidently
+  chose that part of speech for the token that covers the match; `null` otherwise.
 - *Preconditions*: `segmentText` is not null; the match lies within the segment text.
 - *Postconditions*: The sentence that holds the match is tagged with a single `Tagger.Tag` call.
-  A token whose confidence is below `MinimumConfidence` is inconclusive. A `Noun` or `Verb` tag
-  maps to the repository's `PartOfSpeech`; every other tag (adjective, adverb, determiner,
-  proper noun, and so on) is inconclusive. A match that spans more than one token (a multi-word
+  A token whose confidence is below `MinimumConfidence` is inconclusive. A supported tag maps to
+  the repository's `PartOfSpeech`; every other tag (including determiner, proper noun, and so on)
+  is inconclusive. A match that spans more than one token (a multi-word
   term) is inconclusive, as is a match that no token covers. The package does not report unknown
   words: a word that is not in its lexicon is tagged as a noun, so it cannot be detected.
 

@@ -36,8 +36,8 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     matched by the word-boundary regex (which it is not, since the boundary requires the exact
 ///     term). Multi-word terms match across the segment's normalized single-space-separated text.
 ///     A term is always evaluated through <see cref="IPartOfSpeechResolver.Resolve"/>, even when it
-///     has only one sense: when the resolver confidently resolves a grammatical role (noun or
-///     verb) that none of the entry's senses restrict, the term is not being used in a
+///     has only one sense: when the resolver confidently resolves a grammatical role (noun, verb,
+///     adjective, or adverb) that none of the entry's senses restrict, the term is not being used in a
 ///     disallowed role at this location and no diagnostic is reported. When the resolved role matches
 ///     one sense, that sense's alternative(s) are reported (labeled with the resolved part of
 ///     speech only when the entry has more than one sense, so a single-sense entry's message
@@ -226,6 +226,15 @@ internal static class DictionaryChecker
             // senses restrict (for example, a verb-only entry matched where the term is used
             // as a noun): the word is not being used in a role ASD-STE100 disallows here, so no
             // diagnostic is reported.
+            return null;
+        }
+
+        if (role is PartOfSpeech.Adjective or PartOfSpeech.Adverb
+            && candidates.All(s => IsPureSelfReferentialSense(s, entry.Term)))
+        {
+            // A confident role can match several approved/no-replacement senses, including an
+            // Any sense. Suppress the finding because none of the matching senses offers an
+            // actionable replacement; unrelated senses are deliberately not considered.
             return null;
         }
 
