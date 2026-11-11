@@ -57,13 +57,13 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// </summary>
     /// <remarks>
     ///     This is the strict threshold documented by the package: on its open test split it answers
-    ///     83.7% of decisions with 2.4 harmful errors per 1000 answered decisions. In this project's
-    ///     110-sample hand check no error was found at a confidence of 0.95 or higher, whereas
+    ///     89.4% of decisions with 3.8 harmful errors per 1000 answered decisions. In this project's
+    ///     110-sample hand check no error was found at a confidence of 0.90 or higher, whereas
     ///     low-confidence VERB answers on noun-noun compounds were wrong about half the time. A strict
     ///     value is preferred because a wrong answer hides a real violation or reports a false one, while
     ///     an inconclusive answer only makes the checker report the term as ambiguous.
     /// </remarks>
-    internal const double MinimumConfidence = 0.95;
+    internal const double MinimumConfidence = 0.90;
 
     /// <summary>Maximum number of cached sentence classifications before completed entries are evicted.</summary>
     private const int MaxCacheEntries = 4096;

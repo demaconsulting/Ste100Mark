@@ -315,9 +315,9 @@ fallback.
 
 The tagger is statistical, so it is not always right. It is bundled with the tool and runs
 fully offline; nothing is downloaded. An answer is accepted only when its confidence is at
-least 0.95, the strict threshold documented by the tagger library. A strict threshold favors
+least 0.90, the strict threshold documented by the tagger library. A strict threshold favors
 reporting a term as ambiguous over a wrong decision. Very short snippets and verbless
-fragments (a table cell such as "Wash pump", a heading, or a bare label) often get a
+fragments (a heading such as "Heading:", a low-confidence noun compound, or a bare label) often get a
 lower-confidence answer, so a term in them can be reported as ambiguous. The tagger also
 treats a word that it does not recognize as a noun. Known weak spots include a
 sentence-initial imperative that reads like a noun phrase (for example "Test results daily")

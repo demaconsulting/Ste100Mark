@@ -32,7 +32,7 @@ splits the prose segment into sentences with the repository's own sentence rule,
 `Tagger.Default.Tag` once for the sentence that contains the match. The token offsets index the
 string that was passed in, so they are relative to the sentence text; the resolver flattens the
 tokens of every returned sentence. Only a `Noun`, `Verb`, `Adjective`, or `Adverb` tag at or above the resolver's minimum
-confidence (0.95, the strict threshold documented by the package) is mapped to the repository's own
+confidence (0.90, the strict threshold documented by the package) is mapped to the repository's own
 `PartOfSpeech`; a confident determiner maps to the resolver-only `PartOfSpeech.Determiner` result,
 which rules out role-specific dictionary senses but is not a dictionary role. Other unsupported
 answers are inconclusive. The package does not report unknown words: a

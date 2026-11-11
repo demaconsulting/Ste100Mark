@@ -38,7 +38,7 @@ The source folder contains twelve primary behavioral units plus two supporting v
   implements the internal `IPartOfSpeechResolver` interface and delegates to the
   `DemaConsulting.PartOfSpeech` OTS tagger (`Tagger.Default`): the sentence containing the
   match is tagged in one call, and a noun, verb, adjective, or adverb answer at or above a
-  documented minimum confidence (0.95) is accepted. A confident determiner is preserved as the
+  documented minimum confidence (0.90) is accepted. A confident determiner is preserved as the
   resolver-only `Determiner` result and rules out role-specific senses; other unsupported outcomes are
   inconclusive. `DictionaryChecker` calls it for general noun/verb/adjective/adverb sense selection and
   resolver-only determiner evidence.

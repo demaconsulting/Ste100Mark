@@ -217,14 +217,13 @@ public class PartOfSpeechFalsePositiveCorpusTests
     }
 
     /// <summary>
-    ///     Test that legal noun usages the tagger answers below the minimum confidence ("rank" and
-    ///     "cast" in these sentences) are inconclusive from the resolver but are still not flagged,
-    ///     because the checker's own noun-signal rules (a preceding determiner) decide them.
+    ///     Test that verb-only entries used as nouns ("rank" and "cast" in these sentences) are
+    ///     resolved as confident nouns and are therefore suppressed through the confident-role path.
     /// </summary>
     [Theory]
     [InlineData("rank", "Note the technician's rank on the form.")]
     [InlineData("cast", "Examine the cast for cracks.")]
-    public void Evaluate_LowConfidenceNounUsage_VerbOnlyDisallowedEntry_NotFlagged(
+    public void Evaluate_ConfidentNounUsage_VerbOnlyDisallowedEntry_NotFlagged(
         string term, string sentence)
     {
         // Arrange: a self-contained dictionary disallowing only the verb sense of the term
@@ -245,8 +244,9 @@ public class PartOfSpeechFalsePositiveCorpusTests
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);
 
-        // Assert: the resolver is inconclusive and the legal usage still produces no finding
-        Assert.Null(ResolveRole(term, sentence));
+        // Assert: the resolver confidently identifies the legal noun usage and suppresses the
+        // incompatible verb-only entry through its confident-role path.
+        Assert.Equal(PartOfSpeech.Noun, ResolveRole(term, sentence));
         Assert.Empty(diagnostics);
     }
 

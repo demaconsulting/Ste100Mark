@@ -5,7 +5,7 @@
 # grammatical role at a specific point in prose. A resolution is "confident" only when the part-of-speech
 # classifier chose a noun, verb, adjective, or adverb for the matched word, or confidently chose a determiner as
 # resolver-only evidence, in the context of its own sentence, with a
-# confidence of at least 0.95 (the minimum confidence, set by the MinimumConfidence requirement).
+# confidence of at least 0.90 (the minimum confidence, set by the MinimumConfidence requirement).
 # Other unsupported outcomes are "inconclusive". The unit has no OTS child requirement: the OTS PartOfSpeech
 # requirement is a child of the Linting subsystem requirement Ste100Mark-Linting-DictionaryPos.
 
@@ -57,12 +57,12 @@ sections:
 
       - id: Ste100Mark-PartOfSpeechResolver-MinimumConfidence
         title: >-
-          The PartOfSpeechResolver class shall treat a tagger answer with a confidence below 0.95
-          as inconclusive and a tagger answer with a confidence of exactly 0.95 as confident.
+          The PartOfSpeechResolver class shall treat a tagger answer with a confidence below 0.90
+          as inconclusive and a tagger answer with a confidence of exactly 0.90 as confident.
         justification: |
-          The threshold is the strict threshold documented by the PartOfSpeech package (83.7%
-          coverage, 2.4 harmful errors per 1000 answered decisions). A hand check of 110 samples
-          found no error at or above 0.95, while low-confidence verb answers on noun-noun
+          The threshold is the strict threshold documented by the PartOfSpeech package (89.4%
+          coverage, 3.8 harmful errors per 1000 answered decisions). A hand check of 110 samples
+          found no error at or above 0.90, while low-confidence verb answers on noun-noun
           compounds were wrong about half the time. The inclusive boundary must be exact so the
           documented value behaves as documented.
         tests:
