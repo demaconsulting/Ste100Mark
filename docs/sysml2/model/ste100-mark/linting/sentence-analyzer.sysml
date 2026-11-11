@@ -7,7 +7,6 @@ package Ste100Mark {
         // Verification: verified through sentence-analysis scenarios
         // Requirements: word-limit requirements
         metadata info : SoftwareInfo {
-            description = "Splits prose into sentences and counts words using the implemented STE100 counting rules.";
             sourceFiles = ("src/DemaConsulting.Ste100Mark/Linting/SentenceAnalyzer.cs");
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Linting/SentenceAnalyzerTests.cs");
             designFiles = ("docs/design/ste100-mark/linting/sentence-analyzer.md");

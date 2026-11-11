@@ -7,7 +7,6 @@ package Ste100Mark {
         // Verification: verified through structural-rule scenarios
         // Requirements: mechanical and advisory rule requirements
         metadata info : SoftwareInfo {
-            description = "Evaluates official structural rules and advisory prose heuristics over extracted segments.";
             sourceFiles = ("src/DemaConsulting.Ste100Mark/Linting/StructuralRules.cs");
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Linting/StructuralRulesTests.cs");
             designFiles = ("docs/design/ste100-mark/linting/structural-rules.md");

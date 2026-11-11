@@ -7,7 +7,6 @@ package Ste100Mark {
         // Verification: verified through extraction scenarios
         // Requirements: word-limit and extraction-related requirements
         metadata info : SoftwareInfo {
-            description = "Extracts lintable prose segments from Markdown while skipping code and link targets.";
             sourceFiles = ("src/DemaConsulting.Ste100Mark/Linting/MarkdownProseExtractor.cs");
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Linting/MarkdownProseExtractorTests.cs");
             designFiles = ("docs/design/ste100-mark/linting/markdown-prose-extractor.md");

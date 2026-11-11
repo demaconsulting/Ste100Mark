@@ -5,7 +5,6 @@ package Ste100Mark {
         doc /* End-to-end lint orchestrator and the subsystem's single externally called entry point. */
 
         metadata info : SoftwareInfo {
-            description = "End-to-end lint orchestrator and the subsystem's single externally called entry point.";
             sourceFiles = ("src/DemaConsulting.Ste100Mark/Linting/Linter.cs");
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Linting/LinterTests.cs");
             designFiles = ("docs/design/ste100-mark/linting/linter.md");

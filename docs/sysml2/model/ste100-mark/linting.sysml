@@ -5,7 +5,6 @@ package Ste100Mark {
         doc /* Markdown linting, configuration, dictionary merge, and diagnostic reporting. */
 
         metadata info : SoftwareInfo {
-            description = "Markdown linting, configuration, dictionary merge, and diagnostic reporting.";
             designFiles = ("docs/design/ste100-mark/linting.md");
             verificationFiles = ("docs/verification/ste100-mark/linting.md");
             requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");

@@ -5,7 +5,6 @@ package Ste100Mark {
         doc /* Orchestrates the self-validation test suite and reports pass/fail results. */
 
         metadata info : SoftwareInfo {
-            description = "Orchestrates the self-validation test suite and reports pass/fail results.";
             sourceFiles = ("src/DemaConsulting.Ste100Mark/SelfTest/Validation.cs");
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/SelfTest/ValidationTests.cs");
             designFiles = ("docs/design/ste100-mark/self-test/validation.md");

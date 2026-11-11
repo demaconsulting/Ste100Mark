@@ -5,7 +5,6 @@ package Ste100Mark {
         doc /* Shared, independently testable helper functions used by other subsystems. */
 
         metadata info : SoftwareInfo {
-            description = "Shared, independently testable helper functions used by other subsystems.";
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Utilities/UtilitiesSubsystemTests.cs");
             designFiles = ("docs/design/ste100-mark/utilities.md");
             verificationFiles = ("docs/verification/ste100-mark/utilities.md");

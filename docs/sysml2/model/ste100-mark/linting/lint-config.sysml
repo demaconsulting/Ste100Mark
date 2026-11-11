@@ -7,7 +7,6 @@ package Ste100Mark {
         // Verification: verified through configuration scenarios
         // Requirements: configuration, profiles, and CLI integration requirements
         metadata info : SoftwareInfo {
-            description = "YAML-backed lint configuration model; resolves per-file mode, rules, and dictionary allowances via profiles.";
             sourceFiles = ("src/DemaConsulting.Ste100Mark/Linting/LintConfig.cs");
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Linting/LintConfigTests.cs");
             designFiles = ("docs/design/ste100-mark/linting/lint-config.md");

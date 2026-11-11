@@ -7,7 +7,6 @@ package Ste100Mark {
         // Verification: verified through dictionary-check scenarios
         // Requirements: dictionary requirements
         metadata info : SoftwareInfo {
-            description = "Matches extracted prose against the effective dictionary and reports vocabulary findings.";
             sourceFiles = ("src/DemaConsulting.Ste100Mark/Linting/DictionaryChecker.cs");
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Linting/DictionaryCheckerTests.cs");
             designFiles = ("docs/design/ste100-mark/linting/dictionary-checker.md");

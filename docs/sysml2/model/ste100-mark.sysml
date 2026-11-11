@@ -11,7 +11,6 @@ package Ste100Mark {
         doc /* The Ste100Mark system as a whole. */
 
         metadata info : SoftwareInfo {
-            description = "The Ste100Mark system as a whole.";
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/IntegrationTests.cs");
             designFiles = ("docs/design/ste100-mark.md");
             verificationFiles = ("docs/verification/ste100-mark.md");
