@@ -5,7 +5,6 @@ package Ste100Mark {
         doc /* Command-line argument parsing, output-channel management, and exit-code tracking. */
 
         metadata info : SoftwareInfo {
-            description = "Command-line argument parsing, output-channel management, and exit-code tracking.";
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Cli/CliSubsystemTests.cs");
             designFiles = ("docs/design/ste100-mark/cli.md");
             verificationFiles = ("docs/verification/ste100-mark/cli.md");

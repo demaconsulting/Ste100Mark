@@ -5,7 +5,6 @@ package Ste100Mark {
         doc /* Command-line argument parser and I/O owner for one tool invocation. */
 
         metadata info : SoftwareInfo {
-            description = "Command-line argument parser and I/O owner for one tool invocation.";
             sourceFiles = ("src/DemaConsulting.Ste100Mark/Cli/Context.cs");
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Cli/ContextTests.cs");
             designFiles = ("docs/design/ste100-mark/cli/context.md");

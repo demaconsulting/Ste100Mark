@@ -5,7 +5,6 @@ package Ste100Mark {
         doc /* Self-validation framework exercising the tool's own capabilities on demand. */
 
         metadata info : SoftwareInfo {
-            description = "Self-validation framework exercising the tool's own capabilities on demand.";
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/SelfTest/SelfTestSubsystemTests.cs");
             designFiles = ("docs/design/ste100-mark/self-test.md");
             verificationFiles = ("docs/verification/ste100-mark/self-test.md");

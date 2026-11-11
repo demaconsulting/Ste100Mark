@@ -8,7 +8,6 @@ package Ste100Mark {
         // Verification: verified through -ing form scenarios
         // Requirements: -ing form requirements
         metadata info : SoftwareInfo {
-            description = "Deterministic regex/rule-based heuristic deciding whether an -ing word is a verb or a gerund/adjective.";
             sourceFiles = ("src/DemaConsulting.Ste100Mark/Linting/PartOfSpeechGuesser.cs");
             testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Linting/StructuralRulesTests.cs");
             designFiles = ("docs/design/ste100-mark/linting/part-of-speech-guesser.md");
