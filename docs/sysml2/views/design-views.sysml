@@ -5,7 +5,8 @@
 // 'render' - is what scopes the rendered diagram content.
 package Ste100Mark {
     view SoftwareStructureView {
-        expose Ste100Mark;
+        expose Ste100Mark::**;
+        render asInterconnectionDiagram;
     }
 
     view Ste100MarkView {
