@@ -1,6 +1,6 @@
 ---
 title: Ste100Mark Trace Matrix
-subtitle: Requirements Traceability Matrix for the Ste100Mark
+subtitle: ASD-STE100 prose linter for Markdown documentation
 author: DEMA Consulting
 description: Requirements Traceability Matrix for the Ste100Mark
 lang: en-US

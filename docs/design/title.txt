@@ -1,6 +1,6 @@
 ---
 title: Ste100Mark Software Design Document
-subtitle: A .NET Reference Implementation for CLI Tools
+subtitle: ASD-STE100 prose linter for Markdown documentation
 author: DEMA Consulting
 description: Detailed design document for the Ste100Mark
 lang: en-US

@@ -1,6 +1,6 @@
 ---
 title: Ste100Mark Review Report
-subtitle: File Review Report for the Ste100Mark
+subtitle: ASD-STE100 prose linter for Markdown documentation
 author: DEMA Consulting
 description: File Review Report for the Ste100Mark
 lang: en-US
