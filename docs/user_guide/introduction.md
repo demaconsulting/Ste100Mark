@@ -1,9 +1,13 @@
 # Introduction
 
-The diagram below shows how one `ste100mark` run reads Markdown files and configuration, lints the prose,
-and reports the findings.
+The workflow below shows how Ste100Mark is used: prepare your Markdown files and an optional
+`.ste100mark.yaml`, run the `ste100mark` command locally or in a CI pipeline, and use the reported
+findings and exit code as a writing-quality gate and in pull request reviews.
 
-![Ste100Mark architecture: the ste100mark program runs the Cli, which hands Markdown files and an optional .ste100mark.yaml to the Linting subsystem (configuration, prose extraction, rules, and reporting) to produce text or JSON findings and an exit code, with SelfTest and Utilities as support, built on YamlDotNet, PartOfSpeech, and FileSystemGlobbing](architecture.svg)
+![Ste100Mark workflow: prepare Markdown files, an optional .ste100mark.yaml with profiles, and a dictionary file, run
+ste100mark with globs and the config, format, and strict options, get text or JSON diagnostics with rule codes, a run
+summary, and an exit code, then use them as a CI writing-quality gate, in pull request reviews, for tool integration,
+and for clearer documentation](workflow.svg)
 
 ## Purpose
 

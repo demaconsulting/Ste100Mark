@@ -57,6 +57,18 @@ pipeline tooling and are not modeled as SysML2 parts; all OTS items are document
 
 ![Software Structure](SoftwareStructureView.svg)
 
+The diagram below complements the structure view by showing how data flows at run time: the
+Cli subsystem parses the arguments, the Linting subsystem loads the configuration and dictionary,
+extracts the prose, applies the rules, and formats the findings, and the tool writes the text or
+JSON findings and returns the exit code; SelfTest runs the built-in validation and Utilities
+provides safe path handling.
+
+![Ste100Mark architecture: the ste100mark Program entry point runs the Cli subsystem, the Linting
+subsystem (configuration, prose extraction, rules, and reporting) turns Markdown files and an optional
+.ste100mark.yaml into text or JSON findings, an exit code, and the rule catalog, SelfTest writes TRX or
+JUnit results, and Utilities supports them, built on YamlDotNet, PartOfSpeech, and
+FileSystemGlobbing](architecture.svg)
+
 ## Folder Layout
 
 - **src/** - source files and projects

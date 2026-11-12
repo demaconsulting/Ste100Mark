@@ -1,12 +1,15 @@
 ---
 resource-path:
   - docs/design
+  - docs/design/generated
   - docs/design/ste100-mark
   - docs/design/ste100-mark/cli
   - docs/design/ste100-mark/self-test
   - docs/design/ste100-mark/utilities
   - docs/design/ots
+  - docs/images
   - docs/template
+embed-resources: true
 
 input-files:
   - docs/design/title.txt

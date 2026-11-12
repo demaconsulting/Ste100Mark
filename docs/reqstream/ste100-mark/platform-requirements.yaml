@@ -4,7 +4,7 @@
 # These requirements specify the platforms and runtimes the tool must support.
 # They ensure the tool works across the required execution environments.
 #
-# Test links can include a source filter prefix (e.g. "windows@", "ubuntu@", "dotnet8.x@") to restrict
+# Test links can include a source filter prefix (e.g. "windows@", "ubuntu@", "dotnet10.x@") to restrict
 # which test results count as evidence for a requirement. This is critical for platform and runtime
 # requirements - removing these filters invalidates the evidence-based proof.
 #
@@ -12,9 +12,8 @@
 #   windows@TestName      - proves the test passed on a Windows platform
 #   ubuntu@TestName       - proves the test passed on a Linux (Ubuntu) platform
 #   macos@TestName        - proves the test passed on a macOS platform
-#   dotnet8.x@TestName    - proves the self-validation test ran with .NET 8.x runtime
-#   dotnet9.x@TestName    - proves the self-validation test ran with .NET 9.x runtime
 #   dotnet10.x@TestName   - proves the self-validation test ran with .NET 10.x runtime
+#   dotnet11.x@TestName   - proves the self-validation test ran with .NET 11.x runtime
 
 sections:
   - title: Platform Support
@@ -23,7 +22,7 @@ sections:
         title: The tool shall execute successfully on Windows platforms.
         justification: |
           The GitHub Actions build workflow runs the build, pack, and full `dotnet test` suite on
-          the `windows-latest` matrix leg after installing .NET 8.x, 9.x, and 10.x. This
+          the `windows-latest` matrix leg after installing .NET 10.x and 11.x. This
           requirement is therefore limited to the Windows environment that the CI matrix actually
           exercises and can prove with platform-filtered evidence.
         tags: [system]
@@ -36,7 +35,7 @@ sections:
         title: The tool shall execute successfully on Linux platforms.
         justification: |
           The GitHub Actions build workflow runs the build, pack, and full `dotnet test` suite on
-          the `ubuntu-latest` matrix leg after installing .NET 8.x, 9.x, and 10.x. This
+          the `ubuntu-latest` matrix leg after installing .NET 10.x and 11.x. This
           requirement is therefore limited to the Linux environment that the CI matrix actually
           exercises and can prove with platform-filtered evidence.
         tags: [system]
@@ -49,7 +48,7 @@ sections:
         title: The tool shall execute successfully on macOS platforms.
         justification: |
           The GitHub Actions build workflow runs the build, pack, and full `dotnet test` suite on
-          the `macos-latest` matrix leg after installing .NET 8.x, 9.x, and 10.x. This
+          the `macos-latest` matrix leg after installing .NET 10.x and 11.x. This
           requirement is therefore limited to the macOS environment that the CI matrix actually
           exercises and can prove with platform-filtered evidence.
         tags: [system]
@@ -58,38 +57,28 @@ sections:
           - "macos@Ste100Mark_VersionDisplay"
           - "macos@Ste100Mark_HelpDisplay"
 
-      - id: Ste100Mark-Platform-Net8
-        title: The tool shall support .NET 8 runtime.
-        justification: |
-          The GitHub Actions build workflow installs .NET 8.x, 9.x, and 10.x on every
-          `windows-latest`, `ubuntu-latest`, and `macos-latest` build-matrix leg before running the
-          build and test steps. This requirement is therefore bounded to the .NET 8.x runtime that
-          the CI matrix actually provisions and exercises across those operating systems.
-        tags: [system]
-        tests:
-          - "dotnet8.x@Ste100Mark_VersionDisplay"
-          - "dotnet8.x@Ste100Mark_HelpDisplay"
-
-      - id: Ste100Mark-Platform-Net9
-        title: The tool shall support .NET 9 runtime.
-        justification: |
-          The GitHub Actions build workflow installs .NET 8.x, 9.x, and 10.x on every
-          `windows-latest`, `ubuntu-latest`, and `macos-latest` build-matrix leg before running the
-          build and test steps. This requirement is therefore bounded to the .NET 9.x runtime that
-          the CI matrix actually provisions and exercises across those operating systems.
-        tags: [system]
-        tests:
-          - "dotnet9.x@Ste100Mark_VersionDisplay"
-          - "dotnet9.x@Ste100Mark_HelpDisplay"
-
       - id: Ste100Mark-Platform-Net10
         title: The tool shall support .NET 10 runtime.
         justification: |
-          The GitHub Actions build workflow installs .NET 8.x, 9.x, and 10.x on every
-          `windows-latest`, `ubuntu-latest`, and `macos-latest` build-matrix leg before running the
-          build and test steps. This requirement is therefore bounded to the .NET 10.x runtime
-          that the CI matrix actually provisions and exercises across those operating systems.
+          The GitHub Actions integration-test workflow installs only the .NET 10.x runtime on its
+          `10.x` matrix legs for `windows-latest`, `ubuntu-latest`, and `macos-latest` before
+          installing the packaged tool and running self-validation. This requirement is therefore
+          bounded to the .NET 10.x runtime that the CI matrix actually provisions and exercises
+          across those operating systems.
         tags: [system]
         tests:
           - "dotnet10.x@Ste100Mark_VersionDisplay"
           - "dotnet10.x@Ste100Mark_HelpDisplay"
+
+      - id: Ste100Mark-Platform-Net11
+        title: The tool shall support .NET 11 runtime.
+        justification: |
+          The GitHub Actions integration-test workflow installs only the .NET 11.x runtime on its
+          `11.x` matrix legs for `windows-latest`, `ubuntu-latest`, and `macos-latest` before
+          installing the packaged tool and running self-validation. This requirement is therefore
+          bounded to the .NET 11.x runtime that the CI matrix actually provisions and exercises
+          across those operating systems.
+        tags: [system]
+        tests:
+          - "dotnet11.x@Ste100Mark_VersionDisplay"
+          - "dotnet11.x@Ste100Mark_HelpDisplay"

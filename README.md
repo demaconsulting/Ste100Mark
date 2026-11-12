@@ -13,10 +13,14 @@ Ste100Mark is a .NET CLI tool for linting Markdown prose against ASD-STE100-styl
 while also demonstrating DEMA Consulting practices for command-line tooling,
 self-validation, and continuous-compliance documentation.
 
-The diagram below shows how one `ste100mark` run reads Markdown files and configuration, lints the prose,
-and reports the findings.
+The workflow below shows how to use it: prepare your Markdown files and an optional `.ste100mark.yaml`, run
+`ste100mark` from the command line or a CI pipeline, and use the reported findings and exit code as a writing-quality
+gate.
 
-![Ste100Mark architecture: the ste100mark program runs the Cli, which hands Markdown files and an optional .ste100mark.yaml to the Linting subsystem (configuration, prose extraction, rules, and reporting) to produce text or JSON findings and an exit code, with SelfTest and Utilities as support, built on YamlDotNet, PartOfSpeech, and FileSystemGlobbing][architecture]
+![Ste100Mark workflow: prepare Markdown files, an optional .ste100mark.yaml with profiles, and a dictionary file, run
+ste100mark with globs and the config, format, and strict options, get text or JSON diagnostics with rule codes, a run
+summary, and an exit code, then use them as a CI writing-quality gate, in pull request reviews, for tool integration,
+and for clearer documentation][workflow]
 
 ## Features
 
@@ -29,7 +33,7 @@ Ste100Mark provides:
 - 📖 **Embedded Example Dictionary**: Ships illustrative vocabulary for immediate linter evaluation
 - ✅ **Self-Validation**: Built-in validation tests with TRX and JUnit output
 - 🖥️ **Multi-Platform Support**: Builds and runs on Windows, Linux, macOS
-- ⚙️ **Multi-Runtime Support**: Targets .NET 8, 9, and 10 runtimes
+- ⚙️ **Multi-Runtime Support**: Targets .NET 10 and 11 runtimes
 - 🔁 **Comprehensive CI/CD**: GitHub Actions workflows for quality checks, builds, tests
 - 🛡️ **Continuous Compliance**: This repository's CI pipeline generates compliance evidence and
   reports using the [Continuous Compliance][link-continuous-compliance] methodology
@@ -384,7 +388,7 @@ the package is [PACKAGE-LICENSE.md][link-package-license], and the required attr
 By contributing to this project, you agree that your contributions will be licensed under the MIT License.
 
 <!-- Badge References -->
-[architecture]: https://raw.githubusercontent.com/demaconsulting/Ste100Mark/main/docs/images/architecture.png
+[workflow]: https://raw.githubusercontent.com/demaconsulting/Ste100Mark/main/docs/images/workflow.png
 [badge-forks]: https://img.shields.io/github/forks/demaconsulting/Ste100Mark?style=plastic
 [badge-stars]: https://img.shields.io/github/stars/demaconsulting/Ste100Mark?style=plastic
 [badge-contributors]: https://img.shields.io/github/contributors/demaconsulting/Ste100Mark?style=plastic

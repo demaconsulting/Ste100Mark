@@ -14,7 +14,8 @@ against the combined output.
 
 ## Test Environment
 
-Integration tests run on .NET 8.0, .NET 9.0, and .NET 10.0 across Windows, Linux, and macOS.
+Integration tests run on .NET 10.0 and .NET 11.0 across Windows, Linux, and macOS (both net10.0
+and net11.0 are exercised in the CI matrix).
 All scenarios are expected to produce identical results on all supported runtime and platform
 combinations. Temporary files and directories are created and cleaned up within each test.
 
