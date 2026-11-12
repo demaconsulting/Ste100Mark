@@ -4,6 +4,7 @@ resource-path:
   - docs/design/generated
   - docs/design/ste100-mark
   - docs/design/ste100-mark/cli
+  - docs/design/ste100-mark/linting
   - docs/design/ste100-mark/self-test
   - docs/design/ste100-mark/utilities
   - docs/design/ots
@@ -18,6 +19,21 @@ input-files:
   - docs/design/ste100-mark/program.md
   - docs/design/ste100-mark/cli.md
   - docs/design/ste100-mark/cli/context.md
+  - docs/design/ste100-mark/linting.md
+  - docs/design/ste100-mark/linting/severity.md
+  - docs/design/ste100-mark/linting/diagnostic.md
+  - docs/design/ste100-mark/linting/lint-config.md
+  - docs/design/ste100-mark/linting/lint-dictionary.md
+  - docs/design/ste100-mark/linting/part-of-speech-resolver.md
+  - docs/design/ste100-mark/linting/part-of-speech-guesser.md
+  - docs/design/ste100-mark/linting/markdown-prose-extractor.md
+  - docs/design/ste100-mark/linting/sentence-analyzer.md
+  - docs/design/ste100-mark/linting/structural-rules.md
+  - docs/design/ste100-mark/linting/dictionary-checker.md
+  - docs/design/ste100-mark/linting/diagnostic-reporter.md
+  - docs/design/ste100-mark/linting/rule-codes.md
+  - docs/design/ste100-mark/linting/rule-catalog.md
+  - docs/design/ste100-mark/linting/linter.md
   - docs/design/ste100-mark/self-test.md
   - docs/design/ste100-mark/self-test/validation.md
   - docs/design/ste100-mark/utilities.md
@@ -25,7 +41,9 @@ input-files:
   - docs/design/ots.md
   - docs/design/ots/buildmark.md
   - docs/design/ots/fileassert.md
+  - docs/design/ots/file-system-globbing.md
   - docs/design/ots/pandoc.md
+  - docs/design/ots/part-of-speech.md
   - docs/design/ots/reqstream.md
   - docs/design/ots/reviewmark.md
   - docs/design/ots/sarifmark.md
@@ -34,6 +52,7 @@ input-files:
   - docs/design/ots/versionmark.md
   - docs/design/ots/weasyprint.md
   - docs/design/ots/xunit.md
+  - docs/design/ots/yamldotnet.md
 template: template.html
 table-of-contents: true
 number-sections: true
