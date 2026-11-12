@@ -1,6 +1,6 @@
 ---
 title: Ste100Mark Verification Design Document
-subtitle: A .NET Reference Implementation for CLI Tools
+subtitle: ASD-STE100 prose linter for Markdown documentation
 author: DEMA Consulting
 description: Verification design document for the Ste100Mark
 lang: en-US

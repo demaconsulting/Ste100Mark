@@ -1,21 +1,17 @@
 # Project Overview
 
-> **Downstream customization required**: Replace the `TODO` values below with
-> values specific to the target repository. These values are the canonical source
-> for project-wide template placeholders used throughout the repository.
-
-- **project-name**: TODO — repository/project name (e.g., `ReqStream`)
-- **organization**: TODO — organization name for document authorship (e.g., `DEMA Consulting`)
-- **project-tagline**: TODO — document subtitle; 4–8 words, noun phrase, no period
-  (e.g., `Requirements traceability for .NET projects`)
-- **description**: TODO — full project description, may be multiple sentences
-- **languages**: TODO — programming languages used (e.g., `C#`, `C++`)
-- **technologies**: TODO — key technologies and frameworks (e.g., `.NET`, `CMake`)
+- **project-name**: Ste100Mark
+- **organization**: DEMA Consulting
+- **project-tagline**: ASD-STE100 prose linter for Markdown documentation
+- **description**: A .NET command-line tool that lints Markdown prose against ASD-STE100
+  (Issue 9) Simplified Technical English rules, reporting text or JSON diagnostics with rule
+  codes and an exit code suitable for CI writing-quality gates, and demonstrating DEMA
+  Consulting practices for self-validation and continuous-compliance documentation.
+- **languages**: C#
+- **technologies**: .NET 10/11, YamlDotNet, DemaConsulting.PartOfSpeech,
+  Microsoft.Extensions.FileSystemGlobbing, xUnit, Pandoc, WeasyPrint
 
 # Project Structure
-
-> **Downstream customization required**: Replace `{project}` and
-> `{test-project}` with the actual source and test project folder names.
 
 ```text
 ├── docs/
@@ -24,16 +20,19 @@
 │   ├── code_review_plan/
 │   ├── code_review_report/
 │   ├── design/
+│   ├── filters/
+│   ├── images/
 │   ├── requirements_doc/
 │   ├── requirements_report/
 │   ├── reqstream/
 │   ├── sysml2/
+│   ├── template/
 │   ├── user_guide/
 │   └── verification/
 ├── src/
-│   └── {project}/
+│   └── DemaConsulting.Ste100Mark/
 └── test/
-    └── {test-project}/
+    └── DemaConsulting.Ste100Mark.Tests/
 ```
 
 # Language and Spelling (ALL Agents)

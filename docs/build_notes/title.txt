@@ -1,8 +1,8 @@
 ---
 title: Ste100Mark
-subtitle: Build Notes
+subtitle: ASD-STE100 prose linter for Markdown documentation
 author: DEMA Consulting
-description: Build notes for the Ste100Mark reference implementation
+description: Build notes for the Ste100Mark
 lang: en-US
 keywords:
   - Ste100Mark

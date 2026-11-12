@@ -1,6 +1,6 @@
 ---
 title: Ste100Mark Requirements
-subtitle: Requirements Specification for the Ste100Mark
+subtitle: ASD-STE100 prose linter for Markdown documentation
 author: DEMA Consulting
 description: Requirements Specification for the Ste100Mark
 lang: en-US
