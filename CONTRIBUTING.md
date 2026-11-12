@@ -47,7 +47,8 @@ We follow a standard GitHub workflow for contributions:
 
 ### Prerequisites
 
-- [.NET SDK][dotnet-download] 8.0, 9.0, or 10.0
+- [.NET SDK][dotnet-download] 10.0 and 11.0 (both are required: the 11.0 SDK builds the
+  `net11.0` target and the .NET 10 runtime runs the `net10.0` tests)
 - Git
 - A code editor (Visual Studio, VS Code, or Rider recommended)
 
