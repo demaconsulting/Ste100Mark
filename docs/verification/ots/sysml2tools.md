@@ -34,7 +34,7 @@ assertions on its actual pipeline output:
   that render succeeded. Instead, `SysML2Tools_DesignDiagramsSvg` is a FileAssert test that runs
   immediately after the render step and directly asserts that each expected SVG file
   (`SoftwareStructureView.svg`, `Ste100MarkView.svg`, `CliView.svg`, `SelfTestView.svg`,
-  `UtilitiesView.svg`) exists in `docs/design/generated/`, has a non-trivial size, and is
+  `UtilitiesView.svg`, `LintingView.svg`) exists in `docs/design/generated/`, has a non-trivial size, and is
   well-formed XML with an `<svg>` root element. This is the only evidence that render actually
   produced the required diagrams against the real model.
 
@@ -62,7 +62,7 @@ against a known-good model fixture as part of its built-in self-test suite.
 #### SysML2Tools_DesignDiagramsSvg
 
 **Scenario**: FileAssert asserts, immediately after the real `dotnet sysml2tools render` step runs
-against this project's actual model, that each of the five expected SVG files exists in
+against this project's actual model, that each of the six expected SVG files exists in
 `docs/design/generated/`, has a non-trivial size, and is well-formed XML with an `<svg>` root
 element.
 
