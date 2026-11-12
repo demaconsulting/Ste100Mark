@@ -1271,7 +1271,7 @@ public class DictionaryCheckerTests
         IReadOnlyList<ProseSegment> segments =
         [
             new ProseSegment(
-                "Software support is a must. LaunchCode supports the switch to support gigabit.",
+                "Software support is a must. Acme supports the switch to support gigabit.",
                 1,
                 SegmentRole.Paragraph)
         ];
