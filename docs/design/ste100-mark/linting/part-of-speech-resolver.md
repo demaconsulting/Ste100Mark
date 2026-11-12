@@ -99,9 +99,9 @@ confident-role path and suppresses their verb-only, self-referential entries.
 
 The tagger is a statistical model and is wrong or unsure for some inputs:
 
-- Short verbless fragments (a heading such as "Heading:", a table cell with a low-confidence noun
-  compound such as "Check the coolant mix ratio before startup.", or a bare label such as
-  "Function") and some imperatives are often answered below the threshold,
+- Short verbless fragments (a heading such as "Heading:" or a bare label such as "Function"), sentences that
+  contain a low-confidence noun compound (such as "Check the coolant mix ratio before startup."), and some
+  imperatives are often answered below the threshold,
   so the term is reported as ambiguous or, for a single-sense entry, reported.
 - A noun-noun compound can be tagged as a verb at low confidence; such answers are rejected by
   the threshold.

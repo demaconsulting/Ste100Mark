@@ -1,18 +1,22 @@
 # Third-Party Notices
 
-PartOfSpeech is Copyright (c) DEMA Consulting and is licensed under the MIT License (see `LICENSE`). The code and the
-data of this project build on the third-party works below. Their attribution and license notices are reproduced here, and
-this file is packed at the root of the NuGet package so that the notices travel with every copy of the package. The
-data and the files derived from it are kept in the `data/` folder of the repository; compiled forms of them are embedded
-in the package. The package embeds a compiled form of the lexicon `data/lexicon/lexicon.tsv` (derived from Open
-English WordNet and the Moby Part-of-Speech List, with tags attested in MASC and the open corpus) as the binary resource
-that restricts the tags of known words, and the trained weights of the tagger (`Resources/weights.bin`), which the
-Trainer tool learned from the corpora in `data/open/`, `data/masc/` and `data/silver/`. The file `PACKAGE-LICENSE.md`,
-also packed at the root of the package, is the license of the package and states which license covers which part.
+Ste100Mark is Copyright (c) DEMA Consulting and is licensed under the MIT License (see `LICENSE`). The tool depends on
+the package `DemaConsulting.PartOfSpeech`, whose assembly is bundled in the NuGet package and embeds language data
+adapted from the third-party works below. Their attribution and license notices are reproduced here, and this file is
+packed at the root of the NuGet package so that the notices travel with every copy of the package. The file
+`PACKAGE-LICENSE.md`, also packed at the root of the package, is the license of the package and states which license
+covers which part.
 
-No Creative Commons Attribution-ShareAlike (CC BY-SA), NonCommercial or NoDerivatives material is part of this
-repository or package. The one CC BY-SA corpus that the project evaluates against is described in the last section and
-is never distributed.
+The sections below reproduce the notices of `DemaConsulting.PartOfSpeech`. In them, "the project", "the repository" and
+the `data/` and `tools/` paths refer to the PartOfSpeech repository, <https://github.com/demaconsulting/PartOfSpeech>.
+The package embeds a compiled form of its lexicon `data/lexicon/lexicon.tsv` (derived from Open English WordNet and the
+Moby Part-of-Speech List, with tags attested in MASC and the open corpus) and the trained weights of its tagger
+(`Resources/weights.bin`), which its Trainer tool learned from the corpora in `data/open/`, `data/masc/` and
+`data/silver/`.
+
+No Creative Commons Attribution-ShareAlike (CC BY-SA), NonCommercial or NoDerivatives material is part of the
+PartOfSpeech repository or package. The one CC BY-SA corpus that the PartOfSpeech project evaluates against is
+described in the last section and is never distributed.
 
 ## The Manually Annotated Sub-Corpus (MASC)
 
