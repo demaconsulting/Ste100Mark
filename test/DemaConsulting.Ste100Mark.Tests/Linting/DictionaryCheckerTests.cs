@@ -699,8 +699,8 @@ public class DictionaryCheckerTests
     [Fact]
     public void Evaluate_VerblessTableCellNounPhrase_NotFlagged()
     {
-        // Arrange: "Wash pump" - a verbless noun-phrase cell. The real tagger is inconclusive on such
-        // short fragments, so a resolver that confidently reports a noun verifies the checker rule.
+        // Arrange: "Wash pump" - a verbless noun-phrase cell. A resolver that confidently reports
+        // a noun verifies that the checker suppresses verb-only entries in a noun phrase.
         var dictionary = VerblessSegmentFixtureDictionary();
         IReadOnlyList<ProseSegment> segments = [new ProseSegment("Wash pump", 1, SegmentRole.TableRow)];
 

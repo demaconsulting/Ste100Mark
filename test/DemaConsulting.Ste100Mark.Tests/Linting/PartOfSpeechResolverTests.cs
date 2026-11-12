@@ -151,9 +151,7 @@ public class PartOfSpeechResolverTests
     /// </summary>
     public static IEnumerable<object[]> InconclusiveScenarios() =>
     [
-        ["impact", "The metering impact moves to the tower."],
-        ["pump", "Wash pump"],
-        ["pump", "Instructions to wash pump parts."],
+        ["Heading", "Heading:"],
         ["mix", "Check the coolant mix ratio before startup."],
         ["Block", "Block 0 failed the self-test."],
         ["Trigger", "Trigger not issued correctly by the controller."],
@@ -415,13 +413,13 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
-    ///     Test that the minimum confidence is the strict threshold documented by the package.
+    ///     Test that the minimum confidence is the strict threshold documented by the beta.2 package.
     /// </summary>
     [Fact]
     public void MinimumConfidence_IsPackageStrictThreshold()
     {
         // Arrange/Act/Assert: the constant is the strict threshold
-        Assert.Equal(0.95, PartOfSpeechResolver.MinimumConfidence);
+        Assert.Equal(0.90, PartOfSpeechResolver.MinimumConfidence);
     }
 
     /// <summary>

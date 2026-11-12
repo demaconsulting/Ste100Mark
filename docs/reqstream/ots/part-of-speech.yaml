@@ -26,7 +26,7 @@ sections:
               - Resolve_BelowThresholdOrOtherTag_ReturnsNull
               - Tagger_Default_ConfidenceSeparatesResolvedFromInconclusiveScenarios
               - Evaluate_LegalNounUsage_VerbOnlyDisallowedEntry_NotFlagged
-              - Evaluate_LowConfidenceNounUsage_VerbOnlyDisallowedEntry_NotFlagged
+              - Evaluate_ConfidentNounUsage_VerbOnlyDisallowedEntry_NotFlagged
               - Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged
               - Resolve_AdjectiveOrAdverbUsage_ReturnsMatchingRole
               - Resolve_DeterminerUsage_ReturnsDeterminerRole

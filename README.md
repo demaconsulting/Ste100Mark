@@ -234,7 +234,7 @@ inconclusive. A confident determiner is resolver evidence that rules out role-sp
 although it is not a dictionary sense role. When a term has more than one sense, Ste100Mark uses the
 `DemaConsulting.PartOfSpeech` part-of-speech tagger on
 the sentence that contains the term to decide which sense applies. When the tagger can
-confidently tell noun, verb, adjective, or adverb usage apart (confidence of at least 0.95), only the matching
+confidently tell noun, verb, adjective, or adverb usage apart (confidence of at least 0.90), only the matching
 sense is reported, its alternatives are joined with natural "or"/Oxford-comma phrasing, and
 the diagnostic message notes the grammatical role, for example: `Avoid 'impact'; use
 'effect' instead (used as a noun).` Other unsupported tags remain inconclusive; when the tagger

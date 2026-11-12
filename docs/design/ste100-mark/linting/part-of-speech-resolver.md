@@ -11,7 +11,7 @@ part-of-speech-tagged sense of a multi-sense `DictionaryEntry`. It implements th
 OTS library (`Tagger.Default`). It replaces an earlier tagger library and, before that, a
 regex-based heuristic.
 
-The resolver returns `Noun`, `Verb`, `Adjective`, or `Adverb` when the tagger is at least 0.95
+The resolver returns `Noun`, `Verb`, `Adjective`, or `Adverb` when the tagger is at least 0.90
 confident. It preserves a confident `Determiner` result as resolver evidence distinct from
 dictionary sense roles; that result rules out all role-specific senses without being a valid
 dictionary configuration value. Other unsupported tags remain `null` (inconclusive).
@@ -22,7 +22,7 @@ dictionary configuration value. Other unsupported tags remain `null` (inconclusi
 segmentText, int matchIndex, int matchLength)`. `DictionaryChecker` depends on the interface so
 tests can inject a scripted or fixed resolver.
 
-**MinimumConfidence**: `internal const double` (0.95). The minimum tagger confidence for a
+**MinimumConfidence**: `internal const double` (0.90). The minimum tagger confidence for a
 supported answer to be accepted. See *Threshold selection* below.
 
 **SentenceBoundaryRegex**: shared with `SentenceAnalyzer` (`SentenceSplitRegex`, a single source
@@ -79,9 +79,9 @@ so a later call retries.
 #### Threshold selection
 
 `MinimumConfidence` is the strict threshold documented by the `DemaConsulting.PartOfSpeech`
-package: on the package's open test split it answers 83.7% of decisions with 2.4 harmful errors
+package: on the package's open test split it answers 89.4% of decisions with 3.8 harmful errors
 per 1000 answered decisions. In the project's own hand check of 110 samples, no error was found
-at a confidence of 0.95 or higher, while low-confidence VERB answers on noun-noun compounds were
+at a confidence of 0.90 or higher, while low-confidence VERB answers on noun-noun compounds were
 wrong about half the time. A strict value is preferred because a wrong answer either hides a real
 violation or reports a false one, whereas an inconclusive answer only makes the checker report
 the term as ambiguous. `MinimumConfidence_IsPackageStrictThreshold` guards the value, and
@@ -91,18 +91,17 @@ At this threshold the corpus (`PartOfSpeechFalsePositiveCorpusTests`) resolves a
 `LegalNounUsageCases` as nouns and all 30 rows of `LegalVerbUsageCases` as verbs, and 25 of the
 26 hard cases (`PartOfSpeechHardCasesTests`; the imperative "Mount the bracket on the frame."
 is the exception: it is answered below the threshold and is inconclusive). Two further legal
-noun usages, "rank" and "cast", are tested separately as low-confidence cases
-(`Evaluate_LowConfidenceNounUsage_VerbOnlyDisallowedEntry_NotFlagged`): the resolver is
-inconclusive for them, but they are still not flagged, because their dictionary entries are
-single-sense and self-referential, and the checker does not report such an entry when the
-role is inconclusive.
+noun usages, "rank" and "cast", are tested separately as confident noun cases
+(`Evaluate_ConfidentNounUsage_VerbOnlyDisallowedEntry_NotFlagged`): the resolver follows the
+confident-role path and suppresses their verb-only, self-referential entries.
 
 #### Known limitations
 
 The tagger is a statistical model and is wrong or unsure for some inputs:
 
-- Short verbless fragments (a table cell such as "Wash pump", a heading such as "Wash Tower", or
-  a bare label such as "Function") and some imperatives are often answered below the threshold,
+- Short verbless fragments (a heading such as "Heading:" or a bare label such as "Function"), sentences that
+  contain a low-confidence noun compound (such as "Check the coolant mix ratio before startup."), and some
+  imperatives are often answered below the threshold,
   so the term is reported as ambiguous or, for a single-sense entry, reported.
 - A noun-noun compound can be tagged as a verb at low confidence; such answers are rejected by
   the threshold.

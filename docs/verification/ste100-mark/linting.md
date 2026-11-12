@@ -28,7 +28,7 @@ N/A - standard test environment.
 ### Test Scenarios
 
 **Ste100Mark-Linting-PartOfSpeechSupportedRoles**: Twelve real-tagger sentence scenarios verify
-confident adjective and adverb resolution at the 0.95 boundary, while the observed determiner
+confident adjective and adverb resolution at the 0.90 boundary, while the observed determiner
 tag for `Any` is preserved as the distinct `Determiner` resolver role.
 `Resolve_AdjectiveOrAdverbUsage_ReturnsMatchingRole`,
 `Tagger_Default_ConfidenceSeparatesResolvedFromInconclusiveScenarios`, and
@@ -283,10 +283,10 @@ two layers. Scenarios that depend on the tagger's real answers use the real
 possessives, quantifiers, prepositions, modals, the infinitive marker, progressive auxiliaries,
 plural nouns, noun-phrase modifiers, and a finite verb following the match), the 26 hard cases
 (imperatives, noun-noun compounds, and modals; the imperative "Mount" is inconclusive at the
-0.95 threshold), the requested sentence of a multi-sentence segment, and contractions and
+0.90 threshold), the requested sentence of a multi-sentence segment, and contractions and
 hyphenated words. Scenarios that verify the resolver's own mapping logic use a scripted tagging
 function so the tagger's answer is controlled: the requested occurrence of a repeated word, the
-inclusive confidence boundary at 0.95, the rejection of parts of speech other than noun and
+inclusive confidence boundary at 0.90, the rejection of parts of speech other than noun and
 verb and of low-confidence answers, a match that no token covers, multi-word matches,
 consistent answers for repeated and concurrent queries, and argument validation. These scenarios are tested
 by `Resolve_NounUsage_ReturnsNoun`, `Resolve_VerbUsage_ReturnsVerb`,
