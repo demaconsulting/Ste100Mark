@@ -847,4 +847,103 @@ public class PartOfSpeechResolverTests
         Assert.Equal(PartOfSpeech.Verb, first);
         Assert.All(results, r => Assert.Equal(first, r));
     }
+
+    /// <summary>
+    ///     Builds a package glossary with one noun entry in the given mode.
+    /// </summary>
+    private static DemaConsulting.PartOfSpeech.Glossary BuildGlossary(
+        string term,
+        DemaConsulting.PartOfSpeech.GlossaryMode mode,
+        Upos tag = Upos.Noun) =>
+        DemaConsulting.PartOfSpeech.Glossary.Create(
+            [new DemaConsulting.PartOfSpeech.GlossaryEntry(term, tag)],
+            new DemaConsulting.PartOfSpeech.GlossaryOptions { Mode = mode });
+
+    /// <summary>
+    ///     Test that a hard glossary noun for a made-up word, which the lexicon does not know, resolves
+    ///     as a noun, because a constrained token counts as known.
+    /// </summary>
+    [Fact]
+    public void Resolve_GlossaryUnknownWordNoun_ResolvesNounInHardMode()
+    {
+        // Arrange: a hard glossary naming a made-up word as a noun
+        const string text = "Wash the zorbix.";
+        var plain = new PartOfSpeechResolver();
+        var glossary = new PartOfSpeechResolver(
+            BuildGlossary("zorbix", DemaConsulting.PartOfSpeech.GlossaryMode.Hard));
+
+        // Act
+        var withoutGlossary = plain.Resolve(text, text.IndexOf("zorbix", StringComparison.Ordinal), 6);
+        var withGlossary = glossary.Resolve(text, text.IndexOf("zorbix", StringComparison.Ordinal), 6);
+
+        // Assert: only the glossary yields a confident noun
+        Assert.Null(withoutGlossary);
+        Assert.Equal(PartOfSpeech.Noun, withGlossary);
+    }
+
+    /// <summary>
+    ///     Test that a soft glossary entry also counts its matched token as known, so the glossary tag
+    ///     is not discarded by the unknown-word rule.
+    /// </summary>
+    [Fact]
+    public void Resolve_SoftGlossaryMatchedToken_CountsAsKnownWord()
+    {
+        // Arrange: a soft glossary naming a made-up word as a noun
+        const string text = "Wash the zorbix.";
+        var resolver = new PartOfSpeechResolver(
+            BuildGlossary("zorbix", DemaConsulting.PartOfSpeech.GlossaryMode.Soft));
+
+        // Act
+        var result = resolver.Resolve(text, text.IndexOf("zorbix", StringComparison.Ordinal), 6);
+
+        // Assert: the matched token is constrained, hence known, hence resolved
+        Assert.Equal(PartOfSpeech.Noun, result);
+    }
+
+    /// <summary>
+    ///     Test that two resolvers built for different glossaries do not share cached results.
+    /// </summary>
+    [Fact]
+    public void Resolve_TwoGlossaries_SameSentence_DoNotShareCache()
+    {
+        // Arrange: the same sentence, one glossary saying noun and one saying verb
+        const string text = "Zorbix the panel.";
+        var nounResolver = new PartOfSpeechResolver(
+            BuildGlossary("zorbix", DemaConsulting.PartOfSpeech.GlossaryMode.Hard));
+        var verbResolver = new PartOfSpeechResolver(
+            BuildGlossary("zorbix", DemaConsulting.PartOfSpeech.GlossaryMode.Hard, Upos.Verb));
+
+        // Act
+        var asNoun = nounResolver.Resolve(text, 0, 6);
+        var asVerb = verbResolver.Resolve(text, 0, 6);
+
+        // Assert: each glossary decides its own answer
+        Assert.Equal(PartOfSpeech.Noun, asNoun);
+        Assert.Equal(PartOfSpeech.Verb, asVerb);
+    }
+
+    /// <summary>
+    ///     Test that a resolver without a glossary behaves as before for an unknown word.
+    /// </summary>
+    [Fact]
+    public void Resolve_NoGlossary_BehaviorUnchanged()
+    {
+        // Arrange / Act: an unknown made-up word without any glossary
+        const string text = "Wash the zorbix.";
+        var result = new PartOfSpeechResolver().Resolve(text, text.IndexOf("zorbix", StringComparison.Ordinal), 6);
+
+        // Assert: the unknown-word rule makes the answer inconclusive
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    ///     Test that a null glossary is rejected by the constructor.
+    /// </summary>
+    [Fact]
+    public void Constructor_NullGlossary_ThrowsArgumentNullException()
+    {
+        // Act / Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            new PartOfSpeechResolver((DemaConsulting.PartOfSpeech.Glossary)null!));
+    }
 }

@@ -21,6 +21,7 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using DemaConsulting.PartOfSpeech;
+using PackageGlossary = DemaConsulting.PartOfSpeech.Glossary;
 
 namespace DemaConsulting.Ste100Mark.Linting;
 
@@ -52,9 +53,11 @@ internal readonly record struct TaggedSpan(int Start, int Length, Upos Tag, doub
 ///     guidance, a noun, verb, or proper-noun tag on a word that the package's lexicon does not know
 ///     (<see cref="TaggedToken.IsKnownWord"/> is <see langword="false"/>) is also inconclusive, even above
 ///     the threshold, because the tag of an unknown word is a guess. The package's exception for tokens
-///     decided by a dictionary (<see cref="TaggedToken.IsConstrained"/>) does not apply: the resolver gives
-///     the tagger no <c>Glossary</c> or <c>TokenConstraint</c>. The tagger is thread-safe and fully
-///     in-memory (no download), and per-sentence results are cached.
+///     decided by a dictionary (<see cref="TaggedToken.IsConstrained"/>) applies: a token a project
+///     glossary constrained counts as known, so the glossary's tag is kept. Without a glossary the
+///     resolver gives the tagger no <c>Glossary</c> or <c>TokenConstraint</c>. The tagger is thread-safe and fully
+///     in-memory (no download), and per-sentence results are cached per resolver instance, so a
+///     resolver built for one glossary never shares results with another.
 /// </remarks>
 internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 {
@@ -106,6 +109,20 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// </summary>
     public PartOfSpeechResolver()
         : this(TagWithDefaultTagger)
+    {
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PartOfSpeechResolver"/> class that tags with
+    ///     <see cref="Tagger.Default"/> constrained by a project glossary.
+    /// </summary>
+    /// <remarks>
+    ///     The classification cache is per instance, so results computed under one glossary are never
+    ///     served for another: every distinct glossary needs its own resolver instance.
+    /// </remarks>
+    /// <param name="glossary">The project glossary the tagger applies.</param>
+    internal PartOfSpeechResolver(PackageGlossary glossary)
+        : this(CreateGlossaryTagger(glossary))
     {
     }
 
@@ -306,14 +323,40 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// <remarks>
     ///     Token offsets index the string passed in, so they are relative to the sentence text.
     /// </remarks>
-    private static List<TaggedSpan> TagWithDefaultTagger(string sentence)
+    private static List<TaggedSpan> TagWithDefaultTagger(string sentence) =>
+        Flatten(Tagger.Default.Tag(sentence));
+
+    /// <summary>
+    ///     Creates a tagging function that applies <paramref name="glossary"/> to every sentence.
+    /// </summary>
+    /// <param name="glossary">The project glossary.</param>
+    /// <returns>A tagging function for the resolver.</returns>
+    private static Func<string, IReadOnlyList<TaggedSpan>> CreateGlossaryTagger(PackageGlossary glossary)
+    {
+        ArgumentNullException.ThrowIfNull(glossary);
+        return sentence => Flatten(Tagger.Default.Tag(sentence, glossary));
+    }
+
+    /// <summary>
+    ///     Flattens tagged sentences into one span list. A token counts as known when the lexicon has
+    ///     it or when a glossary decided its tag (<see cref="TaggedToken.IsConstrained"/>), so a
+    ///     glossary term the lexicon does not know keeps its glossary tag.
+    /// </summary>
+    /// <param name="sentences">Tagged sentences from the package tagger.</param>
+    /// <returns>The flattened spans.</returns>
+    private static List<TaggedSpan> Flatten(IEnumerable<TaggedSentence> sentences)
     {
         var result = new List<TaggedSpan>();
-        foreach (var tagged in Tagger.Default.Tag(sentence))
+        foreach (var tagged in sentences)
         {
             foreach (var token in tagged.Tokens)
             {
-                result.Add(new TaggedSpan(token.Start, token.Length, token.Tag, token.Confidence, token.IsKnownWord));
+                result.Add(new TaggedSpan(
+                    token.Start,
+                    token.Length,
+                    token.Tag,
+                    token.Confidence,
+                    token.IsKnownWord || token.IsConstrained));
             }
         }
 

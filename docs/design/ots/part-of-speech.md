@@ -38,8 +38,10 @@ confidence (0.90, the strict threshold documented by the package) is mapped to t
 which rules out role-specific dictionary senses but is not a dictionary role. Other unsupported
 answers are inconclusive. Following the package's rule-checker guidance, a noun, verb, or
 proper-noun tag on a word that the lexicon does not know (`IsKnownWord` is false) is also
-inconclusive at any confidence, because that tag is a guess. The resolver supplies no `Glossary`
-or `TokenConstraint` and does not use `TaggedToken.Margin`, for which the package recommends no
+inconclusive at any confidence, because that tag is a guess. When the resolver is built with a
+project `Glossary`, it tags with that glossary and counts a constrained token (`IsConstrained`)
+as known. The resolver supplies no `TokenConstraint` and does not use `TaggedToken.Margin`, for
+which the package recommends no
 limit. The
 library is beta software, so its package version is pinned exactly in the project file and
 upgrades are reviewed deliberately.

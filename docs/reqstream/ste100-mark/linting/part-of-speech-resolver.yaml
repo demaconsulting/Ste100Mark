@@ -93,12 +93,15 @@ sections:
           a noun, verb, or proper-noun tag on such a word is a guess even at a high confidence.
           The package's guidance for rule checkers is to treat these tokens as unknown. The
           checker then reports every sense as ambiguous instead of acting on a guessed role. The
-          package exception for tokens decided by a glossary or token constraint does not apply,
-          because the resolver supplies neither.
+          package exception for tokens decided by a glossary or token constraint
+          (`IsConstrained`) applies only when the resolver was built with a project glossary, see
+          the glossary requirements of this unit; without a glossary the resolver supplies
+          neither.
         tests:
           - Resolve_UnknownWordNounVerbOrPropnTag_ReturnsNull
           - Resolve_UnknownWordAdjectiveTag_ReturnsAdjective
           - Resolve_UnknownWordWithRealTagger_ReturnsNullAndKnownWordResolves
+          - Resolve_NoGlossary_BehaviorUnchanged
 
       - id: Ste100Mark-PartOfSpeechResolver-OtherPartOfSpeech
         title: >-
@@ -154,3 +157,28 @@ sections:
         tests:
           - Resolve_MatchOutsideText_ThrowsArgumentOutOfRangeException
           - Resolve_MatchLengthIntMaxValue_ThrowsArgumentOutOfRangeException
+
+      - id: Ste100Mark-PartOfSpeechResolver-Glossary
+        title: >-
+          When constructed with a project glossary, the PartOfSpeechResolver class shall tag each
+          sentence with that glossary and shall treat a token that the glossary constrained as a
+          known word, in both hard and soft mode.
+        justification: |
+          A glossary term is often a word or name that the tagger's lexicon does not know. Without
+          the known-word rule, the unknown-word requirement would discard the glossary's tag and
+          the glossary would have no effect. The package marks such tokens as constrained, in
+          hard mode and in soft mode alike.
+        tests:
+          - Resolve_GlossaryUnknownWordNoun_ResolvesNounInHardMode
+          - Resolve_SoftGlossaryMatchedToken_CountsAsKnownWord
+          - Constructor_NullGlossary_ThrowsArgumentNullException
+
+      - id: Ste100Mark-PartOfSpeechResolver-GlossaryCacheScope
+        title: >-
+          The PartOfSpeechResolver class shall never serve a cached classification computed under
+          one glossary for a different glossary.
+        justification: |
+          The same sentence can receive different tags under different glossaries. Sharing cached
+          results across glossaries would report or suppress the wrong findings.
+        tests:
+          - Resolve_TwoGlossaries_SameSentence_DoNotShareCache

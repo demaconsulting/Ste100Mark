@@ -114,7 +114,23 @@ internal static class Linter
         // restrictions. The dictionary itself is only loaded when the check is enabled, so a project
         // that disables it is not required to supply (or license) any dictionary file.
         var dictionaryEnabled = config.Dictionary?.Enabled ?? true;
-        var dictionary = dictionaryEnabled ? LintDictionary.Load(config, configDirectory) : null;
+
+        // The project glossary (approved and deprecated terms) only feeds the dictionary check, so it
+        // is loaded and validated only when that check is enabled.
+        LintGlossary? glossary = null;
+        LintDictionary? dictionary = null;
+        IPartOfSpeechResolver resolver = PartOfSpeechResolver.Shared;
+        if (dictionaryEnabled)
+        {
+            glossary = LintGlossary.Load(config, configPath, configDirectory);
+            dictionary = LintDictionary.Load(config, configDirectory, glossary.Deprecated);
+            glossary.ValidateAgainst(dictionary);
+            if (glossary.Tagging is not null)
+            {
+                resolver = new PartOfSpeechResolver(glossary.Tagging);
+            }
+        }
+
         var files = ResolveFiles(context.Globs, config);
 
         var diagnostics = new List<Diagnostic>();
@@ -134,7 +150,11 @@ internal static class Linter
             if (dictionary is not null)
             {
                 var allowedPhrases = config.ResolveAllowedPhrases(relativePath);
-                diagnostics.AddRange(DictionaryChecker.Evaluate(relativePath, segments, dictionary, allowedTerms, allowedPhrases));
+                var dictionaryAllowed = glossary is { Terms.Count: > 0 }
+                    ? allowedTerms.Concat(glossary.GetAllowedTerms()).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    : allowedTerms;
+                diagnostics.AddRange(DictionaryChecker.Evaluate(
+                    relativePath, segments, dictionary, dictionaryAllowed, allowedPhrases, resolver));
             }
         }
 
@@ -310,12 +330,16 @@ internal static class Linter
     ///     matches.
     /// </remarks>
     /// <param name="patterns">Glob patterns (or plain literal file paths) to resolve.</param>
+    /// <param name="baseDirectory">
+    ///     Directory that relative patterns are rooted at, or <see langword="null"/> for the current
+    ///     directory.
+    /// </param>
     /// <returns>
     ///     Matched absolute file paths; may contain duplicates if multiple patterns/roots resolve
     ///     to the same file, and is not sorted (callers are responsible for deduplication and
     ///     ordering).
     /// </returns>
-    private static List<string> ResolvePatterns(IReadOnlyList<string> patterns)
+    internal static List<string> ResolvePatterns(IReadOnlyList<string> patterns, string? baseDirectory = null)
     {
         var patternsByRoot = new Dictionary<string, List<string>>(PathComparer);
         foreach (var pattern in patterns)
@@ -328,7 +352,7 @@ internal static class Linter
             }
             else
             {
-                root = Directory.GetCurrentDirectory();
+                root = baseDirectory ?? Directory.GetCurrentDirectory();
                 remainingPattern = pattern;
             }
 

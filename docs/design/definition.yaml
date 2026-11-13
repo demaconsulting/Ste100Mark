@@ -24,6 +24,7 @@ input-files:
   - docs/design/ste100-mark/linting/diagnostic.md
   - docs/design/ste100-mark/linting/lint-config.md
   - docs/design/ste100-mark/linting/lint-dictionary.md
+  - docs/design/ste100-mark/linting/lint-glossary.md
   - docs/design/ste100-mark/linting/part-of-speech-resolver.md
   - docs/design/ste100-mark/linting/part-of-speech-guesser.md
   - docs/design/ste100-mark/linting/markdown-prose-extractor.md

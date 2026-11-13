@@ -19,7 +19,7 @@ flowchart TD
         Diagnostic
         LintConfig
         LintDictionary
-        MarkdownProseExtractor
+        LintGlossary
         SentenceAnalyzer
         StructuralRules
         DictionaryChecker
@@ -42,6 +42,7 @@ flowchart TD
     Validation --> PathHelpers
     Linter --> LintConfig
     Linter --> LintDictionary
+    Linter --> LintGlossary
     Linter --> MarkdownProseExtractor
     MarkdownProseExtractor --> StructuralRules
     MarkdownProseExtractor --> DictionaryChecker

@@ -234,7 +234,8 @@ Configuration fields:
 - `rules` - global rule tuning for sentence limits, semicolons, contractions, paragraph
   cap, and passive voice
 - `dictionary` - project dictionary file plus inline allow/disallow/ignore/allow-in-phrase
-  tuning
+  lists, and a project glossary (`glossary`, `glossary-file`, `deprecated-file`,
+  `glossary-mode`); see "Project Glossary" below
 
 ## Profiles
 
@@ -367,6 +368,87 @@ feature and provide a reasonable default — it is **not** a substitute for the 
 Any organization that requires true ASD-STE100 compliance must obtain its own license from
 ASD and supply its own dictionary file, in the format shown above, via the `dictionary.file`
 configuration option.
+
+## Project Glossary
+
+A project glossary lists the terms that your project approves, such as product names and domain
+words, and the part of speech of each term. The format is shared with DictionaryMark, so one file
+can serve both tools. A glossary has two effects:
+
+- An approved term is not reported as a dictionary finding.
+- The part of speech of an approved term guides the tagger. This helps most when a term is a word
+  that the tagger does not know, or when it changes how the words around it are read.
+
+Add the glossary to the `dictionary` section of the configuration file:
+
+```yaml
+dictionary:
+  glossary-file: docs/glossary.yaml          # one path or glob, or a list of them
+  deprecated-file:
+    - docs/deprecated-terms.yaml
+    - ${SHARED_TERMS}/deprecated/*.yaml      # environment variable
+  glossary-mode: hard                        # hard (default) or soft
+  glossary:                                  # optional inline entries
+    Zorbix: Name of Product A.
+```
+
+A glossary file maps each term to a definition string, or to an object:
+
+```yaml
+Zorbix:
+  definition: Name of Product A.
+  pos: proper-noun
+  variants: [Zorbixes]
+  visible: true
+Test Mode:
+  definition: A mode for acceptance tests.
+  pos: noun
+```
+
+- `pos` is `noun` (the default), `verb`, `adjective`, `adverb`, or `proper-noun`. You can give a
+  list. Variants must have the same number of words as the term.
+- `visible: false` keeps the term in the tagger and allowed list, but marks it as hidden for
+  DictionaryMark.
+- An unknown key is an error.
+
+A deprecated-terms file maps each retired term to its replacement:
+
+```yaml
+Product A:
+  use: Product B
+  where: Documents before 2.0.
+```
+
+`use` is required and `where` is optional. A finding for the term reads
+`Avoid 'Product A'; use 'Product B' instead.`
+
+**Paths:** A relative path or glob is resolved against the directory of the configuration file,
+not the current directory. An absolute path and a UNC path (for example `\\server\share\terms.yaml`)
+are used as they are. `${VAR}` is replaced by the environment variable; an undefined variable is an
+error. Your CI job must be able to reach every shared location. A missing file, an unreachable
+location, and a glob that matches no file are errors, never an empty glossary.
+
+**Conflicts:** The same term in two sources is accepted when the entries are identical. These cases
+are errors that name the term and the files, whatever the file order: a term with different fields
+in two sources, a term that is both approved and deprecated, and an approved term that is also an
+entry of the effective dictionary. To approve a dictionary word, use `dictionary.allow`; the
+glossary is for terms that the dictionary does not contain. When `dictionary.enabled` is false, the
+glossary is not loaded.
+
+**Hard and soft mode:** In `hard` mode (the default) the tagger must use the part of speech from
+the glossary for a matching term. This is the best choice for a curated glossary. In `soft` mode
+the glossary only biases the tagger, and it changes few results. In both modes the glossary term
+counts as a known word.
+
+**Risks:**
+
+- A wrong `pos` in a hard-mode entry forces a wrong tag. Check each entry.
+- The tag of a term can change how the tagger reads the words next to it.
+- A shared glossary can change without your project changing. Pin a versioned folder when you
+  need repeatable results.
+- A glossary term is allowed as a whole term or variant only. A dictionary word inside a
+  multi-word term is still checked on its own, so use `dictionary.allow` or `allow-in-phrase` for
+  it.
 
 ## Phrase-Scoped Allowances
 

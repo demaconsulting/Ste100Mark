@@ -93,7 +93,8 @@ internal sealed record DictionaryEntry(string Term, IReadOnlyList<DictionarySens
 ///     Merge order (later sources override earlier ones by term, case-insensitively): embedded
 ///     default dictionary (unless <see cref="DictionaryConfig.UseEmbedded"/> is <see langword="false"/>),
 ///     then the project <see cref="DictionaryConfig.File"/>, then inline
-///     <see cref="DictionaryConfig.Disallow"/>. Finally, every term in
+///     <see cref="DictionaryConfig.Disallow"/>, then deprecated project terms (from the glossary
+///     loader), which behave like inline disallow entries. Finally, every term in
 ///     <see cref="DictionaryConfig.Allow"/> or <see cref="DictionaryConfig.Ignore"/> is removed from
 ///     the merged set regardless of which source it came from.
 ///     </para>
@@ -112,12 +113,20 @@ internal sealed class LintDictionary
     private readonly Dictionary<string, DictionaryEntry> _entries;
 
     /// <summary>
+    ///     Description of the layer or file that supplied each effective entry, keyed by term
+    ///     (case-insensitive).
+    /// </summary>
+    private readonly Dictionary<string, string> _sources;
+
+    /// <summary>
     ///     Private constructor - use <see cref="Load"/> instead.
     /// </summary>
     /// <param name="entries">Merged entries, keyed by term (case-insensitive).</param>
-    private LintDictionary(Dictionary<string, DictionaryEntry> entries)
+    /// <param name="sources">Source description per effective entry, keyed by term (case-insensitive).</param>
+    private LintDictionary(Dictionary<string, DictionaryEntry> entries, Dictionary<string, string> sources)
     {
         _entries = entries;
+        _sources = sources;
     }
 
     /// <summary>
@@ -135,17 +144,25 @@ internal sealed class LintDictionary
     ///     Directory used to resolve a relative <see cref="DictionaryConfig.File"/> path. Pass the
     ///     current working directory when no configuration file was loaded from disk.
     /// </param>
+    /// <param name="deprecated">
+    ///     Deprecated project terms to add as always-reported disallow entries, or
+    ///     <see langword="null"/> for none.
+    /// </param>
     /// <returns>A merged, ready-to-query <see cref="LintDictionary"/>.</returns>
     /// <exception cref="InvalidOperationException">
     ///     Thrown when the embedded resource is missing (indicates a packaging defect), or when
     ///     <see cref="DictionaryConfig.File"/> is set but the file cannot be found or parsed.
     /// </exception>
-    public static LintDictionary Load(LintConfig config, string configDirectory)
+    public static LintDictionary Load(
+        LintConfig config,
+        string configDirectory,
+        IReadOnlyCollection<DeprecatedTerm>? deprecated = null)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(configDirectory);
 
         var entries = new Dictionary<string, DictionaryEntry>(StringComparer.OrdinalIgnoreCase);
+        var sources = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var dictionaryConfig = config.Dictionary;
 
         // Layer 1: the embedded, originally-authored illustrative default dictionary (baseline),
@@ -155,6 +172,7 @@ internal sealed class LintDictionary
             foreach (var entry in LoadEmbeddedDictionary())
             {
                 entries[entry.Term] = entry;
+                sources[entry.Term] = "embedded default dictionary";
             }
         }
 
@@ -169,6 +187,7 @@ internal sealed class LintDictionary
             foreach (var entry in LoadDictionaryFile(path))
             {
                 entries[entry.Term] = entry;
+                sources[entry.Term] = path;
             }
         }
 
@@ -180,14 +199,51 @@ internal sealed class LintDictionary
             foreach (var (term, senses) in dictionaryConfig.Disallow)
             {
                 entries[term] = new DictionaryEntry(term, ConvertSenses(senses));
+                sources[term] = "dictionary.disallow in the configuration file";
+            }
+        }
+
+        // Layer 3b: deprecated project terms. Each becomes a single any-sense entry, which is
+        // reported unconditionally with the replacement as its alternative ("use <replacement>").
+        if (deprecated is not null)
+        {
+            foreach (var term in deprecated)
+            {
+                var note = term.Where is null ? null : $"Used in: {term.Where}";
+                entries[term.Term] = new DictionaryEntry(
+                    term.Term,
+                    [new DictionarySense(PartOfSpeech.Any, [term.Use], note)]);
+                sources[term.Term] = term.Source;
             }
         }
 
         // Layer 4: allow/ignore lists remove terms regardless of which layer introduced them.
         RemoveTerms(entries, dictionaryConfig?.Allow);
         RemoveTerms(entries, dictionaryConfig?.Ignore);
+        foreach (var key in sources.Keys.Where(k => !entries.ContainsKey(k)).ToList())
+        {
+            sources.Remove(key);
+        }
 
-        return new LintDictionary(entries);
+        return new LintDictionary(entries, sources);
+    }
+
+    /// <summary>
+    ///     Attempts to find the source that supplied the effective entry for a term.
+    /// </summary>
+    /// <param name="term">The term to look up (case-insensitive).</param>
+    /// <param name="source">A description of the source (file path or layer), when found.</param>
+    /// <returns><see langword="true"/> if the term is an effective dictionary entry.</returns>
+    public bool TryGetSource(string term, out string source)
+    {
+        if (_sources.TryGetValue(term, out var found))
+        {
+            source = found;
+            return true;
+        }
+
+        source = string.Empty;
+        return false;
     }
 
     /// <summary>

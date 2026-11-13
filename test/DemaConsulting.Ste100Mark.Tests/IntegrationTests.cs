@@ -719,5 +719,151 @@ public class IntegrationTests
             Directory.Delete(workingDirectory, true);
         }
     }
+
+    /// <summary>
+    ///     Runs the tool on a document in a temporary directory populated with the given files.
+    /// </summary>
+    /// <param name="files">Relative path to content for every fixture file.</param>
+    /// <returns>The exit code and combined output.</returns>
+    private (int ExitCode, string Output) RunWithFiles(Dictionary<string, string> files)
+    {
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            foreach (var (relative, content) in files)
+            {
+                var path = Path.Combine(workingDirectory, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, content);
+            }
+
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "doc.md");
+            return (exitCode, output);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that a glossary file lets a multi-word term pass and the run exits zero, while the
+    ///     same document without the glossary is flagged.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithGlossaryFile_TermNotFlaggedAndExitZero()
+    {
+        // Arrange: a two-sense "process" entry; "Process Control" is ambiguous without a glossary
+        const string dictionary =
+            "  use-embedded: false\n  disallow:\n    process:\n      - pos: verb\n        alternatives: [do]\n      - pos: adjective\n        alternatives: [automatic]\n";
+        const string document = "# Title\n\nProcess control is easy.\n";
+
+        // Act
+        var without = RunWithFiles(new()
+        {
+            [".ste100mark.yaml"] = "dictionary:\n" + dictionary,
+            ["doc.md"] = document
+        });
+        var with = RunWithFiles(new()
+        {
+            [".ste100mark.yaml"] = "dictionary:\n" + dictionary + "  glossary-file: glossary/*.yaml\n",
+            ["glossary/terms.yaml"] = "Process Control: A made-up control loop.\n",
+            ["doc.md"] = document
+        });
+
+        // Assert
+        Assert.NotEqual(0, without.ExitCode);
+        Assert.Contains("STE100-DICT", without.Output);
+        Assert.Equal(0, with.ExitCode);
+        Assert.DoesNotContain("STE100-DICT", with.Output);
+    }
+
+    /// <summary>
+    ///     Test that a deprecated-terms file reports the replacement.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithDeprecatedFile_ReportsUseSuggestion()
+    {
+        // Act
+        var result = RunWithFiles(new()
+        {
+            [".ste100mark.yaml"] = "dictionary:\n  use-embedded: false\n  deprecated-file: deprecated.yaml\n",
+            ["deprecated.yaml"] = "Product A:\n  use: Product B\n",
+            ["doc.md"] = "# Title\n\nOpen Product A now.\n"
+        });
+
+        // Assert
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Contains("use 'Product B' instead", result.Output);
+    }
+
+    /// <summary>
+    ///     Test that conflicting glossary files fail the run and name the term and both paths.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithConflictingGlossaryFiles_ReturnsNonZeroNamingTermAndPaths()
+    {
+        // Act
+        var result = RunWithFiles(new()
+        {
+            [".ste100mark.yaml"] = "dictionary:\n  glossary-file: g/*.yaml\n",
+            ["g/a.yaml"] = "Zorbix: First meaning.\n",
+            ["g/b.yaml"] = "Zorbix: Second meaning.\n",
+            ["doc.md"] = "# Title\n\nOpen the panel.\n"
+        });
+
+        // Assert
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Contains("'Zorbix'", result.Output);
+        Assert.Contains("a.yaml", result.Output);
+        Assert.Contains("b.yaml", result.Output);
+    }
+
+    /// <summary>
+    ///     Test that a glossary glob matching nothing fails the run.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithEmptyGlossaryGlob_ReturnsNonZero()
+    {
+        // Act
+        var result = RunWithFiles(new()
+        {
+            [".ste100mark.yaml"] = "dictionary:\n  glossary-file: nothing/*.yaml\n",
+            ["doc.md"] = "# Title\n\nOpen the panel.\n"
+        });
+
+        // Assert
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Contains("matched no files", result.Output);
+    }
+
+    /// <summary>
+    ///     Test that an absolute glossary path outside the working directory works.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithGlossaryAbsolutePath_Works()
+    {
+        // Arrange: a glossary in a separate directory referenced by absolute path
+        var shared = Directory.CreateTempSubdirectory("ste100mark-shared-glossary-").FullName;
+        try
+        {
+            var glossaryPath = Path.Combine(shared, "terms.yaml").Replace('\\', '/');
+            File.WriteAllText(Path.Combine(shared, "terms.yaml"), "Zorbix: A made-up term.\n");
+
+            // Act
+            var result = RunWithFiles(new()
+            {
+                [".ste100mark.yaml"] = $"dictionary:\n  glossary-file: '{glossaryPath}'\n",
+                ["doc.md"] = "# Title\n\nOpen the Zorbix panel.\n"
+            });
+
+            // Assert
+            Assert.Equal(0, result.ExitCode);
+        }
+        finally
+        {
+            Directory.Delete(shared, true);
+        }
+    }
 }
 

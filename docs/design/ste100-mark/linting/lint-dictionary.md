@@ -60,7 +60,14 @@ single shared binding type for the per-term sense-list schema.
 - *Preconditions*: Both arguments are non-null.
 - *Postconditions*: Merge order is embedded dictionary (unless disabled), project dictionary
   file, inline `disallow`, then removal of every term listed in `allow` or `ignore`. Each
-  layer performs a full per-term sense-list replacement rather than a per-sense merge.
+  layer performs a full per-term sense-list replacement rather than a per-sense merge. An
+  optional third argument supplies the deprecated terms from `LintGlossary`; they are applied
+  after the inline `disallow` layer as single `Any`-sense entries whose alternative is the `use`
+  value and whose note is `Used in: {where}`, and they are removed again by `allow` or `ignore`.
+
+**TryGetSource**: Returns the label of the layer that supplied an effective term (the embedded
+dictionary, the dictionary file path, the configuration `disallow` list, or the deprecated file
+path). `LintGlossary.ValidateAgainst` uses it to name the conflicting source.
 
 **TryGetEntry**: Attempts an exact case-insensitive lookup by term.
 

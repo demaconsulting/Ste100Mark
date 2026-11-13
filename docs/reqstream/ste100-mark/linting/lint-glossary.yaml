@@ -1,0 +1,111 @@
+---
+# Software Unit Requirements for the LintGlossary Class
+#
+# The LintGlossary class loads the project glossary (approved terms with a part of speech and
+# deprecated terms with a replacement) from the configuration file and from glossary files,
+# merges and validates it, and builds the part-of-speech tagger glossary. The glossary format is
+# shared with DictionaryMark. Conflicts are errors and never silent overrides.
+
+sections:
+  - title: LintGlossary Unit Requirements
+    requirements:
+      - id: Ste100Mark-LintGlossary-Entries
+        title: >-
+          The LintGlossary class shall read each approved term as a definition string or as an
+          object with definition, pos, variants, and visible, defaulting to a noun, and shall
+          reject an unknown entry key or an unsupported part of speech with an error that names
+          the term.
+        justification: |
+          The entry format is shared with DictionaryMark, so a typo in a key must not be silently
+          ignored, and a part of speech that the tagger cannot use must not silently change the
+          meaning of an entry.
+        tests:
+          - Load_NoGlossaryConfig_ReturnsEmptyGlossary
+          - Load_InlineStringEntry_DefaultsToNoun
+          - Load_InlineObjectEntry_ReadsDefinitionPosVariantsVisible
+          - Load_PosList_MapsToUposSet
+          - Load_InvalidPos_ThrowsNamingTerm
+          - Load_UnknownEntryKey_ThrowsNamingTerm
+          - Load_InvisibleTerm_StillTaggedAndAllowed
+
+      - id: Ste100Mark-LintGlossary-Paths
+        title: >-
+          The LintGlossary class shall resolve each glossary-file and deprecated-file value, given
+          as one path or a list, as a path or glob that is relative to the configuration file
+          directory, absolute, or a UNC path, after expanding ${VAR} environment references.
+        justification: |
+          Projects keep glossaries next to their configuration or in a shared location, and CI
+          must find the same files as a developer machine regardless of the current directory.
+        tests:
+          - Load_GlossaryFileScalarAndList_BothAccepted
+          - Load_RelativePath_ResolvesAgainstConfigDirectory
+          - Load_AbsolutePath_IsUsedAsIs
+          - Load_UncStylePath_IsResolvedWithoutCombiningWithConfigDirectory
+          - Load_GlobPattern_MergesAllMatches
+          - Load_EnvironmentVariable_IsExpanded
+          - Load_UndefinedEnvironmentVariable_Throws
+          - Load_EmptyFile_YieldsNoTerms
+
+      - id: Ste100Mark-LintGlossary-Unreachable
+        title: >-
+          The LintGlossary class shall report a missing file, an unreachable location, or a glob
+          that matches no file as an error, and never treat it as an empty glossary.
+        justification: |
+          A glossary that silently loads as empty would hide every effect it should have, and a
+          CI job could pass while checking against the wrong vocabulary. The message must tell an
+          unreachable location from a file that does not exist.
+        tests:
+          - Load_GlobMatchingNothing_ThrowsNamingPattern
+          - Load_MissingFile_ThrowsNotFound
+          - Load_MissingDirectory_ThrowsUnreachable
+
+      - id: Ste100Mark-LintGlossary-Conflicts
+        title: >-
+          The LintGlossary class shall accept identical duplicate terms, and shall report as an
+          error, independent of file order, a term (case-insensitive) that differs in any field
+          between two sources, a term that is both approved and deprecated, and an approved term
+          or variant that is an effective dictionary entry, naming the term and the sources.
+        justification: |
+          A conflict means two sources disagree about the same term. Picking a winner would make
+          the result depend on file order and hide the disagreement.
+        tests:
+          - Load_IdenticalDuplicateAcrossFiles_Accepted
+          - Load_DuplicateAfterWhitespaceNormalization_Deduplicated
+          - Load_DifferingField_Throws
+          - Load_ConflictOrderIndependent_SameMessage
+          - Load_TermBothApprovedAndDeprecated_Throws
+          - ValidateAgainst_TermIsDictionaryKey_ThrowsNamingTermAndSource
+          - ValidateAgainst_VariantIsDictionaryKey_Throws
+          - ValidateAgainst_TermRemovedByAllow_NoConflict
+
+      - id: Ste100Mark-LintGlossary-Deprecated
+        title: >-
+          The LintGlossary class shall read deprecated terms with a required use value and an
+          optional where value, and the dictionary shall report each deprecated term with a
+          suggestion to use the replacement.
+        justification: |
+          A deprecated-terms file maps onto project disallow entries so that a finding tells the
+          author which term to use instead.
+        tests:
+          - Load_DeprecatedFile_MapsUseAndWhere
+          - Load_DeprecatedMissingUse_Throws
+          - Load_DeprecatedTerms_AddedAsAnySenseDisallowEntry
+          - Load_DeprecatedOverridesEmbeddedEntry
+          - Load_DeprecatedTermInAllowList_Removed
+
+      - id: Ste100Mark-LintGlossary-Tagging
+        title: >-
+          The LintGlossary class shall build the tagger glossary from the approved terms in the
+          mode given by glossary-mode, hard by default, and shall report a term that the tagger
+          rejects with an error that names the term.
+        justification: |
+          Hard mode forces the glossary tag and suits curated files, soft mode only biases the
+          tagger. The mode must reach the tagger unchanged, and a package rejection must be
+          traceable to a term.
+        tests:
+          - Load_HardAndSoftMode_PassedToGlossaryOptions
+          - Load_GlossaryModeOmitted_DefaultsToHard
+          - Load_GlossaryModeInvalid_ThrowsInvalidOperation
+          - Load_GlossaryKeys_BindScalarAndList
+          - NormalizePathList_MappingValue_ThrowsInvalidOperation
+          - Load_PackageRejectsEntry_WrappedWithTermName

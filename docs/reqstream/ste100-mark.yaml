@@ -206,6 +206,8 @@ sections:
           - Ste100Mark-Linting-DictionaryPos
           - Ste100Mark-Linting-DictionaryPos-Suppression
           - Ste100Mark-Linting-DictionaryPos-Ambiguous
+          - Ste100Mark-Linting-ProjectGlossary
+          - Ste100Mark-Linting-DeprecatedTerms
           - Ste100Mark-Linting-AccurateLineNumbers
           - Ste100Mark-Linting-WrappedListItemPhraseMatching
           - Ste100Mark-Linting-FrontMatter

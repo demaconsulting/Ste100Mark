@@ -122,3 +122,13 @@ Lint mode runs against dictionary terms whose senses are restricted to one part 
 noun usage is not reported, a disallowed verb usage is reported with its alternative, and a
 usage the tagger cannot resolve with confidence is reported as ambiguous. This scenario is tested by
 `Ste100Mark_LintDictionaryTermWithPartOfSpeechResolution_ReportsOnlyDisallowedOrAmbiguousUsage`.
+
+**Ste100Mark_LintWithGlossaryFile_TermNotFlaggedAndExitZero**: Lint mode runs with a configured
+glossary file; an approved term that the dictionary would otherwise report is not reported and the
+exit code is zero. The related CLI scenarios cover a deprecated-terms file (the finding suggests the
+replacement) and conflicting or empty glossary sources (non-zero exit, with the term and paths
+named). This scenario is tested by
+`Ste100Mark_LintWithGlossaryFile_TermNotFlaggedAndExitZero`,
+`Ste100Mark_LintWithDeprecatedFile_ReportsUseSuggestion`,
+`Ste100Mark_LintWithConflictingGlossaryFiles_ReturnsNonZeroNamingTermAndPaths`, and
+`Ste100Mark_LintWithEmptyGlossaryGlob_ReturnsNonZero`.
