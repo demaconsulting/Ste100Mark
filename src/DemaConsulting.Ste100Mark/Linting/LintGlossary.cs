@@ -387,6 +387,11 @@ internal sealed partial class LintGlossary
     /// <returns>The non-empty definition.</returns>
     private static string RequireDefinition(object? value, string term, string source)
     {
+        if (value is not null and not string)
+        {
+            throw FieldError(term, source, "definition", "must be a string");
+        }
+
         if (value is string text && !string.IsNullOrWhiteSpace(text))
         {
             return text;

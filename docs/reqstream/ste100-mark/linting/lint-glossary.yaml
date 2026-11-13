@@ -30,6 +30,7 @@ sections:
           - Load_ApprovedEntryWithoutDefinition_ThrowsNamingTermAndSource
           - Load_InlineEntryWithoutDefinition_ThrowsNamingTerm
           - Load_Definition_PassedToTaggerEntry
+          - Load_NonStringDefinition_ThrowsMustBeString
           - Load_UnknownEntryKey_ThrowsNamingTerm
           - Load_InvisibleTerm_StillTaggedAndAllowed
 

@@ -162,6 +162,21 @@ public sealed class LintGlossaryTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a definition that is not a string is reported as such, naming the term.
+    /// </summary>
+    [Theory]
+    [InlineData("[one, two]")]
+    [InlineData("{a: b}")]
+    public void Load_NonStringDefinition_ThrowsMustBeString(string value)
+    {
+        // Act / Assert
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            Load($"  glossary:\n    Zorbix:\n      definition: {value}\n"));
+        Assert.Contains("Zorbix", ex.Message);
+        Assert.Contains("must be a string", ex.Message);
+    }
+
+    /// <summary>
     ///     Test that an inline entry without a definition is an error naming the term.
     /// </summary>
     [Fact]
@@ -185,6 +200,7 @@ public sealed class LintGlossaryTests : IDisposable
         // Assert
         Assert.Equal("A made-up term.", Assert.Single(glossary.Terms).Definition);
         Assert.NotNull(glossary.Tagging);
+        Assert.Equal("A made-up term.", Assert.Single(glossary.Tagging.Entries).Definition);
     }
 
     /// <summary>
@@ -594,7 +610,7 @@ public sealed class LintGlossaryTests : IDisposable
     {
         // Act / Assert: a variant with a different token count is rejected by the package
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            Load("  glossary:\n    Test Mode:\n      variants: [Test]\n"));
+            Load("  glossary:\n    Test Mode:\n      definition: A mode for testing.\n      variants: [Test]\n"));
         Assert.Contains("Test Mode", ex.Message);
     }
 
