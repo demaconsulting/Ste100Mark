@@ -70,7 +70,7 @@ public class PartOfSpeechResolverTests
             var result = new List<TaggedSpan>();
             for (var i = 0; i < tags.Length && i < matches.Count; i++)
             {
-                result.Add(new TaggedSpan(matches[i].Index, matches[i].Length, tags[i].Tag, tags[i].Confidence));
+                result.Add(new TaggedSpan(matches[i].Index, matches[i].Length, tags[i].Tag, tags[i].Confidence, true));
             }
 
             return result;
@@ -115,6 +115,7 @@ public class PartOfSpeechResolverTests
         ["Wash", "Wash the probe."],
         ["wash", "Instructions to wash pump parts."],
         ["cover", "One supply is enough to cover the indicative load."],
+        ["Function", "Function the panel before use."],
         ["Hold", "Hold at the end of the stroke while the column settles"],
         ["Check", "Check the valve before use."]
     ];
@@ -154,8 +155,7 @@ public class PartOfSpeechResolverTests
         ["Heading", "Heading:"],
         ["mix", "Check the coolant mix ratio before startup."],
         ["Block", "Block 0 failed the self-test."],
-        ["Trigger", "Trigger not issued correctly by the controller."],
-        ["Function", "Function the panel before use."]
+        ["Trigger", "Trigger not issued correctly by the controller."]
     ];
 
     /// <summary>
@@ -330,7 +330,7 @@ public class PartOfSpeechResolverTests
         var resolver = new PartOfSpeechResolver(sentence =>
         {
             seen.Add(sentence);
-            return [new TaggedSpan(0, 5, Upos.Aux, 0.99), new TaggedSpan(6, 3, Upos.Verb, 0.99)];
+            return [new TaggedSpan(0, 5, Upos.Aux, 0.99, true), new TaggedSpan(6, 3, Upos.Verb, 0.99, true)];
         });
         const string text = "Don't use well-known tools, please. Next sentence.";
 
@@ -413,13 +413,79 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
-    ///     Test that the minimum confidence is the strict threshold documented by the beta.2 package.
+    ///     Test that the minimum confidence is the strict threshold documented by the beta.3 package.
     /// </summary>
     [Fact]
     public void MinimumConfidence_IsPackageStrictThreshold()
     {
         // Arrange/Act/Assert: the constant is the strict threshold
         Assert.Equal(0.90, PartOfSpeechResolver.MinimumConfidence);
+    }
+
+    /// <summary>
+    ///     Test that a confident noun, verb or proper-noun tag on a word that the lexicon does not know is inconclusive.
+    /// </summary>
+    [Theory]
+    [InlineData(Upos.Noun)]
+    [InlineData(Upos.Verb)]
+    [InlineData(Upos.Propn)]
+    public void Resolve_UnknownWordNounVerbOrPropnTag_ReturnsNull(Upos pos)
+    {
+        // Arrange: a confident tag on a word that the lexicon does not know
+        var resolver = new PartOfSpeechResolver(_ => [new TaggedSpan(4, 4, pos, 0.99, false)]);
+
+        // Act: execute the operation being tested
+        var result = resolver.Resolve("The test passed.", 4, 4);
+
+        // Assert: inconclusive although the confidence is above the threshold
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    ///     Test that a confident adjective tag on a word that the lexicon does not know still resolves,
+    ///     because only noun, verb, and proper-noun tags of unknown words are guesses.
+    /// </summary>
+    [Fact]
+    public void Resolve_UnknownWordAdjectiveTag_ReturnsAdjective()
+    {
+        // Arrange: a confident adjective tag on a word that the lexicon does not know
+        var resolver = new PartOfSpeechResolver(_ => [new TaggedSpan(4, 4, Upos.Adj, 0.99, false)]);
+
+        // Act: execute the operation being tested
+        var result = resolver.Resolve("The test passed.", 4, 4);
+
+        // Assert: the adjective answer is kept
+        Assert.Equal(PartOfSpeech.Adjective, result);
+    }
+
+    /// <summary>
+    ///     Test that the real tagger's confident noun tag on a word missing from its lexicon is
+    ///     inconclusive, while a known noun of the same sentence still resolves.
+    /// </summary>
+    [Fact]
+    public void Resolve_UnknownWordWithRealTagger_ReturnsNullAndKnownWordResolves()
+    {
+        // Arrange: "turbopump" is not in the lexicon; "damage" is
+        var resolver = new PartOfSpeechResolver();
+        const string text = "Inspect the turbopump for damage.";
+        var unknownStart = text.IndexOf("turbopump", StringComparison.Ordinal);
+        var knownStart = text.IndexOf("damage", StringComparison.Ordinal);
+        var tokens = DemaConsulting.PartOfSpeech.Tagger.Default.Tag(text).SelectMany(s => s.Tokens).ToList();
+        var unknownToken = tokens.Single(t => t.Start == unknownStart);
+        var knownToken = tokens.Single(t => t.Start == knownStart);
+
+        // Act: resolve both words
+        var unknown = resolver.Resolve(text, unknownStart, "turbopump".Length);
+        var known = resolver.Resolve(text, knownStart, "damage".Length);
+
+        // Assert: both are confident nouns to the tagger, but only the known word resolves
+        Assert.False(unknownToken.IsKnownWord);
+        Assert.Equal(Upos.Noun, unknownToken.Tag);
+        Assert.True(unknownToken.Confidence >= PartOfSpeechResolver.MinimumConfidence);
+        Assert.True(knownToken.IsKnownWord);
+        Assert.True(knownToken.Confidence >= PartOfSpeechResolver.MinimumConfidence);
+        Assert.Null(unknown);
+        Assert.Equal(PartOfSpeech.Noun, known);
     }
 
     /// <summary>

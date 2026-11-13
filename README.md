@@ -247,8 +247,8 @@ grouped per part of speech and clearly labeled as ambiguous, for example: `Ambig
 speech for 'impact' — possible corrections: as a noun, use 'effect'; as a verb, use
 'affect'.` The tagger is statistical and can be wrong, for example for a sentence-initial
 imperative that reads like a noun phrase. The tagger is bundled with the tool and runs fully
-offline. It is also not told which words are unknown, so a word it does not recognize is
-treated as a noun.
+offline. A term that the tagger does not recognize gets no noun or verb decision, so it is
+reported as ambiguous.
 
 **Why the real ASD-STE100 dictionary is not included:** The official ASD-STE100 Part 2
 Dictionary is commercially-licensed, copyrighted content owned by ASD (Aerospace, Security

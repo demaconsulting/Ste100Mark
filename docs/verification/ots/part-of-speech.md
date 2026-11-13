@@ -21,8 +21,8 @@ mapping logic (for example `Resolve_NoTokensCoverMatch_ReturnsNull`, which scrip
 returns no tokens) verify the resolver rather than the library, so they are not evidence for this
 OTS item. A passing test run for all scenarios constitutes evidence that the tagger returns the
 expected part of speech at or above the 0.90 minimum confidence for the legal-usage corpus (all
-68 rows of `LegalNounUsageCases` and all 30 rows of `LegalVerbUsageCases`) and for 25 of the 26
-hard cases (the exception is "Mount", which is inconclusive), and that low-confidence or
+68 rows of `LegalNounUsageCases` and all 30 rows of `LegalVerbUsageCases`) and for all 26
+hard cases, and that low-confidence or
 other-tag answers are reported as inconclusive. Two further legal noun usages, "rank" and
 "cast", are tested separately as confident noun cases: the resolver follows the confident-role
 path and does not flag their verb-only entries.
@@ -73,9 +73,7 @@ real tagger.
 the real tagger.
 
 **Expected**: Every case resolves to the expected noun, verb, adjective, or adverb role, or to the
-resolver-only determiner result for a confident determiner,
-except one imperative ("Mount the bracket on the frame.") that the tagger answers below the
-minimum confidence and that is therefore inconclusive.
+resolver-only determiner result for a confident determiner.
 
 **Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
 
@@ -86,6 +84,17 @@ minimum confidence and that is therefore inconclusive.
 confidence below 0.90 or with another part of speech.
 
 **Expected**: The result is inconclusive (null) and no exception is thrown.
+
+**Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
+
+#### Resolve_UnknownWordWithRealTagger_ReturnsNullAndKnownWordResolves
+
+**Scenario**: The real tagger tags "Inspect the turbopump for damage.", in which "turbopump" is
+not in its lexicon and "damage" is.
+
+**Expected**: The tagger reports `IsKnownWord` false for "turbopump" with a noun tag at or above
+the minimum confidence, and true for "damage"; the resolver treats "turbopump" as inconclusive
+and resolves "damage" as a noun.
 
 **Requirement coverage**: `Ste100Mark-OTS-PartOfSpeech`.
 

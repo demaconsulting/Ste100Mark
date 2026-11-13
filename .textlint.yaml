@@ -30,6 +30,7 @@ words:
   - DEMA
   - Dema
   - demaconsulting
+  - deverbal
   - endeavour
   - Fellbaum
   - froobnicate
@@ -41,12 +42,14 @@ words:
   - ncipollo
   - nestings
   - netstandard
+  - NOAA
   - nominalized
   - OANC
   - parentheticals
   - Parentheticals
   - Passonneau
   - prenominal
+  - Propn
   - Sarif
   - sarif
   - SARIF
@@ -58,10 +61,12 @@ words:
   - Tatoeba
   - thirdparty
   - Treebank
+  - turbopump
   - unidirectionality
   - unioned
   - unioning
   - unpowered
+  - USGS
   - utilise
   - venv
   - yamldotnet

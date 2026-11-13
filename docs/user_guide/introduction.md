@@ -314,7 +314,8 @@ example `Ambiguous part of speech for 'impact' — possible corrections: as a no
 
 A confident determiner is a separate resolver result, not a dictionary sense role. It rules out
 role-specific senses, so a determiner use such as `any` is not flagged against an adjective-only
-entry. Only unsupported tags, low-confidence results, and multi-word matches use the ambiguous
+entry. Only unsupported tags, low-confidence results, noun, verb or proper-noun tags on words that
+the tagger does not recognize, and multi-word matches use the ambiguous
 fallback.
 
 The tagger is statistical, so it is not always right. It is bundled with the tool and runs
@@ -323,7 +324,9 @@ least 0.90, the strict threshold documented by the tagger library. A strict thre
 reporting a term as ambiguous over a wrong decision. Very short snippets and verbless
 fragments (a heading such as "Heading:", a low-confidence noun compound, or a bare label) often get a
 lower-confidence answer, so a term in them can be reported as ambiguous. The tagger also
-treats a word that it does not recognize as a noun. Known weak spots include a
+reports whether a word is in its lexicon. A term that it does not recognize gets no noun or verb
+decision, because the tagger's tag for that word is a guess, so the term is reported as
+ambiguous. Known weak spots include a
 sentence-initial imperative that reads like a noun phrase (for example "Test results daily")
 and a verb followed by a number. In those cases a term can be reported with the wrong sense,
 or not be reported at all. The writing mode does not influence the decision. Add an `allow`

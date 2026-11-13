@@ -24,6 +24,7 @@ sections:
               - Resolve_VerbUsage_ReturnsVerb
               - Resolve_HardCase_ReturnsExpectedRole
               - Resolve_BelowThresholdOrOtherTag_ReturnsNull
+              - Resolve_UnknownWordWithRealTagger_ReturnsNullAndKnownWordResolves
               - Tagger_Default_ConfidenceSeparatesResolvedFromInconclusiveScenarios
               - Evaluate_LegalNounUsage_VerbOnlyDisallowedEntry_NotFlagged
               - Evaluate_ConfidentNounUsage_VerbOnlyDisallowedEntry_NotFlagged
