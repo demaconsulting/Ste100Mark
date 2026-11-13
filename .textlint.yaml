@@ -71,6 +71,10 @@ words:
   - venv
   - yamldotnet
   - yamlfix
+  - Zorbix
+  - zorbix
+  - Zorbixen
+  - Zorbixes
 
 # Exclude common build artifacts, dependencies, and vendored third-party code
 ignorePaths:

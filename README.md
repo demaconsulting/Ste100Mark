@@ -31,6 +31,8 @@ Ste100Mark provides:
 - 🧾 **Text and JSON Output**: Produces readable diagnostics or structured CI-friendly output
 - 🚦 **Strict Mode**: Promotes warnings to build-breaking failures on demand
 - 📖 **Embedded Example Dictionary**: Ships illustrative vocabulary for immediate linter evaluation
+- 🧩 **Project Glossary**: Approves project terms with a part of speech, and reports deprecated terms
+  with a replacement
 - ✅ **Self-Validation**: Built-in validation tests with TRX and JUnit output
 - 🖥️ **Multi-Platform Support**: Builds and runs on Windows, Linux, macOS
 - ⚙️ **Multi-Runtime Support**: Targets .NET 10 and 11 runtimes
@@ -202,6 +204,22 @@ Each profile entry supports:
 > ASD-STE100 Part 2 Dictionary. Projects that require true ASD-STE100 Issue 9 compliance
 > must supply your organization's licensed ASD-STE100 dictionary through `dictionary.file`.
 > Ste100Mark does not provide full official ASD-STE100 dictionary content out of the box.
+
+### Project Glossary
+
+A project glossary approves product names and domain terms and gives each a part of speech. A
+deprecated-terms file reports retired terms with a replacement. Configure them under `dictionary`:
+
+```yaml
+dictionary:
+  glossary-file: docs/glossary.yaml
+  deprecated-file: docs/deprecated-terms.yaml
+  glossary-mode: hard   # hard (default) or soft
+```
+
+Paths are relative to the configuration file, or absolute, or UNC, and can use `${VAR}`. A missing
+file or a conflict between sources is an error. See the user guide for the entry format, the
+conflict rules, and the risks.
 
 ### Project Dictionary Files
 

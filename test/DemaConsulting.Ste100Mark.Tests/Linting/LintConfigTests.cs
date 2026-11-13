@@ -393,4 +393,74 @@ public class LintConfigTests
         Assert.Contains("Duty Cycle", allowed, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(2, allowed.Count);
     }
+
+    /// <summary>
+    ///     Writes configuration text to a temporary file, loads it, and removes the file.
+    /// </summary>
+    private static LintConfig LoadText(string yaml)
+    {
+        var tempFile = Path.Combine(Path.GetTempPath(), $"ste100mark-config-{Guid.NewGuid()}.yaml");
+        File.WriteAllText(tempFile, yaml);
+        try
+        {
+            return LintConfig.Load(tempFile);
+        }
+        finally
+        {
+            File.Delete(tempFile);
+        }
+    }
+
+    /// <summary>
+    ///     Test that glossary-file and deprecated-file bind as a scalar or a list, and inline entries bind.
+    /// </summary>
+    [Fact]
+    public void Load_GlossaryKeys_BindScalarAndList()
+    {
+        // Act
+        var scalar = LoadText("dictionary:\n  glossary-file: a.yaml\n  deprecated-file: [d1.yaml, d2.yaml]\n  glossary-mode: soft\n  glossary:\n    Zorbix: A made-up term.\n");
+
+        // Assert
+        Assert.Equal(["a.yaml"], DictionaryConfig.NormalizePathList(scalar.Dictionary!.GlossaryFile, "glossary-file"));
+        Assert.Equal(["d1.yaml", "d2.yaml"], DictionaryConfig.NormalizePathList(scalar.Dictionary.DeprecatedFile, "deprecated-file"));
+        Assert.Equal(GlossaryModeSetting.Soft, scalar.Dictionary.GlossaryMode);
+        Assert.Contains("Zorbix", scalar.Dictionary.Glossary!.Keys);
+    }
+
+    /// <summary>
+    ///     Test that an omitted glossary-mode defaults to hard.
+    /// </summary>
+    [Fact]
+    public void Load_GlossaryModeOmitted_DefaultsToHard()
+    {
+        // Act
+        var config = LoadText("dictionary:\n  glossary-file: a.yaml\n");
+
+        // Assert
+        Assert.Equal(GlossaryModeSetting.Hard, config.Dictionary!.GlossaryMode);
+    }
+
+    /// <summary>
+    ///     Test that an invalid glossary-mode is reported as InvalidOperationException.
+    /// </summary>
+    [Fact]
+    public void Load_GlossaryModeInvalid_ThrowsInvalidOperation()
+    {
+        // Act / Assert
+        Assert.Throws<InvalidOperationException>(() => LoadText("dictionary:\n  glossary-mode: medium\n"));
+    }
+
+    /// <summary>
+    ///     Test that a mapping given for glossary-file is rejected when normalized.
+    /// </summary>
+    [Fact]
+    public void NormalizePathList_MappingValue_ThrowsInvalidOperation()
+    {
+        // Arrange
+        var config = LoadText("dictionary:\n  glossary-file:\n    key: value\n");
+
+        // Act / Assert
+        Assert.Throws<InvalidOperationException>(() =>
+            DictionaryConfig.NormalizePathList(config.Dictionary!.GlossaryFile, "glossary-file"));
+    }
 }

@@ -348,4 +348,79 @@ public class LintDictionaryTests
         var verbSense = Assert.Single(entry.Senses, s => s.Pos == PartOfSpeech.Verb);
         Assert.Contains("handle", verbSense.Alternatives);
     }
+
+    /// <summary>
+    ///     Test that a deprecated term becomes an any-sense entry whose alternative is the replacement.
+    /// </summary>
+    [Fact]
+    public void Load_DeprecatedTerms_AddedAsAnySenseDisallowEntry()
+    {
+        // Arrange
+        var deprecated = new[] { new DeprecatedTerm("Old Name", "New Name", "Legacy pages", "dep.yaml") };
+
+        // Act
+        var dictionary = LintDictionary.Load(
+            new LintConfig { Dictionary = new DictionaryConfig { UseEmbedded = false } },
+            Directory.GetCurrentDirectory(),
+            deprecated);
+
+        // Assert
+        Assert.True(dictionary.TryGetEntry("old name", out var entry));
+        var sense = Assert.Single(entry!.Senses);
+        Assert.Equal(PartOfSpeech.Any, sense.Pos);
+        Assert.Equal(["New Name"], sense.Alternatives);
+        Assert.Equal("Used in: Legacy pages", sense.Note);
+    }
+
+    /// <summary>
+    ///     Test that a deprecated term overrides an embedded entry with the same term.
+    /// </summary>
+    [Fact]
+    public void Load_DeprecatedOverridesEmbeddedEntry()
+    {
+        // Arrange
+        var deprecated = new[] { new DeprecatedTerm("utilize", "apply", null, "dep.yaml") };
+
+        // Act
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory(), deprecated);
+
+        // Assert
+        Assert.True(dictionary.TryGetEntry("utilize", out var entry));
+        Assert.Equal(["apply"], Assert.Single(entry!.Senses).Alternatives);
+        Assert.True(dictionary.TryGetSource("utilize", out var source));
+        Assert.Equal("dep.yaml", source);
+    }
+
+    /// <summary>
+    ///     Test that the allow list still removes a deprecated term.
+    /// </summary>
+    [Fact]
+    public void Load_DeprecatedTermInAllowList_Removed()
+    {
+        // Arrange
+        var config = new LintConfig { Dictionary = new DictionaryConfig { UseEmbedded = false, Allow = ["Old Name"] } };
+        var deprecated = new[] { new DeprecatedTerm("Old Name", "New Name", null, "dep.yaml") };
+
+        // Act
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory(), deprecated);
+
+        // Assert
+        Assert.False(dictionary.TryGetEntry("Old Name", out _));
+        Assert.False(dictionary.TryGetSource("Old Name", out _));
+    }
+
+    /// <summary>
+    ///     Test that the source of an embedded entry and of an unknown term are reported correctly.
+    /// </summary>
+    [Fact]
+    public void TryGetSource_EmbeddedAndUnknownTerms_ReportSourceOrNothing()
+    {
+        // Act
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+
+        // Assert
+        Assert.True(dictionary.TryGetSource("utilize", out var source));
+        Assert.Equal("embedded default dictionary", source);
+        Assert.False(dictionary.TryGetSource("zorbix", out _));
+    }
 }

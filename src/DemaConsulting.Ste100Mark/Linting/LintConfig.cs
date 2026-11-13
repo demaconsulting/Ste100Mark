@@ -309,6 +309,82 @@ internal sealed class DictionaryConfig
     ///     feature request, added to satisfy the "embedded dictionary, unless disabled" requirement.
     /// </summary>
     public bool UseEmbedded { get; set; } = true;
+
+    /// <summary>
+    ///     Path, glob pattern, or list of them (bound as a scalar or a sequence, so held as
+    ///     <see cref="object"/>) naming project glossary YAML files of approved terms. Relative
+    ///     patterns resolve against the configuration file's directory; absolute and UNC paths are
+    ///     used as-is; <c>${VAR}</c> references are expanded from the environment. Use
+    ///     <see cref="NormalizePathList"/> to read it.
+    /// </summary>
+    public object? GlossaryFile { get; set; }
+
+    /// <summary>
+    ///     Path, glob pattern, or list of them naming deprecated-terms YAML files
+    ///     (<c>term: {use: ..., where: ...}</c>). Resolved like <see cref="GlossaryFile"/>.
+    /// </summary>
+    public object? DeprecatedFile { get; set; }
+
+    /// <summary>
+    ///     How strictly glossary entries decide the part of speech of their terms.
+    ///     Default <see cref="GlossaryModeSetting.Hard"/>.
+    /// </summary>
+    public GlossaryModeSetting GlossaryMode { get; set; } = GlossaryModeSetting.Hard;
+
+    /// <summary>
+    ///     Inline glossary entries (<c>term: "definition"</c> or <c>term: {definition, pos,
+    ///     variants, visible}</c>), subject to the same conflict rule as glossary files. Values are
+    ///     bound loosely (string or map) and validated by <see cref="LintGlossary"/>.
+    /// </summary>
+    public Dictionary<string, object?>? Glossary { get; set; }
+
+    /// <summary>
+    ///     Normalizes a scalar-or-sequence YAML value into a list of non-empty path strings.
+    /// </summary>
+    /// <param name="value">The bound value: <see langword="null"/>, a string, or a list of strings.</param>
+    /// <param name="key">Configuration key name used in error messages.</param>
+    /// <returns>The path patterns in declaration order; empty when <paramref name="value"/> is <see langword="null"/>.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the value is neither a string nor a list of strings.</exception>
+    public static IReadOnlyList<string> NormalizePathList(object? value, string key)
+    {
+        switch (value)
+        {
+            case null:
+                return [];
+            case string single:
+                return string.IsNullOrWhiteSpace(single) ? [] : [single];
+            case IEnumerable<object?> list:
+                var result = new List<string>();
+                foreach (var item in list)
+                {
+                    if (item is not string text || string.IsNullOrWhiteSpace(text))
+                    {
+                        throw new InvalidOperationException(
+                            $"Configuration key 'dictionary.{key}' must be a path or a list of paths.");
+                    }
+
+                    result.Add(text);
+                }
+
+                return result;
+            default:
+                throw new InvalidOperationException(
+                    $"Configuration key 'dictionary.{key}' must be a path or a list of paths.");
+        }
+    }
+}
+
+/// <summary>
+///     How strictly glossary entries decide a term's part of speech
+///     (<c>dictionary.glossary-mode</c>).
+/// </summary>
+internal enum GlossaryModeSetting
+{
+    /// <summary>The glossary tag is forced; the tagger cannot disagree. Recommended for curated files.</summary>
+    Hard,
+
+    /// <summary>The glossary tag is a boost; the tagger may disagree when it is clearly sure.</summary>
+    Soft
 }
 
 /// <summary>

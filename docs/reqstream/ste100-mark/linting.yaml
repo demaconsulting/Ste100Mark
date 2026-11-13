@@ -315,6 +315,49 @@ sections:
           - Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment
           - Evaluate_PureSelfReferentialCandidate_WithinAmbiguousResult_UsesRoleRestrictionClause
 
+      - id: Ste100Mark-Linting-ProjectGlossary
+        title: >-
+          When the configuration lists glossary files or inline glossary entries, the Linting
+          subsystem shall load them, treat each approved term as allowed, use its part of speech
+          for sense decisions, and report any load or conflict problem as an error.
+        justification: |
+          Projects use product names and domain terms that the dictionary or the tagger does not
+          know. A project glossary lets a project approve those terms and fix their part of
+          speech, so that the tool reports fewer false findings and decides senses more
+          reliably. A missing file or a conflict must fail loudly, because a silently ignored
+          glossary hides the effect the project wanted.
+        children:
+          - Ste100Mark-LintGlossary-Entries
+          - Ste100Mark-LintGlossary-Paths
+          - Ste100Mark-LintGlossary-Unreachable
+          - Ste100Mark-LintGlossary-Conflicts
+          - Ste100Mark-LintGlossary-Tagging
+          - Ste100Mark-PartOfSpeechResolver-Glossary
+          - Ste100Mark-PartOfSpeechResolver-GlossaryCacheScope
+        tests:
+          - Run_GlossaryChangesSenseDecision_ReportsConfidentSense
+          - Run_GlossaryTerm_IsNotFlagged
+          - Run_GlossaryFileMissing_ReportsErrorAndFails
+          - Run_GlossaryConflictsWithDictionaryKey_ReportsErrorNamingTerm
+          - Run_DictionaryDisabled_DoesNotLoadGlossary
+          - Ste100Mark_LintWithGlossaryFile_TermNotFlaggedAndExitZero
+          - Ste100Mark_LintWithGlossaryAbsolutePath_Works
+          - Ste100Mark_LintWithConflictingGlossaryFiles_ReturnsNonZeroNamingTermAndPaths
+          - Ste100Mark_LintWithEmptyGlossaryGlob_ReturnsNonZero
+
+      - id: Ste100Mark-Linting-DeprecatedTerms
+        title: >-
+          When the configuration lists deprecated-term files, the Linting subsystem shall report
+          each use of a deprecated term with a suggestion to use its replacement.
+        justification: |
+          A project retires terms over time. A deprecated-terms file lets the tool tell authors
+          which term to use instead, in the same form as every other dictionary finding.
+        children:
+          - Ste100Mark-LintGlossary-Deprecated
+        tests:
+          - Run_DeprecatedTerm_ReportsUseReplacement
+          - Ste100Mark_LintWithDeprecatedFile_ReportsUseSuggestion
+
       - id: Ste100Mark-Linting-AccurateLineNumbers
         title: >-
           The Linting subsystem shall report each diagnostic against the source line on which its

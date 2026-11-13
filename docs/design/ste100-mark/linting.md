@@ -22,7 +22,7 @@ types (`Diagnostic` and `Severity`). Together they convert raw Markdown input in
 deterministic lint findings aligned with the tool's official STE100 rule checks and
 advisory heuristics.
 
-The source folder contains twelve primary behavioral units plus two supporting value types:
+The source folder contains thirteen primary behavioral units plus two supporting value types:
 
 - `Severity` - closed severity set (`Off`, `Warn`, `Error`) shared by configuration and
   diagnostics.
@@ -33,6 +33,8 @@ The source folder contains twelve primary behavioral units plus two supporting v
 - `LintDictionary` - merged effective dictionary built from the embedded baseline,
   project-supplied dictionary file, and inline allow/disallow/ignore lists, with each term
   carrying one or more part-of-speech-tagged senses.
+- `LintGlossary` - loader and validator of the project glossary (approved terms with a part of
+  speech) and deprecated terms, which builds the tagger glossary and the allowed-term set.
 - `PartOfSpeechResolver` - resolves whether a matched term is used as a noun, verb, adjective, or adverb at its
   match site, used to select the applicable sense(s) of a multi-sense dictionary entry. It
   implements the internal `IPartOfSpeechResolver` interface and delegates to the
@@ -96,7 +98,7 @@ The source folder contains twelve primary behavioral units plus two supporting v
 
 The unit design details for the subsystem are documented in the companion unit files in
 this folder: *Diagnostic Design*, *DiagnosticReporter Design*, *DictionaryChecker Design*,
-*LintConfig Design*, *LintDictionary Design*, *Linter Design*, *MarkdownProseExtractor
+*LintConfig Design*, *LintDictionary Design*, *LintGlossary Design*, *Linter Design*, *MarkdownProseExtractor
 Design*, *PartOfSpeechGuesser Design*, *PartOfSpeechResolver Design*, *RuleCatalog Design*, *RuleCodes Design*,
 *SentenceAnalyzer Design*, *Severity Design*, and *StructuralRules Design*.
 
@@ -116,6 +118,9 @@ Design*, *PartOfSpeechGuesser Design*, *PartOfSpeechResolver Design*, *RuleCatal
 flowchart TD
     Linter --> LintConfig
     Linter --> LintDictionary
+    Linter --> LintGlossary
+    LintGlossary --> LintDictionary
+    LintGlossary --> PartOfSpeechResolver
     Linter --> MarkdownProseExtractor
     MarkdownProseExtractor --> SentenceAnalyzer
     MarkdownProseExtractor --> DictionaryChecker
@@ -155,6 +160,7 @@ flowchart TD
 
 1. `LintConfig.Load` resolves the effective YAML configuration, including include/exclude
    globs, default writing mode, override globs, rule tuning, and dictionary options.
+   `LintGlossary.Load` then reads the project glossary and deprecated terms.
 2. `LintDictionary.Load` merges the embedded illustrative dictionary (unless disabled),
    the optional project dictionary file, inline `disallow` entries, and the
    `allow`/`ignore` removal lists.

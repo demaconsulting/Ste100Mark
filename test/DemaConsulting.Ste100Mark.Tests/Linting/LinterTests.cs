@@ -820,4 +820,175 @@ public sealed class LinterTests : IDisposable
             Console.SetOut(originalOut);
         }
     }
+
+    /// <summary>
+    ///     Runs the linter with the given arguments and returns the exit code and the combined output.
+    /// </summary>
+    private static (int ExitCode, string Output) RunLinter(params string[] args)
+    {
+        var originalOut = Console.Out;
+        var originalError = Console.Error;
+        try
+        {
+            using var writer = new StringWriter();
+            Console.SetOut(writer);
+            Console.SetError(writer);
+            using var context = Context.Create(args);
+            Linter.Run(context);
+            return (context.ExitCode, writer.ToString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+        }
+    }
+
+    /// <summary>
+    ///     Writes a file under the temporary working directory.
+    /// </summary>
+    private void WriteFile(string relative, string content)
+    {
+        var path = Path.Combine(_tempDirectory.FullName, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+    }
+
+    /// <summary>
+    ///     Configuration whose dictionary has a two-sense "process" entry (verb and adjective
+    ///     only), so a noun use is legal only when the tagger confidently says noun.
+    /// </summary>
+    private const string ProcessDictionary =
+        "  use-embedded: false\n  disallow:\n    process:\n      - pos: verb\n        alternatives: [do]\n      - pos: adjective\n        alternatives: [automatic]\n";
+
+    /// <summary>
+    ///     Test that a sentence with an ambiguous dictionary word is reported without a glossary.
+    /// </summary>
+    [Fact]
+    public void Run_NoGlossary_AmbiguousTermIsReported()
+    {
+        // Arrange
+        WriteFile(".ste100mark.yaml", "dictionary:\n" + ProcessDictionary);
+        WriteFile("doc.md", "# Title\n\nProcess control is easy.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.Contains("STE100-DICT", output);
+        Assert.Equal(1, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a glossary term changes the tag decision so the dictionary finding disappears.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryChangesSenseDecision_ReportsConfidentSense()
+    {
+        // Arrange: the glossary names "process control" as a noun term
+        WriteFile(".ste100mark.yaml", "dictionary:\n" + ProcessDictionary + "  glossary:\n    Process Control: A control loop.\n");
+        WriteFile("doc.md", "# Title\n\nProcess control is easy.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert: the noun tag from the glossary rules out both senses
+        Assert.DoesNotContain("STE100-DICT", output);
+        Assert.Equal(0, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a glossary term itself is not flagged.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryTerm_IsNotFlagged()
+    {
+        // Arrange: the glossary file approves the term "Zorbix Mode"; nothing in the document may be flagged
+        WriteFile("glossary/terms.yaml", "Zorbix Mode: A made-up mode.\n");
+        WriteFile(".ste100mark.yaml", "dictionary:\n  use-embedded: false\n  glossary-file: glossary/*.yaml\n");
+        WriteFile("doc.md", "# Title\n\nOpen the Zorbix Mode panel.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.DoesNotContain("STE100-DICT", output);
+        Assert.Equal(0, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a deprecated term is reported with the replacement.
+    /// </summary>
+    [Fact]
+    public void Run_DeprecatedTerm_ReportsUseReplacement()
+    {
+        // Arrange
+        WriteFile("deprecated.yaml", "Product A:\n  use: Product B\n  where: Old pages\n");
+        WriteFile(".ste100mark.yaml", "dictionary:\n  use-embedded: false\n  deprecated-file: deprecated.yaml\n");
+        WriteFile("doc.md", "# Title\n\nOpen Product A now.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.Contains("STE100-DICT", output);
+        Assert.Contains("use 'Product B' instead", output);
+        Assert.Equal(1, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a missing glossary file is reported as an error with a failing exit code.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryFileMissing_ReportsErrorAndFails()
+    {
+        // Arrange
+        WriteFile(".ste100mark.yaml", "dictionary:\n  glossary-file: missing.yaml\n");
+        WriteFile("doc.md", "# Title\n\nOpen the panel.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.Contains("missing.yaml", output);
+        Assert.Contains("not found", output);
+        Assert.NotEqual(0, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a glossary term that is also a dictionary key reports an error naming the term.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryConflictsWithDictionaryKey_ReportsErrorNamingTerm()
+    {
+        // Arrange: "utilize" is an embedded dictionary entry
+        WriteFile(".ste100mark.yaml", "dictionary:\n  glossary:\n    utilize: A made-up meaning.\n");
+        WriteFile("doc.md", "# Title\n\nOpen the panel.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.Contains("'utilize'", output);
+        Assert.Contains("dictionary entry", output);
+        Assert.NotEqual(0, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a bad glossary path is not diagnosed when the dictionary check is disabled.
+    /// </summary>
+    [Fact]
+    public void Run_DictionaryDisabled_DoesNotLoadGlossary()
+    {
+        // Arrange
+        WriteFile(".ste100mark.yaml", "dictionary:\n  enabled: false\n  glossary-file: missing.yaml\n");
+        WriteFile("doc.md", "# Title\n\nOpen the panel.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.DoesNotContain("missing.yaml", output);
+        Assert.Equal(0, exitCode);
+    }
 }

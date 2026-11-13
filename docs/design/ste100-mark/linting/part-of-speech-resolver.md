@@ -87,9 +87,19 @@ the lexicon gives no evidence for such a word, all tags are allowed, and the cho
 even when its confidence is high. The resolver follows this guidance after the confidence check,
 so an unknown word in a noun or verb position is reported as ambiguous instead of resolved. Other
 tags of unknown words (for example an adjective) keep the normal confidence rule. The package's
-exception for tokens that a dictionary decides (`IsConstrained` with no alternatives) does not
-apply, because the resolver gives the tagger no `Glossary` or `TokenConstraint`. The resolver
+exception for tokens that a glossary decides (`IsConstrained`) applies only when the resolver was
+built with a project glossary: the resolver then counts a constrained token as known
+(`IsKnownWord || IsConstrained`), in hard and soft mode alike. Without a glossary the resolver
+gives the tagger no `Glossary` or `TokenConstraint`, and the exception does not apply. The resolver
 does not use `TaggedToken.Margin`: the package measures and recommends no margin limit.
+
+#### Project glossary
+
+An internal constructor accepts a `DemaConsulting.PartOfSpeech.Glossary` (built by `LintGlossary`)
+and tags every sentence with `Tagger.Default.Tag(sentence, glossary)`. A resolver that has a
+glossary is never shared: `Linter` creates one per run, so the cache never mixes results of
+different glossaries. The process-wide `Shared` instance has no glossary and keeps its behavior.
+The tagging path of both constructors flattens tokens through one helper.
 
 #### Threshold selection
 

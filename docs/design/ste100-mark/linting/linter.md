@@ -36,11 +36,20 @@ user-fixable configuration problems become normal lint errors rather than top-le
 - *Postconditions*: Files are resolved, diagnostics are reported, and the exit code is driven
   according to error and strict-mode semantics.
 
-`RunCore` resolves the configuration path, loads `LintConfig` and `LintDictionary`, resolves
+`RunCore` resolves the configuration path, loads `LintConfig`, resolves
 files, reads file contents, extracts prose, resolves each file's mode/rules/allowed-terms/
 allowed-phrases via `LintConfig.ResolveMode`/`ResolveRules`/`ResolveAllowedTerms`/
 `ResolveAllowedPhrases` (applying any matching `Profile` deltas), evaluates structural and
 dictionary rules against that per-file configuration, and reports the aggregated diagnostics.
+
+Immediately before resolving files, when the dictionary is enabled, `RunCore` loads the project
+glossary with `LintGlossary.Load`, then `LintDictionary` (passing the deprecated terms), and then
+calls `LintGlossary.ValidateAgainst` so that an approved term that is also a dictionary entry is
+reported as an error. When the glossary has tagging entries it creates a
+`PartOfSpeechResolver` for the run with the tagger glossary; otherwise it uses the shared
+resolver. The allowed terms passed to `DictionaryChecker` are the union of the configured allowed
+terms and the glossary's allowed terms. A glossary or dictionary load failure is reported as an
+error and fails the run. When `dictionary.enabled` is false, the glossary is not loaded.
 
 Immediately after resolving files, `RunCore` computes
 `noFilesMatched = files.Count == 0 && !context.AllowEmpty` and passes it to
@@ -108,7 +117,9 @@ as unexpected failures.
 
 - **Context** and **OutputFormat** - provide CLI inputs and output channels.
 - **LintConfig** - loads configuration and resolves per-file mode, rules, and allowed terms.
-- **LintDictionary** - builds the effective dictionary.
+- **LintDictionary** - builds the effective dictionary, including deprecated terms.
+- **LintGlossary** - loads the project glossary and deprecated terms and builds the tagger glossary.
+- **PartOfSpeechResolver** - created per run with the tagger glossary when a glossary is configured.
 - **MarkdownProseExtractor** - extracts prose segments from each Markdown file.
 - **StructuralRules** and **DictionaryChecker** - produce diagnostics.
 - **DiagnosticReporter** - formats and writes the final report.

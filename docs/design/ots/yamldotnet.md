@@ -5,7 +5,7 @@ This document describes the integration and usage design for the `YamlDotNet` OT
 ### Purpose
 
 YamlDotNet is chosen as the YAML deserialization library for the project. It parses
-`.ste100mark.yaml` lint configuration files and project dictionary files into strongly typed
+`.ste100mark.yaml` lint configuration files and project dictionary and glossary files into strongly typed
 local models used by the `Linting` subsystem.
 
 ### Features Used

@@ -4,7 +4,7 @@
 
 The `Linting` subsystem is verified by a combination of unit tests and end-to-end integration
  tests. The unit tests exercise `MarkdownProseExtractor`, `SentenceAnalyzer`, `StructuralRules`,
-`LintConfig`, `LintDictionary`, `PartOfSpeechResolver`, `PartOfSpeechGuesser`,
+`LintConfig`, `LintDictionary`, `LintGlossary`, `PartOfSpeechResolver`, `PartOfSpeechGuesser`,
 `DictionaryChecker`, `DiagnosticReporter`,
 and `Linter` directly with controlled inputs. Integration tests invoke the published tool
 assembly through `Runner.RunInDirectory`, confirming that command-line parsing, dispatch,
@@ -523,6 +523,24 @@ through the published CLI. This scenario is tested by
 `Ste100Mark_LintWithNoMatchingFiles_ReturnsNoFilesMatchedExitCode`,
 `Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode`, and
 `Ste100Mark_LintWithNoMatchingFilesJsonFormat_ReportsNoFilesMatchedTrue`.
+
+**Ste100Mark-Linting-ProjectGlossary**: Glossary loading is verified by unit tests for entry
+parsing, path and glob resolution, environment-variable expansion, unreachable sources, merge
+and conflict rules (independent of file order), deprecated terms, and tagger-glossary mode. The
+resolver is verified with the real tagger: a glossary changes the sense decision and makes an
+unknown word resolve as a noun in hard and soft mode, and two glossaries never share cached
+results. `Linter.Run` scenarios and the CLI scenarios confirm that an approved term is not
+reported, that a deprecated term reports its replacement, and that a missing file or a conflict
+fails the run. This scenario is tested by the tests listed for the `LintGlossary` unit
+(`Load_*`, `ValidateAgainst_*`), `Resolve_GlossaryUnknownWordNoun_ResolvesNounInHardMode`,
+`Resolve_SoftGlossaryMatchedToken_CountsAsKnownWord`,
+`Resolve_TwoGlossaries_SameSentence_DoNotShareCache`,
+`Run_GlossaryChangesSenseDecision_ReportsConfidentSense`, `Run_GlossaryTerm_IsNotFlagged`,
+`Run_GlossaryFileMissing_ReportsErrorAndFails`,
+`Run_GlossaryConflictsWithDictionaryKey_ReportsErrorNamingTerm`,
+`Run_DictionaryDisabled_DoesNotLoadGlossary`, `Run_DeprecatedTerm_ReportsUseReplacement`, and the
+`Ste100Mark_LintWith*Glossary*` and `Ste100Mark_LintWithDeprecatedFile_ReportsUseSuggestion`
+CLI tests.
 
 **Ste100Mark-Linting-RuleCatalog**: The rule catalog is verified to contain exactly every rule
 code the linter can emit, to classify official/mechanical/advisory status and suggestion kind

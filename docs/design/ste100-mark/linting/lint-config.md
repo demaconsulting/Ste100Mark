@@ -88,6 +88,13 @@ files it matches.
   entirely and does not run `DictionaryChecker`, disabling the `STE100-DICT` check project-wide
   without requiring any dictionary source. Distinct from `UseEmbedded`, which only removes the
   embedded baseline while the check itself still runs against any remaining sources.
+- `GlossaryFile`, `DeprecatedFile`: `object?` - one path or glob, or a list of them (a mapping
+  is an error), read by `LintGlossary`. `DictionaryConfig.NormalizePathList` converts the value to
+  a list of strings.
+- `GlossaryMode`: `GlossaryModeSetting` (`Hard` or `Soft`) - default `Hard`; any other value is an
+  error.
+- `Glossary`: `Dictionary<string, object?>?` - inline approved entries, in the same shape as a
+  glossary file.
 
 **LintConfig**: root configuration class.
 
