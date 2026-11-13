@@ -429,7 +429,7 @@ public class PartOfSpeechResolverTests
     [InlineData(Upos.Noun)]
     [InlineData(Upos.Verb)]
     [InlineData(Upos.Propn)]
-    public void Resolve_UnknownWordNounOrVerbTag_ReturnsNull(Upos pos)
+    public void Resolve_UnknownWordNounVerbOrPropnTag_ReturnsNull(Upos pos)
     {
         // Arrange: a confident tag on a word that the lexicon does not know
         var resolver = new PartOfSpeechResolver(_ => [new TaggedSpan(4, 4, pos, 0.99, false)]);

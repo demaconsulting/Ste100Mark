@@ -96,7 +96,7 @@ sections:
           package exception for tokens decided by a glossary or token constraint does not apply,
           because the resolver supplies neither.
         tests:
-          - Resolve_UnknownWordNounOrVerbTag_ReturnsNull
+          - Resolve_UnknownWordNounVerbOrPropnTag_ReturnsNull
           - Resolve_UnknownWordAdjectiveTag_ReturnsAdjective
           - Resolve_UnknownWordWithRealTagger_ReturnsNullAndKnownWordResolves
 

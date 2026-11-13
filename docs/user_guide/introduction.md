@@ -314,8 +314,8 @@ example `Ambiguous part of speech for 'impact' — possible corrections: as a no
 
 A confident determiner is a separate resolver result, not a dictionary sense role. It rules out
 role-specific senses, so a determiner use such as `any` is not flagged against an adjective-only
-entry. Only unsupported tags, low-confidence results, noun or verb tags on words that the tagger
-does not recognize, and multi-word matches use the ambiguous
+entry. Only unsupported tags, low-confidence results, noun, verb or proper-noun tags on words that
+the tagger does not recognize, and multi-word matches use the ambiguous
 fallback.
 
 The tagger is statistical, so it is not always right. It is bundled with the tool and runs
