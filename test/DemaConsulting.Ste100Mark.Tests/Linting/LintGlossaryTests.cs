@@ -116,7 +116,7 @@ public sealed class LintGlossaryTests : IDisposable
     public void Load_PosList_MapsToUposSet()
     {
         // Act
-        var glossary = Load("  glossary:\n    bleed:\n      pos: [Noun, verb]\n");
+        var glossary = Load("  glossary:\n    bleed:\n      definition: To release pressure.\n      pos: [Noun, verb]\n");
 
         // Assert
         Assert.Equal(UposSet.Of(Upos.Noun, Upos.Verb), Assert.Single(glossary.Terms).Pos);
@@ -132,9 +132,75 @@ public sealed class LintGlossaryTests : IDisposable
     {
         // Act / Assert
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            Load($"  glossary:\n    Zorbix:\n      pos: {pos}\n"));
+            Load($"  glossary:\n    Zorbix:\n      definition: A made-up term.\n      pos: {pos}\n"));
         Assert.Contains("Zorbix", ex.Message);
         Assert.Contains("pos", ex.Message);
+    }
+
+    /// <summary>
+    ///     Test that an approved entry without a usable definition is an error naming the term and source.
+    /// </summary>
+    [Theory]
+    [InlineData("Zorbix:\n")]
+    [InlineData("Zorbix: \"\"\n")]
+    [InlineData("Zorbix: \"   \"\n")]
+    [InlineData("Zorbix: {}\n")]
+    [InlineData("Zorbix:\n  pos: noun\n")]
+    [InlineData("Zorbix:\n  definition: \"\"\n")]
+    [InlineData("Zorbix:\n  definition: \"  \"\n")]
+    [InlineData("Zorbix:\n  definition: \"\"\n  visible: false\n")]
+    public void Load_ApprovedEntryWithoutDefinition_ThrowsNamingTermAndSource(string content)
+    {
+        // Arrange
+        var path = Write("terms.yaml", content);
+
+        // Act / Assert
+        var ex = Assert.Throws<InvalidOperationException>(() => Load("  glossary-file: terms.yaml\n"));
+        Assert.Contains("'Zorbix'", ex.Message);
+        Assert.Contains(path, ex.Message);
+        Assert.Contains("definition", ex.Message);
+    }
+
+    /// <summary>
+    ///     Test that a definition that is not a string is reported as such, naming the term.
+    /// </summary>
+    [Theory]
+    [InlineData("[one, two]")]
+    [InlineData("{a: b}")]
+    public void Load_NonStringDefinition_ThrowsMustBeString(string value)
+    {
+        // Act / Assert
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            Load($"  glossary:\n    Zorbix:\n      definition: {value}\n"));
+        Assert.Contains("Zorbix", ex.Message);
+        Assert.Contains("must be a string", ex.Message);
+    }
+
+    /// <summary>
+    ///     Test that an inline entry without a definition is an error naming the term.
+    /// </summary>
+    [Fact]
+    public void Load_InlineEntryWithoutDefinition_ThrowsNamingTerm()
+    {
+        // Act / Assert
+        var ex = Assert.Throws<InvalidOperationException>(() => Load("  glossary:\n    Zorbix: \"\"\n"));
+        Assert.Contains("'Zorbix'", ex.Message);
+        Assert.Contains("definition", ex.Message);
+    }
+
+    /// <summary>
+    ///     Test that the glossary entry for the tagger receives the real definition.
+    /// </summary>
+    [Fact]
+    public void Load_Definition_PassedToTaggerEntry()
+    {
+        // Act
+        var glossary = Load("  glossary:\n    Zorbix:\n      definition: A made-up term.\n      pos: proper-noun\n");
+
+        // Assert
+        Assert.Equal("A made-up term.", Assert.Single(glossary.Terms).Definition);
+        Assert.NotNull(glossary.Tagging);
+        Assert.Equal("A made-up term.", Assert.Single(glossary.Tagging.Entries).Definition);
     }
 
     /// <summary>
@@ -372,9 +438,9 @@ public sealed class LintGlossaryTests : IDisposable
     /// </summary>
     [Theory]
     [InlineData("Zorbix: One.\n", "Zorbix: Two.\n", "definition")]
-    [InlineData("Zorbix:\n  pos: noun\n", "Zorbix:\n  pos: verb\n", "pos")]
-    [InlineData("Zorbix:\n  variants: [Zorbixes]\n", "Zorbix:\n  variants: [Zorbixen]\n", "variants")]
-    [InlineData("Zorbix:\n  visible: true\n", "Zorbix:\n  visible: false\n", "visible")]
+    [InlineData("Zorbix:\n  definition: One.\n  pos: noun\n", "Zorbix:\n  definition: One.\n  pos: verb\n", "pos")]
+    [InlineData("Zorbix:\n  definition: One.\n  variants: [Zorbixes]\n", "Zorbix:\n  definition: One.\n  variants: [Zorbixen]\n", "variants")]
+    [InlineData("Zorbix:\n  definition: One.\n  visible: true\n", "Zorbix:\n  definition: One.\n  visible: false\n", "visible")]
     public void Load_DifferingField_Throws(string contentA, string contentB, string field)
     {
         // Arrange
@@ -432,7 +498,7 @@ public sealed class LintGlossaryTests : IDisposable
     public void Load_InvisibleTerm_StillTaggedAndAllowed()
     {
         // Act
-        var glossary = Load("  glossary:\n    Zorbix:\n      visible: false\n");
+        var glossary = Load("  glossary:\n    Zorbix:\n      definition: A made-up term.\n      visible: false\n");
 
         // Assert
         Assert.NotNull(glossary.Tagging);
@@ -495,7 +561,7 @@ public sealed class LintGlossaryTests : IDisposable
     public void ValidateAgainst_VariantIsDictionaryKey_Throws()
     {
         // Arrange
-        var glossary = Load("  glossary:\n    utilise:\n      variants: [utilize]\n");
+        var glossary = Load("  glossary:\n    utilise:\n      definition: A made-up meaning.\n      variants: [utilize]\n");
         var dictionary = LintDictionary.Load(new LintConfig(), _dir.FullName);
 
         // Act / Assert
@@ -544,7 +610,7 @@ public sealed class LintGlossaryTests : IDisposable
     {
         // Act / Assert: a variant with a different token count is rejected by the package
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            Load("  glossary:\n    Test Mode:\n      variants: [Test]\n"));
+            Load("  glossary:\n    Test Mode:\n      definition: A mode for testing.\n      variants: [Test]\n"));
         Assert.Contains("Test Mode", ex.Message);
     }
 
@@ -556,7 +622,7 @@ public sealed class LintGlossaryTests : IDisposable
     {
         // Act / Assert
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            Load("  glossary:\n    Product A:\n      variants: [Gadget One]\n    Product B:\n      variants: [gadget  one]\n"));
+            Load("  glossary:\n    Product A:\n      definition: The first product.\n      variants: [Gadget One]\n    Product B:\n      definition: The second product.\n      variants: [gadget  one]\n"));
         Assert.Contains("Product A", ex.Message);
         Assert.Contains("Product B", ex.Message);
     }

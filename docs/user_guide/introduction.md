@@ -392,7 +392,9 @@ dictionary:
     Zorbix: Name of Product A.
 ```
 
-A glossary file maps each term to a definition string, or to an object:
+A glossary file maps each term to a definition string, or to an object. Every approved term must
+have a definition that is not empty. A missing or empty definition is an error that names the term
+and the file, even when `visible` is `false`:
 
 ```yaml
 Zorbix:
@@ -405,6 +407,8 @@ Test Mode:
   pos: noun
 ```
 
+- `definition` is required. In the object form it is a key; in the string form the string is the
+  definition.
 - `pos` is `noun` (the default), `verb`, `adjective`, `adverb`, or `proper-noun`. You can give a
   list. Variants must have the same number of words as the term.
 - `visible: false` keeps the term in the tagger and allowed list, but marks it as hidden for
@@ -419,7 +423,7 @@ Product A:
   where: Documents before 2.0.
 ```
 
-`use` is required and `where` is optional. A finding for the term reads
+`use` is required and `where` is optional. A deprecated entry has no definition. A finding for the term reads
 `Avoid 'Product A'; use 'Product B' instead.`
 
 **Paths:** A relative path or glob is resolved against the directory of the configuration file,

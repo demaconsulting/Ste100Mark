@@ -29,7 +29,7 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     One approved project term from a glossary file or the inline <c>glossary:</c> section.
 /// </summary>
 /// <param name="Term">The term, whitespace-normalized (trimmed, internal runs collapsed to one space).</param>
-/// <param name="Definition">The definition, or <see langword="null"/> when none was given.</param>
+/// <param name="Definition">The required, non-empty definition.</param>
 /// <param name="Pos">The parts of speech the term's head word may take.</param>
 /// <param name="Variants">Variant spellings of the whole term, whitespace-normalized.</param>
 /// <param name="Visible">
@@ -39,7 +39,7 @@ namespace DemaConsulting.Ste100Mark.Linting;
 /// <param name="Source">Full path of the file (or inline label) that supplied the term.</param>
 internal sealed record GlossaryTerm(
     string Term,
-    string? Definition,
+    string Definition,
     UposSet Pos,
     IReadOnlyList<string> Variants,
     bool Visible,
@@ -335,27 +335,20 @@ internal sealed partial class LintGlossary
             throw new InvalidOperationException($"Glossary in '{source}' contains an empty term.");
         }
 
-        switch (value)
+        if (value is null || value is string)
         {
-            case null:
-                return new GlossaryTerm(term, null, UposSet.Of(Upos.Noun), [], true, source);
-            case string definition:
-                return new GlossaryTerm(term, definition, UposSet.Of(Upos.Noun), [], true, source);
+            return new GlossaryTerm(term, RequireDefinition(value, term, source), UposSet.Of(Upos.Noun), [], true, source);
         }
 
         var map = AsMap(value, term, source, "an entry must be a definition string or an object");
         RejectUnknownKeys(map, EntryKeys, term, source);
 
-        string? definitionText = null;
         var pos = UposSet.Of(Upos.Noun);
         var variants = new List<string>();
         var visible = true;
 
-        if (map.TryGetValue("definition", out var definitionValue) && definitionValue is not null)
-        {
-            definitionText = definitionValue as string
-                             ?? throw FieldError(term, source, "definition", "must be a string");
-        }
+        map.TryGetValue("definition", out var definitionValue);
+        var definitionText = RequireDefinition(definitionValue, term, source);
 
         if (map.TryGetValue("pos", out var posValue))
         {
@@ -383,6 +376,29 @@ internal sealed partial class LintGlossary
         }
 
         return new GlossaryTerm(term, definitionText, pos, variants, visible, source);
+    }
+
+    /// <summary>
+    ///     Validates the required definition of an approved-term entry.
+    /// </summary>
+    /// <param name="value">The bound YAML value of the definition, or null when missing.</param>
+    /// <param name="term">The normalized term.</param>
+    /// <param name="source">Source label for messages.</param>
+    /// <returns>The non-empty definition.</returns>
+    private static string RequireDefinition(object? value, string term, string source)
+    {
+        if (value is not null and not string)
+        {
+            throw FieldError(term, source, "definition", "must be a string");
+        }
+
+        if (value is string text && !string.IsNullOrWhiteSpace(text))
+        {
+            return text;
+        }
+
+        throw new InvalidOperationException(
+            $"Glossary term '{term}' in '{source}' must have a non-empty definition.");
     }
 
     /// <summary>

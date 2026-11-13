@@ -525,8 +525,9 @@ through the published CLI. This scenario is tested by
 `Ste100Mark_LintWithNoMatchingFilesJsonFormat_ReportsNoFilesMatchedTrue`.
 
 **Ste100Mark-Linting-ProjectGlossary**: Glossary loading is verified by unit tests for entry
-parsing, path and glob resolution, environment-variable expansion, unreachable sources, merge
-and conflict rules (independent of file order), deprecated terms, and tagger-glossary mode. The
+parsing (including the required, non-empty definition), path and glob resolution,
+environment-variable expansion, unreachable sources, merge and conflict rules (independent of
+file order), deprecated terms, and tagger-glossary mode. The
 resolver is verified with the real tagger: a glossary changes the sense decision and makes an
 unknown word resolve as a noun in hard and soft mode, and two glossaries never share cached
 results. `Linter.Run` scenarios and the CLI scenarios confirm that an approved term is not

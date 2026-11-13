@@ -221,6 +221,32 @@ Paths are relative to the configuration file, or absolute, or UNC, and can use `
 file or a conflict between sources is an error. See the user guide for the entry format, the
 conflict rules, and the risks.
 
+**Definitions are required.** Every approved term must have a definition that is not empty,
+including a term with `visible: false`. A missing or empty definition is an error that names the
+term and the file. A small, complete glossary file looks like this:
+
+```yaml
+# docs/glossary.yaml
+Test Mode: A mode of Product A that runs the acceptance tests.
+Zorbix:
+  definition: The name of the control unit that Acme supplies for Product A.
+  pos: proper-noun
+  variants: [Zorbixes]
+  visible: false
+bleed valve:
+  definition: A valve that lets air out of a closed system.
+  pos: noun
+```
+
+A deprecated-terms file has no definitions. Each entry needs `use`, and `where` is optional:
+
+```yaml
+# docs/deprecated-terms.yaml
+Acme Hub:
+  use: Zorbix
+  where: Documents before version 2.
+```
+
 ### Project Dictionary Files
 
 A project dictionary file (referenced by `dictionary.file`) is a YAML document whose
