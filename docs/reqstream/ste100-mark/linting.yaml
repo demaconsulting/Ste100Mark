@@ -297,8 +297,8 @@ sections:
         justification: |
           A resolution is inconclusive when the confidence is
           below 0.90, the tagger chose a part of speech other than noun, verb, adjective, adverb,
-          or determiner, the tagger chose a noun or verb for a word that its lexicon does not
-          know, or the match covers more than one word. The subsystem must not guess in
+          or determiner, the tagger chose a noun, verb or proper noun for a word that its lexicon
+          does not know, or the match covers more than one word. The subsystem must not guess in
           these cases. It must fall
           back to reporting every remaining sense, clearly labeled as ambiguous, so the author
           can choose the correct alternative.

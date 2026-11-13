@@ -423,11 +423,12 @@ public class PartOfSpeechResolverTests
     }
 
     /// <summary>
-    ///     Test that a confident noun or verb tag on a word that the lexicon does not know is inconclusive.
+    ///     Test that a confident noun, verb or proper-noun tag on a word that the lexicon does not know is inconclusive.
     /// </summary>
     [Theory]
     [InlineData(Upos.Noun)]
     [InlineData(Upos.Verb)]
+    [InlineData(Upos.Propn)]
     public void Resolve_UnknownWordNounOrVerbTag_ReturnsNull(Upos pos)
     {
         // Arrange: a confident tag on a word that the lexicon does not know
