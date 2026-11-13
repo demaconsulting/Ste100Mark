@@ -40,10 +40,13 @@ single-syllable consonant-vowel-consonant verb, or for a verb with a known stres
 - *Parameters*: `string word` - alternative; `WordForm forms` - the flagged form;
   `PartOfSpeech pos` - the role of the sense.
 - *Returns*: `string?` - the inflected word, preserving the case pattern of the input, or
-  `null` when it cannot be done safely (an irregular verb outside the table, "be", or a flag
-  covering forms that differ for this word). A phrasal-verb alternative inflects its head
-  word. A noun alternative that already ends in a plural "s" is left unchanged. The caller
-  then shows the base alternative and says so.
+  `null` when it cannot be done safely: "be", a multi-word noun, a non-letter alternative, a
+  form that does not apply to the part of speech, merged forms whose spellings disagree (for
+  example an irregular past and past participle, such as "gave" and "given"), an ambiguous
+  participle, or a noun that already ends in a plural "s". A verb that is not in the
+  irregular table is inflected by the regular rules (a conservative heuristic, so an unknown
+  irregular verb may receive a regular spelling). A phrasal-verb alternative inflects its head
+  word. The caller shows the base alternative and says so when the result is `null`.
 
 #### Error Handling
 

@@ -100,7 +100,7 @@ can produce that spelling. The diagnostic names the flagged form, for example
 the flagged form when `WordFormInflector.Inflect` can do so safely (a phrasal-verb alternative
 inflects its head word, for example "set up" becomes "sets up"; a noun alternative that already
 ends in a plural "s" is left unchanged). When any alternative cannot be inflected safely
-(for example an irregular verb outside the table) it is shown in its base form and the message
+(for example "gave" and "given" differ, so a merged past/participle flag cannot use either) it is shown in its base form and the message
 appends "The alternative is shown in its base form; adjust it to fit the sentence."
 `Citations` always carry the base dictionary alternatives. Base-form messages are unchanged.
 When `MatchWordForms` is `false` only the base term is matched, as before.
