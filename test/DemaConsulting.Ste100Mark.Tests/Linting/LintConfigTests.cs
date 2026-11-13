@@ -395,6 +395,22 @@ public class LintConfigTests
     }
 
     /// <summary>
+    ///     Test that dictionary.match-word-forms defaults to true and binds false from YAML.
+    /// </summary>
+    [Fact]
+    public void Load_MatchWordForms_DefaultsTrueAndBindsFalse()
+    {
+        // Arrange / Act: load a config without the key and one with it set to false
+        var defaulted = LoadText("dictionary:\n  use-embedded: false\n");
+        var disabled = LoadText("dictionary:\n  match-word-forms: false\n");
+
+        // Assert: default is on, explicit false binds
+        Assert.True(defaulted.Dictionary!.MatchWordForms);
+        Assert.False(disabled.Dictionary!.MatchWordForms);
+        Assert.True(new DictionaryConfig().MatchWordForms);
+    }
+
+    /// <summary>
     ///     Writes configuration text to a temporary file, loads it, and removes the file.
     /// </summary>
     private static LintConfig LoadText(string yaml)

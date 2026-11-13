@@ -64,7 +64,9 @@ single shared binding type for the per-term sense-list schema.
   optional third argument supplies the deprecated terms from `LintGlossary`; they are applied
   after the inline `disallow` layer as single `Any`-sense entries whose alternative is the `use`
   value and whose note is `Used in: {where}`, and they are removed again by `allow` or `ignore`.
-
+  The removed `allow`/`ignore` spellings are retained (`IsAllowedSpelling`) so an allowed
+  inflected spelling is not flagged as a generated form of another term, and
+  `MatchWordForms` carries the `dictionary.match-word-forms` setting (default `true`).
 **TryGetSource**: Returns the label of the layer that supplied an effective term (the embedded
 dictionary, the dictionary file path, the configuration `disallow` list, or the deprecated file
 path). `LintGlossary.ValidateAgainst` uses it to name the conflicting source.

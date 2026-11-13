@@ -311,6 +311,18 @@ internal sealed class DictionaryConfig
     public bool UseEmbedded { get; set; } = true;
 
     /// <summary>
+    ///     When <see langword="true"/> (the default), a disallowed dictionary term is also matched
+    ///     in its inflected forms: third-person, past, past participle and -ing forms of a verb
+    ///     sense (and of the first word of a phrasal verb), and plural forms of a noun sense.
+    ///     Adjective, adverb and any-role senses are never inflected. Each inflected match still
+    ///     goes through part-of-speech resolution, and an allowed spelling or an explicit
+    ///     dictionary entry for the inflected spelling takes precedence. When
+    ///     <see langword="false"/>, only the exact term is matched. YAML key:
+    ///     <c>match-word-forms</c>.
+    /// </summary>
+    public bool MatchWordForms { get; set; } = true;
+
+    /// <summary>
     ///     Path, glob pattern, or list of them (bound as a scalar or a sequence, so held as
     ///     <see cref="object"/>) naming project glossary YAML files of approved terms. Relative
     ///     patterns resolve against the configuration file's directory; absolute and UNC paths are

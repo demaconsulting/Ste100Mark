@@ -163,6 +163,81 @@ sections:
           - Evaluate_InlineOverriddenTerm_UsesOverriddenSuggestion
           - Evaluate_AllowListedTerm_NotFlagged
 
+      - id: Ste100Mark-Linting-DictionaryWordForms
+        title: >-
+          The Linting subsystem shall, by default, match inflected spellings of dictionary
+          terms (verb third-person, past, participle, and gerund forms including a small
+          documented irregular table; noun plurals; the head verb of a phrasal verb) as whole
+          words, case-insensitively, subject to the same role compatibility check as the base
+          term, and shall not inflect adjective, adverb, or general senses.
+        justification: |
+          A vocabulary check that only matches the base spelling misses "produced" or
+          "permits" when "produce" and "permit" are disallowed. Generating the inflected
+          spellings and applying the existing part-of-speech gating catches them without
+          flagging a noun use of a verb-only homograph.
+        tests:
+          - Generate_Verb_ProducesExpectedForms
+          - Generate_RegularVerbPastEqualsParticiple_MergesForms
+          - Generate_Noun_ProducesPlural
+          - Generate_PhrasalVerb_InflectsHeadOnly
+          - Generate_NotInflectedCases_ReturnEmpty
+          - Inflect_CasePattern_IsPreserved
+          - Inflect_IrregularAndPhrasalAlternatives_Inflect
+          - Inflect_UnsafeCases_ReturnNull
+          - Evaluate_VerbWordForm_FlaggedWithInflectedAlternative
+          - Evaluate_EmbeddedProduceForms_Flagged
+          - Evaluate_EmbeddedPermitForms_FollowResolvedRole
+          - Evaluate_InflectedFormOfEmbeddedTerm_FlaggedWithProductionResolver
+          - Evaluate_NounPlural_GatedByResolvedRole
+          - Evaluate_VerbForm_NotFlaggedWhenResolvedAsNoun
+          - Evaluate_PhrasalVerbForms_HeadVerbInflects
+          - Evaluate_NonNounVerbSense_NotInflected
+          - Evaluate_InflectedFormBoundaries_RespectedAndCaseInsensitive
+          - Evaluate_LargeSegment_CompletesAndMatches
+          - Ste100Mark_LintInflectedDictionaryTerm_FlaggedUnlessWordFormsDisabled
+
+      - id: Ste100Mark-Linting-DictionaryWordForms-Precedence
+        title: >-
+          The Linting subsystem shall not flag an inflected spelling that the project allows
+          (allow or ignore list, per-file allowance, allowed phrase, or glossary term or
+          variant) or that is itself an explicit dictionary key, and allowing a base term
+          shall also allow its inflected forms.
+        justification: |
+          An explicit project decision about a spelling must override a generated guess.
+        tests:
+          - Evaluate_AllowedInflectedSpelling_WinsOverGeneratedForm
+          - Evaluate_ExtraAllowedInflectedSpelling_WinsOverGeneratedForm
+          - Evaluate_AllowedBaseTerm_SuppressesAllForms
+          - Evaluate_InflectedFormInsideAllowedPhrase_NotFlagged
+          - Evaluate_ExplicitInflectedKey_WinsOverGeneratedForm
+          - Run_GlossaryVariantEqualsInflectedSpelling_NotFlagged
+
+      - id: Ste100Mark-Linting-DictionaryWordForms-Diagnostics
+        title: >-
+          The Linting subsystem shall report an inflected match using the flagged spelling,
+          inflect each alternative to that form when it can do so safely, otherwise show the
+          alternative in its base form and say so, and leave base-form messages and citations
+          unchanged.
+        justification: |
+          A suggestion in the wrong tense misleads the writer; an honest fallback is better
+          than a wrong inflection.
+        tests:
+          - Evaluate_BaseForm_MessageUnchanged
+          - Evaluate_IrregularAlternative_InflectsForUnambiguousForm
+          - Evaluate_IrregularAlternative_FallsBackToBaseAndSaysSo
+
+      - id: Ste100Mark-Linting-DictionaryWordForms-Switch
+        title: >-
+          The Linting subsystem shall let a project turn word-form matching off with
+          `dictionary.match-word-forms: false`, defaulting to on.
+        justification: |
+          Projects that want exact-spelling matching need a way to keep the earlier behavior.
+        tests:
+          - Load_MatchWordForms_DefaultsTrueAndBindsFalse
+          - Load_WordFormSettings_DefaultOnAndAllowedSpellingsRetained
+          - Evaluate_MatchWordFormsOff_OnlyBaseTermMatches
+          - Run_MatchWordFormsSwitch_ControlsInflectedMatches
+
       - id: Ste100Mark-Linting-DictionaryDisable
         title: >-
           The Linting subsystem shall let a project disable the dictionary/vocabulary check

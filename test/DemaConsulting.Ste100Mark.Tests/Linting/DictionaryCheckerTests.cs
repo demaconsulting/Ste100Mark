@@ -118,15 +118,15 @@ public class DictionaryCheckerTests
     }
 
     /// <summary>
-    ///     Test that matching is whole-word only: a term embedded within a longer word is not
-    ///     flagged.
+    ///     Test that matching is whole-word only: a term embedded within an unrelated longer word
+    ///     is not flagged, even with word-form matching enabled.
     /// </summary>
     [Fact]
     public void Evaluate_TermEmbeddedInLongerWord_NotFlagged()
     {
-        // Arrange: "utilized" should not trigger the "utilize" entry (different word)
+        // Arrange: "utilizer" is not an inflected form of "utilize", so it must not match
         var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
-        IReadOnlyList<ProseSegment> segments = [new ProseSegment("The tool was utilized yesterday.", 1, SegmentRole.Paragraph)];
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("The utilizer was ready yesterday.", 1, SegmentRole.Paragraph)];
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary);

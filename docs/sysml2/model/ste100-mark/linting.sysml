@@ -15,6 +15,7 @@ package Ste100Mark {
         part lintConfig : LintConfig;
         part lintDictionary : LintDictionary;
         part lintGlossary : LintGlossary;
+        part wordFormInflector : WordFormInflector;
         part partOfSpeechResolver : PartOfSpeechResolver;
         part partOfSpeechGuesser : PartOfSpeechGuesser;
         part markdownProseExtractor : MarkdownProseExtractor;

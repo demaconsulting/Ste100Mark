@@ -96,7 +96,13 @@ internal sealed record DictionaryEntry(string Term, IReadOnlyList<DictionarySens
 ///     <see cref="DictionaryConfig.Disallow"/>, then deprecated project terms (from the glossary
 ///     loader), which behave like inline disallow entries. Finally, every term in
 ///     <see cref="DictionaryConfig.Allow"/> or <see cref="DictionaryConfig.Ignore"/> is removed from
-///     the merged set regardless of which source it came from.
+///     the merged set regardless of which source it came from; the allow/ignore terms are also
+///     retained (see <see cref="IsAllowedSpelling"/>) so an allowed inflected spelling suppresses
+///     the generated word form.
+///     </para>
+///     <para>
+///     <see cref="MatchWordForms"/> carries the <see cref="DictionaryConfig.MatchWordForms"/> switch
+///     to <see cref="DictionaryChecker"/>, which generates the inflected forms.
 ///     </para>
 /// </remarks>
 internal sealed class LintDictionary
@@ -123,11 +129,42 @@ internal sealed class LintDictionary
     /// </summary>
     /// <param name="entries">Merged entries, keyed by term (case-insensitive).</param>
     /// <param name="sources">Source description per effective entry, keyed by term (case-insensitive).</param>
-    private LintDictionary(Dictionary<string, DictionaryEntry> entries, Dictionary<string, string> sources)
+    /// <param name="allowedSpellings">
+    ///     Every term from the allow and ignore lists (case-insensitive), kept so that an allowed
+    ///     inflected spelling can suppress a generated word form even though it is not an entry.
+    /// </param>
+    /// <param name="matchWordForms">Whether inflected word forms are matched.</param>
+    private LintDictionary(
+        Dictionary<string, DictionaryEntry> entries,
+        Dictionary<string, string> sources,
+        HashSet<string> allowedSpellings,
+        bool matchWordForms)
     {
         _entries = entries;
         _sources = sources;
+        _allowedSpellings = allowedSpellings;
+        MatchWordForms = matchWordForms;
     }
+
+    /// <summary>
+    ///     Allow and ignore terms (case-insensitive), retained after the entries they name are
+    ///     removed.
+    /// </summary>
+    private readonly HashSet<string> _allowedSpellings;
+
+    /// <summary>
+    ///     Gets a value indicating whether <see cref="DictionaryChecker"/> also matches inflected
+    ///     word forms of disallowed terms (see <see cref="DictionaryConfig.MatchWordForms"/>).
+    /// </summary>
+    public bool MatchWordForms { get; }
+
+    /// <summary>
+    ///     Determines whether a spelling was named in the allow or ignore list, which makes it
+    ///     take precedence over an inflected form generated from a disallowed term.
+    /// </summary>
+    /// <param name="spelling">The spelling to test (case-insensitive).</param>
+    /// <returns><see langword="true"/> when the spelling is allowed or ignored.</returns>
+    public bool IsAllowedSpelling(string spelling) => _allowedSpellings.Contains(spelling);
 
     /// <summary>
     ///     Gets the merged dictionary entries, in no particular order.
@@ -225,7 +262,13 @@ internal sealed class LintDictionary
             sources.Remove(key);
         }
 
-        return new LintDictionary(entries, sources);
+        // Retain the allow/ignore spellings: removing the entries above hides an allowed
+        // *inflected* spelling (for example "performed") that never was an entry.
+        var allowedSpellings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        allowedSpellings.UnionWith(dictionaryConfig?.Allow ?? []);
+        allowedSpellings.UnionWith(dictionaryConfig?.Ignore ?? []);
+
+        return new LintDictionary(entries, sources, allowedSpellings, dictionaryConfig?.MatchWordForms != false);
     }
 
     /// <summary>

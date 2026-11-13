@@ -35,6 +35,8 @@ The source folder contains thirteen primary behavioral units plus two supporting
   carrying one or more part-of-speech-tagged senses.
 - `LintGlossary` - loader and validator of the project glossary (approved terms with a part of
   speech) and deprecated terms, which builds the tagger glossary and the allowed-term set.
+- `WordFormInflector` - generates inflected spellings of dictionary terms (verb forms and noun
+  plurals) and inflects replacement words, used by `DictionaryChecker` for word-form matching.
 - `PartOfSpeechResolver` - resolves whether a matched term is used as a noun, verb, adjective, or adverb at its
   match site, used to select the applicable sense(s) of a multi-sense dictionary entry. It
   implements the internal `IPartOfSpeechResolver` interface and delegates to the
@@ -100,7 +102,7 @@ The unit design details for the subsystem are documented in the companion unit f
 this folder: *Diagnostic Design*, *DiagnosticReporter Design*, *DictionaryChecker Design*,
 *LintConfig Design*, *LintDictionary Design*, *LintGlossary Design*, *Linter Design*, *MarkdownProseExtractor
 Design*, *PartOfSpeechGuesser Design*, *PartOfSpeechResolver Design*, *RuleCatalog Design*, *RuleCodes Design*,
-*SentenceAnalyzer Design*, *Severity Design*, and *StructuralRules Design*.
+*SentenceAnalyzer Design*, *Severity Design*, *StructuralRules Design*, and *WordFormInflector Design*.
 
 > **Dictionary notice:** The embedded default dictionary in
 > `src/DemaConsulting.Ste100Mark/Linting/DefaultDictionary.yaml` is a small,
@@ -129,6 +131,7 @@ flowchart TD
     LintConfig --> LintDictionary
     LintDictionary --> DictionaryChecker
     DictionaryChecker --> PartOfSpeechResolver
+    DictionaryChecker --> WordFormInflector
     StructuralRules --> PartOfSpeechGuesser
     StructuralRules --> DiagnosticReporter
     DictionaryChecker --> DiagnosticReporter
