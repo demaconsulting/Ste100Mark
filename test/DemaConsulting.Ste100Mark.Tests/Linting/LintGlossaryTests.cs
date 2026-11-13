@@ -547,4 +547,34 @@ public sealed class LintGlossaryTests : IDisposable
             Load("  glossary:\n    Test Mode:\n      variants: [Test]\n"));
         Assert.Contains("Test Mode", ex.Message);
     }
+
+    /// <summary>
+    ///     Test that two entries claiming the same surface form are reported with both term names.
+    /// </summary>
+    [Fact]
+    public void Load_DuplicateFormAcrossEntries_ThrowsNamingBothTerms()
+    {
+        // Act / Assert
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            Load("  glossary:\n    Product A:\n      variants: [Gadget One]\n    Product B:\n      variants: [gadget  one]\n"));
+        Assert.Contains("Product A", ex.Message);
+        Assert.Contains("Product B", ex.Message);
+    }
+
+    /// <summary>
+    ///     Test that a file that exists but cannot be opened is reported as unreachable, not missing.
+    /// </summary>
+    [Fact]
+    public void Load_LockedFile_ThrowsUnreachable()
+    {
+        // Arrange: hold the file open exclusively so opening it fails with an IO error
+        var path = Path.Combine(_dir.FullName, "locked.yaml");
+        File.WriteAllText(path, "A Term: Something\n");
+        using var hold = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        // Act / Assert
+        var ex = Assert.Throws<InvalidOperationException>(() => Load("  glossary-file: locked.yaml\n"));
+        Assert.Contains("unreachable", ex.Message);
+        Assert.DoesNotContain("not found", ex.Message);
+    }
 }

@@ -273,9 +273,18 @@ internal sealed partial class LintGlossary
                     $"{kind} '{full}' is unreachable (directory '{directory}' does not exist or cannot be accessed).");
             }
 
-            if (!File.Exists(full))
+            try
             {
-                throw new InvalidOperationException($"{kind} '{full}' was not found.");
+                // File.Exists hides access failures as false, so probe by opening the file.
+                using var probe = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+            {
+                throw new InvalidOperationException($"{kind} '{full}' was not found.", ex);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+            {
+                throw new InvalidOperationException($"{kind} '{full}' is unreachable: {ex.Message}", ex);
             }
 
             files.Add(full);
@@ -666,6 +675,23 @@ internal sealed partial class LintGlossary
     /// <exception cref="InvalidOperationException">Thrown when the package rejects a term or the combination.</exception>
     private static PackageGlossary BuildTagging(List<GlossaryTerm> terms, GlossaryModeSetting mode)
     {
+        // Detect surface forms claimed by two different entries so the error names the terms.
+        var owners = new Dictionary<string, GlossaryTerm>(StringComparer.OrdinalIgnoreCase);
+        foreach (var term in terms)
+        {
+            foreach (var form in new[] { term.Term }.Concat(term.Variants))
+            {
+                var key = WhitespaceRegex().Replace(form.Trim(), " ");
+                if (owners.TryGetValue(key, out var owner) && !ReferenceEquals(owner, term))
+                {
+                    throw new InvalidOperationException(
+                        $"The glossary could not be built: '{form}' of term '{term.Term}' ({term.Source}) duplicates '{owner.Term}' ({owner.Source}).");
+                }
+
+                owners[key] = term;
+            }
+        }
+
         var entries = new List<GlossaryEntry>();
         foreach (var term in terms)
         {

@@ -20,6 +20,7 @@ flowchart TD
         LintConfig
         LintDictionary
         LintGlossary
+        MarkdownProseExtractor
         SentenceAnalyzer
         StructuralRules
         DictionaryChecker
