@@ -12,19 +12,24 @@ sections:
       - id: Ste100Mark-LintGlossary-Entries
         title: >-
           The LintGlossary class shall read each approved term as a definition string or as an
-          object with definition, pos, variants, and visible, defaulting to a noun, and shall
-          reject an unknown entry key or an unsupported part of speech with an error that names
-          the term.
+          object with definition, pos, variants, and visible, defaulting to a noun, shall require
+          a non-empty definition for every approved term regardless of visible, and shall reject
+          a missing or empty definition, an unknown entry key, or an unsupported part of speech
+          with an error that names the term.
         justification: |
           The entry format is shared with DictionaryMark, so a typo in a key must not be silently
           ignored, and a part of speech that the tagger cannot use must not silently change the
-          meaning of an entry.
+          meaning of an entry. A glossary exists to hold definitions, so an entry without one is
+          an error, and the message names the term and the file so that it is easy to fix.
         tests:
           - Load_NoGlossaryConfig_ReturnsEmptyGlossary
           - Load_InlineStringEntry_DefaultsToNoun
           - Load_InlineObjectEntry_ReadsDefinitionPosVariantsVisible
           - Load_PosList_MapsToUposSet
           - Load_InvalidPos_ThrowsNamingTerm
+          - Load_ApprovedEntryWithoutDefinition_ThrowsNamingTermAndSource
+          - Load_InlineEntryWithoutDefinition_ThrowsNamingTerm
+          - Load_Definition_PassedToTaggerEntry
           - Load_UnknownEntryKey_ThrowsNamingTerm
           - Load_InvisibleTerm_StillTaggedAndAllowed
 

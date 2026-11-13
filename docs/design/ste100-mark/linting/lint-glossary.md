@@ -20,7 +20,9 @@ configuration file).
 `Where` (optional context), and `Source`.
 
 **Entry shape**: an approved entry is a string (the definition, noun by default) or an object with
-the keys `definition`, `pos`, `variants`, and `visible`. `pos` is one value or a list of `noun`,
+the keys `definition`, `pos`, `variants`, and `visible`. The `definition` is required and must not
+be empty or only white space, whatever the value of `visible`; a missing or empty definition is an
+error that names the term and the source file. `pos` is one value or a list of `noun`,
 `verb`, `adjective`, `adverb`, and `proper-noun`. A deprecated entry is an object with a required
 `use` and an optional `where`. An unknown key is an error.
 
@@ -51,7 +53,8 @@ dictionary source. A term that `allow` or `ignore` removed is not a conflict.
 An approved term is allowed only by whole-term or variant equality. A dictionary word inside a
 multi-word glossary term is still checked on its own.
 
-**Tagging**: the package `Glossary` built from the approved terms with the configured mode. The
+**Tagging**: the package `Glossary` built from the approved terms (each `GlossaryEntry` receives the
+real definition) with the configured mode. The
 package rejects duplicate token sequences and variants with a different token count; the error is
 re-thrown with the term name. A term with `visible: false` is still tagged and allowed.
 
