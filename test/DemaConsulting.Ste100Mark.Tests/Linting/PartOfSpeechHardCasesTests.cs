@@ -43,7 +43,7 @@ public class PartOfSpeechHardCasesTests
         ["Check", "Check the valve before use.", "verb"],
         ["Test", "Test the unit daily.", "verb"],
         ["Log", "Log the reading in the record.", "verb"],
-        ["Mount", "Mount the bracket on the frame.", "none"],
+        ["Mount", "Mount the bracket on the frame.", "verb"],
         ["Clamp", "Clamp the hose to the pipe.", "verb"],
         ["Record", "Record the pressure.", "verb"],
         ["Filter", "Filter the fluid before use.", "verb"],

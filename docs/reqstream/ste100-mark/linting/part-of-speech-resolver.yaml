@@ -60,11 +60,13 @@ sections:
           The PartOfSpeechResolver class shall treat a tagger answer with a confidence below 0.90
           as inconclusive and a tagger answer with a confidence of exactly 0.90 as confident.
         justification: |
-          The threshold is the strict threshold documented by the PartOfSpeech package (89.4%
-          coverage, 3.8 harmful errors per 1000 answered decisions). A hand check of 110 samples
-          found no error at or above 0.90, while low-confidence verb answers on noun-noun
-          compounds were wrong about half the time. The inclusive boundary must be exact so the
-          documented value behaves as documented.
+          The threshold is the strict threshold documented by the PartOfSpeech package (on its
+          open test split the 0.1.0-beta.3 model answers 89.7% of noun-verb decisions with 4.6
+          harmful errors per 1,000 answered decisions). A hand check of 110 samples, made with an
+          earlier beta model of the package and not repeated for 0.1.0-beta.3, found no error at or
+          above 0.90, while low-confidence verb answers on noun-noun compounds were wrong about
+          half the time. The inclusive boundary must be exact so the documented value behaves as
+          documented.
         tests:
           - Resolve_ConfidenceThreshold_BoundaryIsInclusive
           - MinimumConfidence_IsPackageStrictThreshold
@@ -80,6 +82,23 @@ sections:
           ambiguous.
         tests:
           - Resolve_NoTokensCoverMatch_ReturnsNull
+
+      - id: Ste100Mark-PartOfSpeechResolver-WordNotInLexicon
+        title: >-
+          The PartOfSpeechResolver class shall report a match as inconclusive when the tagger
+          tags the matched word as a noun, verb, or proper noun and the tagger's lexicon does not
+          know the word, whatever the confidence.
+        justification: |
+          The PartOfSpeech package allows every tag for a word that its lexicon does not know, so
+          a noun, verb, or proper-noun tag on such a word is a guess even at a high confidence.
+          The package's guidance for rule checkers is to treat these tokens as unknown. The
+          checker then reports every sense as ambiguous instead of acting on a guessed role. The
+          package exception for tokens decided by a glossary or token constraint does not apply,
+          because the resolver supplies neither.
+        tests:
+          - Resolve_UnknownWordNounOrVerbTag_ReturnsNull
+          - Resolve_UnknownWordAdjectiveTag_ReturnsAdjective
+          - Resolve_UnknownWordWithRealTagger_ReturnsNullAndKnownWordResolves
 
       - id: Ste100Mark-PartOfSpeechResolver-OtherPartOfSpeech
         title: >-

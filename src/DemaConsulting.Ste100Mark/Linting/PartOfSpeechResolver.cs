@@ -25,13 +25,15 @@ using DemaConsulting.PartOfSpeech;
 namespace DemaConsulting.Ste100Mark.Linting;
 
 /// <summary>
-///     One token of a tagged sentence: its offsets within the sentence text, tag and confidence.
+///     One token of a tagged sentence: its offsets within the sentence text, tag, confidence, and
+///     whether the tagger's lexicon knows the word.
 /// </summary>
 /// <param name="Start">The zero-based start offset of the token within the sentence text.</param>
 /// <param name="Length">The length of the token.</param>
 /// <param name="Tag">The universal part-of-speech tag chosen for the token.</param>
 /// <param name="Confidence">The confidence (0 to 1) of the chosen tag.</param>
-internal readonly record struct TaggedSpan(int Start, int Length, Upos Tag, double Confidence);
+/// <param name="IsKnownWord">Whether the tagger's lexicon has an entry for the word.</param>
+internal readonly record struct TaggedSpan(int Start, int Length, Upos Tag, double Confidence, bool IsKnownWord);
 
 /// <summary>
 ///     <see cref="IPartOfSpeechResolver"/> backed by the <c>DemaConsulting.PartOfSpeech</c> context-aware
@@ -46,8 +48,12 @@ internal readonly record struct TaggedSpan(int Start, int Length, Upos Tag, doub
 ///     <see cref="PartOfSpeech.Determiner"/> so the checker can distinguish it from every dictionary
 ///     sense role; determiner is resolver evidence only and is not accepted in dictionary configuration.
 ///     Other unsupported outcomes (low confidence, any other part of speech, or an occurrence spanning
-///     several tokens) are inconclusive (<see langword="null"/>). The package tags words that are not
-///     in its lexicon as nouns, so unknown words cannot be detected. The tagger is thread-safe and fully
+///     several tokens) are inconclusive (<see langword="null"/>). Following the package's rule-checker
+///     guidance, a noun, verb, or proper-noun tag on a word that the package's lexicon does not know
+///     (<see cref="TaggedToken.IsKnownWord"/> is <see langword="false"/>) is also inconclusive, even above
+///     the threshold, because the tag of an unknown word is a guess. The package's exception for tokens
+///     decided by a dictionary (<see cref="TaggedToken.IsConstrained"/>) does not apply: the resolver gives
+///     the tagger no <c>Glossary</c> or <c>TokenConstraint</c>. The tagger is thread-safe and fully
 ///     in-memory (no download), and per-sentence results are cached.
 /// </remarks>
 internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
@@ -56,10 +62,11 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     ///     Minimum tagger confidence (0 to 1) for a supported answer to be accepted.
     /// </summary>
     /// <remarks>
-    ///     This is the strict threshold documented by the package: on its open test split it answers
-    ///     89.4% of decisions with 3.8 harmful errors per 1000 answered decisions. In this project's
-    ///     110-sample hand check no error was found at a confidence of 0.90 or higher, whereas
-    ///     low-confidence VERB answers on noun-noun compounds were wrong about half the time. A strict
+    ///     This is the strict threshold documented by the package: on its open test split the 0.1.0-beta.3
+    ///     model answers 89.7% of noun-verb decisions with 4.6 harmful errors per 1,000 answered decisions.
+    ///     A 110-sample hand check of this project, made with an earlier beta model of the package, found
+    ///     no error at a confidence of 0.90 or higher, whereas low-confidence VERB answers on noun-noun
+    ///     compounds were wrong about half the time; it was not repeated for the 0.1.0-beta.3 model. A strict
     ///     value is preferred because a wrong answer hides a real violation or reports a false one, while
     ///     an inconclusive answer only makes the checker report the term as ambiguous.
     /// </remarks>
@@ -306,7 +313,7 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
         {
             foreach (var token in tagged.Tokens)
             {
-                result.Add(new TaggedSpan(token.Start, token.Length, token.Tag, token.Confidence));
+                result.Add(new TaggedSpan(token.Start, token.Length, token.Tag, token.Confidence, token.IsKnownWord));
             }
         }
 
@@ -317,11 +324,16 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     ///     Maps one tagged token to a repository part of speech, or <see langword="null"/> when it is not
     ///     a confident noun, verb, adjective, or adverb. A confident determiner is preserved as
     ///     resolver-only evidence and is not a dictionary sense role; all other unsupported tags are
-    ///     inconclusive.
+    ///     inconclusive, as is a noun, verb, or proper-noun tag on a word that the lexicon does not know.
     /// </summary>
     private static PartOfSpeech? MapRole(TaggedSpan token)
     {
         if (token.Confidence < MinimumConfidence)
+        {
+            return null;
+        }
+
+        if (!token.IsKnownWord && token.Tag is Upos.Noun or Upos.Verb or Upos.Propn)
         {
             return null;
         }

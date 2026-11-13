@@ -282,24 +282,30 @@ two layers. Scenarios that depend on the tagger's real answers use the real
 `DemaConsulting.PartOfSpeech` tagger (`Tagger.Default`): noun, verb, adjective, and adverb usage (articles,
 possessives, quantifiers, prepositions, modals, the infinitive marker, progressive auxiliaries,
 plural nouns, noun-phrase modifiers, and a finite verb following the match), the 26 hard cases
-(imperatives, noun-noun compounds, and modals; the imperative "Mount" is inconclusive at the
-0.90 threshold), the requested sentence of a multi-sentence segment, and contractions and
+(imperatives, noun-noun compounds, and modals; all 26 resolve to their expected role at the
+0.90 threshold), a confident noun on a word that the lexicon does not know ("turbopump", which is
+inconclusive) beside a known noun that still resolves, the requested sentence of a multi-sentence
+segment, and contractions and
 hyphenated words. Scenarios that verify the resolver's own mapping logic use a scripted tagging
 function so the tagger's answer is controlled: the requested occurrence of a repeated word, the
 inclusive confidence boundary at 0.90, the rejection of parts of speech other than noun and
-verb and of low-confidence answers, a match that no token covers, multi-word matches,
+verb and of low-confidence answers, the rejection of confident noun and verb answers on words
+that the lexicon does not know (while a confident adjective on such a word is kept), a match that
+no token covers, multi-word matches,
 consistent answers for repeated and concurrent queries, and argument validation. These scenarios are tested
 by `Resolve_NounUsage_ReturnsNoun`, `Resolve_VerbUsage_ReturnsVerb`,
 `Resolve_HardCase_ReturnsExpectedRole`, `HardCases_ContainsTwentySixCases`,
 `Resolve_MatchInSecondSentence_UsesThatSentenceOnly`,
 `Resolve_LowercaseContinuationAfterPeriod_StaysInSameSentence`,
-`Resolve_ContractionAndHyphenWithRealTagger_ResolvesMatch` (real tagger), and, with a scripted
+`Resolve_ContractionAndHyphenWithRealTagger_ResolvesMatch`,
+`Resolve_UnknownWordWithRealTagger_ReturnsNullAndKnownWordResolves` (real tagger), and, with a scripted
 tagger, `Resolve_ContractionAndHyphen_TokenOffsetsMapToMatch`,
 `Resolve_RepeatedWord_ResolvesRequestedOccurrence`,
 `Resolve_ConfidenceThreshold_BoundaryIsInclusive`,
 `MinimumConfidence_IsPackageStrictThreshold`,
 `Resolve_BelowThresholdOrOtherTag_ReturnsNull`,
 `Resolve_DeterminerUsage_ReturnsDeterminerRole`, `Resolve_UnsupportedPartOfSpeech_ReturnsNull`,
+`Resolve_UnknownWordNounOrVerbTag_ReturnsNull`, `Resolve_UnknownWordAdjectiveTag_ReturnsAdjective`,
 `Resolve_NoTokensCoverMatch_ReturnsNull`,
 `Resolve_MultiWordMatch_ReturnsNull`,
 `Resolve_RepeatedAndConcurrentQueries_ReturnSameResult` (real tagger),

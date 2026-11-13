@@ -18,8 +18,9 @@ library and, before that, a regex-based heuristic.
   use.
 - `Tagger.Tag(string)` - splits a text into sentences, tokenizes them, and returns the tagged
   sentences (`TaggedSentence`) with their `TaggedToken` items.
-- `TaggedToken.Start`, `TaggedToken.Length`, `TaggedToken.Tag` (a `Upos` value), and
-  `TaggedToken.Confidence`.
+- `TaggedToken.Start`, `TaggedToken.Length`, `TaggedToken.Tag` (a `Upos` value),
+  `TaggedToken.Confidence`, and `TaggedToken.IsKnownWord` (whether the lexicon has an entry for
+  the word).
 
 ### Integration Pattern
 
@@ -35,8 +36,11 @@ tokens of every returned sentence. Only a `Noun`, `Verb`, `Adjective`, or `Adver
 confidence (0.90, the strict threshold documented by the package) is mapped to the repository's own
 `PartOfSpeech`; a confident determiner maps to the resolver-only `PartOfSpeech.Determiner` result,
 which rules out role-specific dictionary senses but is not a dictionary role. Other unsupported
-answers are inconclusive. The package does not report unknown words: a
-word that is not in its lexicon is tagged as a noun, so such a word cannot be detected. The
+answers are inconclusive. Following the package's rule-checker guidance, a noun, verb, or
+proper-noun tag on a word that the lexicon does not know (`IsKnownWord` is false) is also
+inconclusive at any confidence, because that tag is a guess. The resolver supplies no `Glossary`
+or `TokenConstraint` and does not use `TaggedToken.Margin`, for which the package recommends no
+limit. The
 library is beta software, so its package version is pinned exactly in the project file and
 upgrades are reviewed deliberately.
 

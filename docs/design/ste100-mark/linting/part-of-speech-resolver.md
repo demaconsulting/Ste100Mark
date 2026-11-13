@@ -14,7 +14,8 @@ regex-based heuristic.
 The resolver returns `Noun`, `Verb`, `Adjective`, or `Adverb` when the tagger is at least 0.90
 confident. It preserves a confident `Determiner` result as resolver evidence distinct from
 dictionary sense roles; that result rules out all role-specific senses without being a valid
-dictionary configuration value. Other unsupported tags remain `null` (inconclusive).
+dictionary configuration value. Other unsupported tags remain `null` (inconclusive), and so does
+a noun, verb, or proper-noun tag on a word that the tagger's lexicon does not know.
 
 #### Data Model
 
@@ -31,8 +32,9 @@ quote, opening parenthesis, backtick, asterisk, underscore, or the end of text. 
 continuation (for example `e.g. test the valve`) therefore stays in one sentence. A segment is
 split into sentences so a match is classified within its own sentence only.
 
-**TaggedSpan**: `internal readonly record struct` of a token's `Start`, `Length`, `Upos` tag, and
-`Confidence`. Offsets are relative to the sentence text that was tagged.
+**TaggedSpan**: `internal readonly record struct` of a token's `Start`, `Length`, `Upos` tag,
+`Confidence`, and `IsKnownWord` (whether the tagger's lexicon has an entry for the word). Offsets
+are relative to the sentence text that was tagged.
 
 **Tagging function**: a `Func<string, IReadOnlyList<TaggedSpan>>` that tags one sentence. The
 public constructor uses `Tagger.Default` (the package tokenizes the sentence itself, splits
@@ -70,17 +72,32 @@ so a later call retries.
 - *Postconditions*: The sentence that holds the match is tagged with a single `Tagger.Tag` call.
   A token whose confidence is below `MinimumConfidence` is inconclusive. A supported tag maps to
   the repository's `PartOfSpeech`; a confident determiner maps to the resolver-only
-  `Determiner` role, while every other unsupported tag is inconclusive. A match that spans more than one token (a multi-word
-  term) is inconclusive, as is a match that no token covers. The package does not report unknown
-  words: a word that is not in its lexicon is tagged as a noun, so it cannot be detected.
+  `Determiner` role, while every other unsupported tag is inconclusive. A noun, verb, or
+  proper-noun tag on a token whose `IsKnownWord` is false is inconclusive at any confidence (see
+  *Unknown words* below). A match that spans more than one token (a multi-word
+  term) is inconclusive, as is a match that no token covers.
 
 **GetTags**: Tags one sentence, maps each token to a role, and caches the outcome.
+
+#### Unknown words
+
+The package's guidance for rule checkers is to treat a token as unknown when the lexicon does not
+know the word (`TaggedToken.IsKnownWord` is false) and its tag is a noun, a verb, or a proper noun:
+the lexicon gives no evidence for such a word, all tags are allowed, and the chosen tag is a guess
+even when its confidence is high. The resolver follows this guidance after the confidence check,
+so an unknown word in a noun or verb position is reported as ambiguous instead of resolved. Other
+tags of unknown words (for example an adjective) keep the normal confidence rule. The package's
+exception for tokens that a dictionary decides (`IsConstrained` with no alternatives) does not
+apply, because the resolver gives the tagger no `Glossary` or `TokenConstraint`. The resolver
+does not use `TaggedToken.Margin`: the package measures and recommends no margin limit.
 
 #### Threshold selection
 
 `MinimumConfidence` is the strict threshold documented by the `DemaConsulting.PartOfSpeech`
-package: on the package's open test split it answers 89.4% of decisions with 3.8 harmful errors
-per 1000 answered decisions. In the project's own hand check of 110 samples, no error was found
+package: on the package's open test split the 0.1.0-beta.3 model answers 89.7% of noun-verb
+decisions with 4.6 harmful errors per 1,000 answered decisions. In the project's own hand check
+of 110 samples, made with an earlier beta model of the package and not repeated for
+0.1.0-beta.3, no error was found
 at a confidence of 0.90 or higher, while low-confidence VERB answers on noun-noun compounds were
 wrong about half the time. A strict value is preferred because a wrong answer either hides a real
 violation or reports a false one, whereas an inconclusive answer only makes the checker report
@@ -88,9 +105,8 @@ the term as ambiguous. `MinimumConfidence_IsPackageStrictThreshold` guards the v
 `Resolve_ConfidenceThreshold_BoundaryIsInclusive` verifies the boundary behavior.
 
 At this threshold the corpus (`PartOfSpeechFalsePositiveCorpusTests`) resolves all 68 rows of
-`LegalNounUsageCases` as nouns and all 30 rows of `LegalVerbUsageCases` as verbs, and 25 of the
-26 hard cases (`PartOfSpeechHardCasesTests`; the imperative "Mount the bracket on the frame."
-is the exception: it is answered below the threshold and is inconclusive). Two further legal
+`LegalNounUsageCases` as nouns and all 30 rows of `LegalVerbUsageCases` as verbs, and all 26
+hard cases (`PartOfSpeechHardCasesTests`) as expected. Two further legal
 noun usages, "rank" and "cast", are tested separately as confident noun cases
 (`Evaluate_ConfidentNounUsage_VerbOnlyDisallowedEntry_NotFlagged`): the resolver follows the
 confident-role path and suppresses their verb-only, self-referential entries.
@@ -105,8 +121,8 @@ The tagger is a statistical model and is wrong or unsure for some inputs:
   so the term is reported as ambiguous or, for a single-sense entry, reported.
 - A noun-noun compound can be tagged as a verb at low confidence; such answers are rejected by
   the threshold.
-- Words that are not in the lexicon are tagged as nouns, so a noun-only restriction on an
-  unknown word cannot be told from a known noun.
+- A term that is not in the lexicon (for example a specialized technical noun such as
+  "turbopump") cannot be resolved as a noun or a verb, so it is reported as ambiguous.
 - A sentence-initial imperative that looks like a noun phrase ("Test results daily") can still be
   read as a noun with high confidence.
 
@@ -124,7 +140,8 @@ timeout.
 
 #### Dependencies
 
-- **PartOfSpeech** (OTS) - `Tagger.Default`, `Tagger.Tag`, and `TaggedToken`.
+- **PartOfSpeech** (OTS) - `Tagger.Default`, `Tagger.Tag`, and `TaggedToken` (`Start`, `Length`,
+  `Tag`, `Confidence`, and `IsKnownWord`).
 - **.NET BCL** - `Regex` and concurrent collections.
 
 #### Callers
