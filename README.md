@@ -83,6 +83,7 @@ rules:
   max-words-descriptive: 25
 dictionary:
   file: your-licensed-asd-ste-dictionary.yaml
+  use-embedded: false
 ```
 
 > **Dictionary notice:** The embedded dictionary is a small, illustrative example. It is **not** the
