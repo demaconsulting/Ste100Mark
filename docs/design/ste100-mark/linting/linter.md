@@ -48,7 +48,9 @@ calls `LintGlossary.ValidateAgainst` so that an approved term that is also a dic
 reported as an error. When the glossary has tagging entries it creates a
 `PartOfSpeechResolver` for the run with the tagger glossary; otherwise it uses the shared
 resolver. The allowed terms passed to `DictionaryChecker` are the union of the configured allowed
-terms and the glossary's allowed terms. A glossary or dictionary load failure is reported as an
+terms and the glossary's allowed terms. The glossary's multi-word terms and variants
+(`LintGlossary.GetAllowedPhrases`) are computed once per run and unioned, case-insensitively, with
+each file's configured allowed phrases. A glossary or dictionary load failure is reported as an
 error and fails the run. When `dictionary.enabled` is false, the glossary is not loaded.
 
 When `Format` is `JsonDetailed`, `RunCore` calls `DictionaryChecker.Evaluate` with detail

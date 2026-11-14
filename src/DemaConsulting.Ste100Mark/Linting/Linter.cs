@@ -137,6 +137,12 @@ internal static class Linter
         var details = new List<FindingDetail?>();
         var detailed = context.Format == OutputFormat.JsonDetailed;
         var relativePaths = new List<string>(files.Count);
+
+        // Multi-word approved glossary terms and variants are implicit allow-in-phrase entries;
+        // computed once per run and unioned with the per-file configured phrases below.
+        IReadOnlyCollection<string> glossaryPhrases = glossary is { Terms.Count: > 0 }
+            ? glossary.GetAllowedPhrases()
+            : [];
         foreach (var file in files)
         {
             var relativePath = Path.GetRelativePath(Directory.GetCurrentDirectory(), file).Replace('\\', '/');
@@ -153,7 +159,13 @@ internal static class Linter
 
             if (dictionary is not null)
             {
-                var allowedPhrases = config.ResolveAllowedPhrases(relativePath);
+                IReadOnlyCollection<string> allowedPhrases = config.ResolveAllowedPhrases(relativePath);
+                if (glossaryPhrases.Count > 0)
+                {
+                    allowedPhrases = allowedPhrases.Concat(glossaryPhrases)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                }
+
                 var dictionaryAllowed = glossary is { Terms.Count: > 0 }
                     ? allowedTerms.Concat(glossary.GetAllowedTerms()).ToHashSet(StringComparer.OrdinalIgnoreCase)
                     : allowedTerms;

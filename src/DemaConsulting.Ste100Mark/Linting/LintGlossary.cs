@@ -112,6 +112,17 @@ internal sealed partial class LintGlossary
         _terms.SelectMany(t => t.Variants.Prepend(t.Term)).ToList();
 
     /// <summary>
+    ///     Gets every multi-word approved term and variant (including entries with
+    ///     <c>visible: false</c>); each acts as an implicit allow-in-phrase, so a dictionary word
+    ///     inside the approved term is not reported there. Single-word entries are excluded because
+    ///     <see cref="GetAllowedTerms"/> already exempts them exactly.
+    /// </summary>
+    public IReadOnlyCollection<string> GetAllowedPhrases() =>
+        _terms.SelectMany(t => t.Variants.Prepend(t.Term))
+            .Where(s => s.Any(char.IsWhiteSpace))
+            .ToList();
+
+    /// <summary>
     ///     Loads the project glossary described by <paramref name="config"/>.
     /// </summary>
     /// <param name="config">The resolved lint configuration.</param>

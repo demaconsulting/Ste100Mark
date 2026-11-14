@@ -529,6 +529,30 @@ of the global `dictionary.allow-in-phrase` list unioned with a matching profile'
 `ResolveAllowedPhrases_NoMatchingProfile_ReturnsGlobalPhrasesOnly` and
 `ResolveAllowedPhrases_MatchingProfile_UnionsWithGlobalPhraseList` (listed above).
 
+**Ste100Mark-Linting-GlossaryPhraseAllowance**: Each multi-word approved glossary term and
+variant, including entries with `visible: false`, is verified as an implicit allow-in-phrase
+entry: a dictionary word inside the term is not reported, the same word elsewhere is, matching is
+case-insensitive, a longer deprecated term that contains the approved term and a partial overlap
+are still reported, a deprecated-file entry inside an approved term is not reported there, and
+nothing changes when `dictionary.enabled` is false. The combined phrase pattern is verified to keep
+overlapping phrases and a large phrase set correct. This scenario is tested by
+`Run_GlossaryTermContainsDisallowedWord_NotFlaggedInsideTerm`,
+`Run_GlossaryTermContainsDisallowedWord_StillFlaggedElsewhere`,
+`Run_GlossaryVariantContainsDisallowedWord_NotFlagged`,
+`Run_GlossaryVisibleFalseTerm_SuppressesContainedWord`,
+`Run_GlossaryTermDifferentCasing_SuppressesContainedWord`,
+`Run_GlossaryTermPartialOverlap_StillFlagged`,
+`Run_DeprecatedLongerTermContainingApprovedTerm_StillFlagged`,
+`Run_DeprecatedFileEntryInsideApprovedTerm_NotFlagged`,
+`Run_DictionaryDisabled_GlossaryPhrasesHaveNoEffect`,
+`Evaluate_CombinedPhrasePattern_OverlappingPhrasesBothHonored`, and
+`Evaluate_ManyAllowedPhrases_SuppressesOnlyContainedHits`. The `LintGlossary` side is verified by
+`GetAllowedPhrases_ReturnsMultiWordTermsAndVariantsIncludingHidden` and
+`GetAllowedPhrases_SingleWordTerms_Excluded`. A one-off measurement (not a committed test) with
+200 generated files of 200 lines each and generic synthetic glossaries showed that the combined
+pattern keeps total lint time close to the baseline from 100 to 10,000 terms, while one regex per
+phrase grew from about 13 s to about 349 s at 10,000 terms.
+
 **Ste100Mark-Linting-CliIntegration**: The lint-specific CLI surface is verified for positional
 globs, `--config`, `--format`, `--strict`, and default dispatch through `Program.Run`. This
 scenario is tested by `Context_Create_NoArguments_ReturnsLintingDefaults`,

@@ -511,6 +511,32 @@ sections:
           - Ste100Mark_LintWithConflictingGlossaryFiles_ReturnsNonZeroNamingTermAndPaths
           - Ste100Mark_LintWithEmptyGlossaryGlob_ReturnsNonZero
 
+      - id: Ste100Mark-Linting-GlossaryPhraseAllowance
+        title: >-
+          When the dictionary check is enabled, the Linting subsystem shall treat each multi-word
+          approved glossary term and variant, including entries with visible false, as an implicit
+          allow-in-phrase entry, so that a dictionary hit entirely inside an occurrence of it is not
+          reported, ignoring letter case, while a hit that is not entirely inside it is reported.
+        justification: |
+          A product name such as a multi-word term can contain a word that the dictionary
+          disallows. The project approved the whole term, so the author should not need a second
+          allow-in-phrase entry. Only full containment is exempt, so the same word elsewhere, a
+          longer deprecated term, and a partial overlap are still reported.
+        children:
+          - Ste100Mark-LintGlossary-AllowedPhrases
+        tests:
+          - Run_GlossaryTermContainsDisallowedWord_NotFlaggedInsideTerm
+          - Run_GlossaryTermContainsDisallowedWord_StillFlaggedElsewhere
+          - Run_GlossaryVariantContainsDisallowedWord_NotFlagged
+          - Run_GlossaryVisibleFalseTerm_SuppressesContainedWord
+          - Run_GlossaryTermDifferentCasing_SuppressesContainedWord
+          - Run_GlossaryTermPartialOverlap_StillFlagged
+          - Run_DeprecatedLongerTermContainingApprovedTerm_StillFlagged
+          - Run_DeprecatedFileEntryInsideApprovedTerm_NotFlagged
+          - Run_DictionaryDisabled_GlossaryPhrasesHaveNoEffect
+          - Evaluate_CombinedPhrasePattern_OverlappingPhrasesBothHonored
+          - Evaluate_ManyAllowedPhrases_SuppressesOnlyContainedHits
+
       - id: Ste100Mark-Linting-DeprecatedTerms
         title: >-
           When the configuration lists deprecated-term files, the Linting subsystem shall report

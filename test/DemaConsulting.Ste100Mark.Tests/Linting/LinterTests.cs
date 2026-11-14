@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Text.RegularExpressions;
 using DemaConsulting.Ste100Mark.Cli;
 using DemaConsulting.Ste100Mark.Linting;
 
@@ -1105,6 +1106,191 @@ public sealed class LinterTests : IDisposable
 
         // Assert
         Assert.DoesNotContain("missing.yaml", output);
+        Assert.Equal(0, exitCode);
+    }
+
+    /// <summary>Dictionary that disallows the generic word "test" (any role).</summary>
+    private const string TestWordDictionary =
+        "  use-embedded: false\n  disallow:\n    test:\n      - pos: any\n        alternatives: [check]\n";
+
+    /// <summary>
+    ///     Test that a dictionary word inside an approved multi-word glossary term is not reported.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryTermContainsDisallowedWord_NotFlaggedInsideTerm()
+    {
+        // Arrange
+        WriteFile(".ste100mark.yaml", "dictionary:\n" + TestWordDictionary + "  glossary:\n    Test Mode: A made-up mode.\n");
+        WriteFile("doc.md", "# Title\n\nOpen the Test Mode panel.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.DoesNotContain("STE100-DICT", output);
+        Assert.Equal(0, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that the same word outside the approved term is still reported.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryTermContainsDisallowedWord_StillFlaggedElsewhere()
+    {
+        // Arrange
+        WriteFile(".ste100mark.yaml", "dictionary:\n" + TestWordDictionary + "  glossary:\n    Test Mode: A made-up mode.\n");
+        WriteFile("doc.md", "# Title\n\nOpen the Test Mode panel and do a test now.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.Single(Regex.Matches(output, "STE100-DICT"));
+        Assert.Equal(1, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a glossary variant is also an implicit allowed phrase.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryVariantContainsDisallowedWord_NotFlagged()
+    {
+        // Arrange
+        WriteFile(
+            ".ste100mark.yaml",
+            "dictionary:\n" + TestWordDictionary +
+            "  glossary:\n    Zorbix Mode:\n      definition: A made-up mode.\n      variants: [Test Mode]\n");
+        WriteFile("doc.md", "# Title\n\nOpen the Test Mode panel.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.DoesNotContain("STE100-DICT", output);
+        Assert.Equal(0, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a term with visible false still suppresses a contained dictionary word.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryVisibleFalseTerm_SuppressesContainedWord()
+    {
+        // Arrange
+        WriteFile(
+            ".ste100mark.yaml",
+            "dictionary:\n" + TestWordDictionary +
+            "  glossary:\n    Test Mode:\n      definition: A made-up mode.\n      visible: false\n");
+        WriteFile("doc.md", "# Title\n\nOpen the Test Mode panel.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.DoesNotContain("STE100-DICT", output);
+        Assert.Equal(0, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that the implicit allowance is case-insensitive.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryTermDifferentCasing_SuppressesContainedWord()
+    {
+        // Arrange
+        WriteFile(".ste100mark.yaml", "dictionary:\n" + TestWordDictionary + "  glossary:\n    Test Mode: A made-up mode.\n");
+        WriteFile("doc.md", "# Title\n\nOpen the TEST MODE panel, then the test mode panel.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.DoesNotContain("STE100-DICT", output);
+        Assert.Equal(0, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a disallowed phrase only partly overlapping an approved term is still reported.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryTermPartialOverlap_StillFlagged()
+    {
+        // Arrange
+        WriteFile(
+            ".ste100mark.yaml",
+            "dictionary:\n  use-embedded: false\n  disallow:\n    mode zorbix:\n      - pos: any\n        alternatives: [panel]\n" +
+            "  glossary:\n    Test Mode: A made-up mode.\n");
+        WriteFile("doc.md", "# Title\n\nOpen Test Mode Zorbix now.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.Contains("STE100-DICT", output);
+        Assert.Equal(1, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a longer deprecated term that contains an approved term is still reported.
+    /// </summary>
+    [Fact]
+    public void Run_DeprecatedLongerTermContainingApprovedTerm_StillFlagged()
+    {
+        // Arrange
+        WriteFile("deprecated.yaml", "Test Mode Old:\n  use: Test Mode\n");
+        WriteFile(
+            ".ste100mark.yaml",
+            "dictionary:\n  use-embedded: false\n  deprecated-file: deprecated.yaml\n  glossary:\n    Test Mode: A made-up mode.\n");
+        WriteFile("doc.md", "# Title\n\nOpen Test Mode Old now.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.Contains("STE100-DICT", output);
+        Assert.Equal(1, exitCode);
+    }
+
+    /// <summary>
+    ///     Test that a deprecated term inside an approved term is not reported there, but is alone.
+    /// </summary>
+    [Fact]
+    public void Run_DeprecatedFileEntryInsideApprovedTerm_NotFlagged()
+    {
+        // Arrange
+        WriteFile("deprecated.yaml", "Product A:\n  use: Product B\n");
+        WriteFile(
+            ".ste100mark.yaml",
+            "dictionary:\n  use-embedded: false\n  deprecated-file: deprecated.yaml\n  glossary:\n    Product A Console: A made-up console.\n");
+        WriteFile("inside.md", "# Title\n\nOpen the Product A Console now.\n");
+        WriteFile("alone.md", "# Title\n\nOpen Product A now.\n");
+
+        // Act
+        var (insideExit, insideOutput) = RunLinter("inside.md");
+        var (aloneExit, aloneOutput) = RunLinter("alone.md");
+
+        // Assert
+        Assert.DoesNotContain("STE100-DICT", insideOutput);
+        Assert.Equal(0, insideExit);
+        Assert.Contains("STE100-DICT", aloneOutput);
+        Assert.Equal(1, aloneExit);
+    }
+
+    /// <summary>
+    ///     Test that glossary phrases have no effect when the dictionary check is disabled.
+    /// </summary>
+    [Fact]
+    public void Run_DictionaryDisabled_GlossaryPhrasesHaveNoEffect()
+    {
+        // Arrange
+        WriteFile(".ste100mark.yaml", "dictionary:\n  enabled: false\n  glossary:\n    Test Mode: A made-up mode.\n");
+        WriteFile("doc.md", "# Title\n\nOpen the Test Mode panel.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert
+        Assert.DoesNotContain("STE100-DICT", output);
         Assert.Equal(0, exitCode);
     }
 }

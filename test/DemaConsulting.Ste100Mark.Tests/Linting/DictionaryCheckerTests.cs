@@ -1852,4 +1852,63 @@ public class DictionaryCheckerTests
             Assert.Empty(diagnostics);
         }
     }
+
+    /// <summary>
+    ///     Test that overlapping allowed phrases (starting at different positions) are both honored
+    ///     by the combined phrase pattern.
+    /// </summary>
+    [Fact]
+    public void Evaluate_CombinedPhrasePattern_OverlappingPhrasesBothHonored()
+    {
+        // Arrange: "test" sits inside "Test Mode"; "controller" sits inside "Mode Controller"
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["test"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["check"] }],
+                    ["controller"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["unit"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Open the Test Mode Controller now.", 1, SegmentRole.Paragraph)];
+
+        // Act
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, allowedPhrases: ["Test Mode", "Mode Controller"]);
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a large allowed-phrase set suppresses only contained hits.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ManyAllowedPhrases_SuppressesOnlyContainedHits()
+    {
+        // Arrange
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["test"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["check"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        var phrases = Enumerable.Range(0, 1000).Select(i => $"Test Zorbix {i}").ToList();
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Open Test Zorbix 512 now and run a test on Acme.", 1, SegmentRole.Paragraph)];
+
+        // Act
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, allowedPhrases: phrases);
+
+        // Assert: only the standalone "test" is reported
+        Assert.Single(diagnostics);
+    }
 }

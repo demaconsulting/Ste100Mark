@@ -49,9 +49,13 @@ file entries and returns a `LintGlossary`.
 so a glossary never silently overrides the dictionary. The error names the term and the
 dictionary source. A term that `allow` or `ignore` removed is not a conflict.
 
-**GetAllowedTerms**: the approved terms and variants, which `DictionaryChecker` treats as allowed.
-An approved term is allowed only by whole-term or variant equality. A dictionary word inside a
-multi-word glossary term is still checked on its own.
+**GetAllowedTerms**: the approved terms and variants, which `DictionaryChecker` treats as allowed
+by whole-term or variant equality.
+
+**GetAllowedPhrases**: the multi-word approved terms and variants, including entries with
+`visible: false`. `Linter` merges them into the per-file allowed phrases, so each is an implicit
+allow-in-phrase entry: a dictionary hit entirely inside it is not reported, while the same word
+elsewhere is. Single-word entries are left out because `GetAllowedTerms` already exempts them.
 
 **Tagging**: the package `Glossary` built from the approved terms (each `GlossaryEntry` receives the
 real definition) with the configured mode. The
