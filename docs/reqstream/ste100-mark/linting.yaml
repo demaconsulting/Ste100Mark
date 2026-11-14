@@ -191,10 +191,34 @@ sections:
           - Evaluate_NounPlural_GatedByResolvedRole
           - Evaluate_VerbForm_NotFlaggedWhenResolvedAsNoun
           - Evaluate_PhrasalVerbForms_HeadVerbInflects
+          - IsParticipial_ClassifiesFlagCombinations
           - Evaluate_NonNounVerbSense_NotInflected
           - Evaluate_InflectedFormBoundaries_RespectedAndCaseInsensitive
           - Evaluate_LargeSegment_CompletesAndMatches
           - Ste100Mark_LintInflectedDictionaryTerm_FlaggedUnlessWordFormsDisabled
+
+      - id: Ste100Mark-Linting-DictionaryWordForms-ParticipleRole
+        title: >-
+          The Linting subsystem shall flag a generated -ed, -d, -ing, or irregular past or
+          past-participle form of a dictionary verb only when the part-of-speech resolver
+          confidently resolves a verb at the match (a phrasal verb being resolved on its head
+          word), and shall not flag it when the role is ambiguous or inconclusive or is
+          confidently a noun, adjective, or adverb, while the base form and the third-person
+          and plural forms keep their existing behavior.
+        justification: |
+          A participle is often used as an adjective ("the produced item") or a noun, and an
+          low-confidence tagger cannot tell the uses apart. Requiring a confident verb removes
+          those false positives while keeping the clear verb uses and all other forms.
+        tests:
+          - Evaluate_ParticipleInNonVerbRole_NotFlagged
+          - Evaluate_ParticipleResolvedAsVerb_Flagged
+          - Evaluate_IrregularParticiple_FlaggedOnlyAsVerb
+          - Evaluate_ParticipleWithInconclusiveRole_NotFlagged
+          - Evaluate_ThirdPersonAndBaseWithInconclusiveRole_StillFlagged
+          - Evaluate_NounVerbEntryWithInconclusiveRole_ParticipialOriginDropped
+          - Evaluate_PhrasalParticiple_FlaggedOnlyForVerbHead
+          - Evaluate_ParticipleWithProductionResolver_VerbFlaggedAdjectiveNot
+          - IsParticipial_ClassifiesFlagCombinations
 
       - id: Ste100Mark-Linting-DictionaryWordForms-Precedence
         title: >-

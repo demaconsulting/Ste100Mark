@@ -50,6 +50,23 @@ internal enum WordForm
 }
 
 /// <summary>
+///     Classification helpers for <see cref="WordForm"/> values.
+/// </summary>
+internal static class WordFormKind
+{
+    /// <summary>
+    ///     Returns <see langword="true"/> when the forms are participial only: past, past participle
+    ///     and/or -ing, with no third-person singular or plural bit. Such forms are also commonly
+    ///     used as adjectives or nouns, so they need a confident verb role to be flagged.
+    /// </summary>
+    /// <param name="forms">The form flags.</param>
+    /// <returns>True for participial-only forms.</returns>
+    public static bool IsParticipial(WordForm forms)
+        => forms != WordForm.None
+           && (forms & (WordForm.ThirdPersonSingular | WordForm.Plural)) == 0;
+}
+
+/// <summary>
 ///     One generated spelling together with the grammatical form(s) it represents.
 /// </summary>
 /// <param name="Spelling">The lower-case generated spelling (a phrase for a phrasal verb).</param>
@@ -127,6 +144,17 @@ internal static class WordFormInflector
         ["criterion"] = "criteria",
         ["phenomenon"] = "phenomena"
     }.ToFrozenDictionary(StringComparer.Ordinal);
+
+    /// <summary>
+    ///     Returns <see langword="true"/> when the forms are participial only: past, past participle
+    ///     and/or -ing, with no third-person singular or plural bit. Such forms are also commonly
+    ///     used as adjectives or nouns, so they need a confident verb role to be flagged.
+    /// </summary>
+    /// <param name="forms">The form flags.</param>
+    /// <returns>True for participial-only forms.</returns>
+    public static bool IsParticipial(WordForm forms)
+        => forms != WordForm.None
+           && (forms & (WordForm.ThirdPersonSingular | WordForm.Plural)) == 0;
 
     /// <summary>
     ///     Generates every inflected spelling of a dictionary term for a sense's part of speech.

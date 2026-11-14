@@ -94,8 +94,16 @@ an earlier (longer) entry. Allowing a base term therefore also suppresses its fo
 
 An inflected match is resolved with the same `IPartOfSpeechResolver` call as a base match, but
 the candidate senses are strictly gated by role: only a Noun or Verb sense whose forms include
-the matched spelling survives, and an inconclusive resolution keeps only those senses that
-can produce that spelling. The diagnostic names the flagged form, for example
+the matched spelling survives. When the resolution is inconclusive, only non-participial
+origins (third-person singular and plural forms) are kept; participial origins (past, past
+participle, and -ing, classified by `WordFormInflector.IsParticipial` from the `WordForm`
+flags each `FormOrigin` already carries) are dropped, so an -ed/-ing or irregular
+past/participle form is flagged only when the resolver confidently returns Verb. A confident
+Noun, Adjective, or Adverb leaves no candidate and no diagnostic. When no origin remains the
+match is not reported. A phrasal participial match spans more than one token, which the
+resolver does not resolve, so it is resolved on its head (first) word only. An origin whose
+flags include a third-person or plural bit is treated as non-participial. The base form is
+unaffected. The diagnostic names the flagged form, for example
 `Avoid 'produced' (a form of 'produce'); use 'made' instead.` Each alternative is inflected to
 the flagged form when `WordFormInflector.Inflect` can do so safely (a phrasal-verb alternative
 inflects its head word, for example "set up" becomes "sets up"; a noun alternative that already

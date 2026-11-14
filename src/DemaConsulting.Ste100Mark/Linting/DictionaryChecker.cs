@@ -40,7 +40,11 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     the plural of each noun sense, so "utilized" is flagged by a "utilize" verb entry. Adjective,
 ///     adverb and any-role senses are never inflected. A generated form is strictly role-gated:
 ///     it only applies to the noun or verb sense that generated it, so a noun-only entry's plural
-///     is not flagged where the resolver says the word is a verb. A generated spelling never
+///     is not flagged where the resolver says the word is a verb. The participial forms (-ed, -ing
+///     and irregular past or past participle) are flagged only when the resolver confidently
+///     resolves a verb (a phrasal verb is resolved on its head word); an ambiguous or inconclusive
+///     result, or a confident noun or adjective, is not flagged. The base form and the
+///     third-person and plural forms keep reporting when the role is inconclusive. A generated spelling never
 ///     overrides an explicit dictionary entry for that spelling, an allowed or ignored spelling
 ///     (global lists or the per-file allowance), or an allowed phrase. The message names the
 ///     flagged form ("a form of 'utilize'") and the suggested alternatives are inflected to match
@@ -348,13 +352,35 @@ internal static class DictionaryChecker
     {
         var entry = compiled.Entry;
         var origins = FindOrigins(compiled, match);
-        var role = resolver.Resolve(segment.Text, match.Index, match.Length);
+
+        // A phrasal participial form ("carried out") is resolved on its head word only, because
+        // the resolver does not resolve a multi-token span.
+        var spanLength = match.Length;
+        if (origins is not null && origins.Any(o => WordFormInflector.IsParticipial(o.Forms)))
+        {
+            var headLength = match.Value.IndexOfAny([' ', '\t', '\r', '\n']);
+            if (headLength > 0)
+            {
+                spanLength = headLength;
+            }
+        }
+
+        var role = resolver.Resolve(segment.Text, match.Index, spanLength);
 
         // The base term keeps the original sense selection (including any-role senses); a
         // generated form is strict: only the noun/verb sense that generated it can apply.
         var candidates = origins is null
             ? BaseCandidates(entry, role)
             : InflectedCandidates(origins, role);
+
+        if (origins is not null && candidates.Count == 0)
+        {
+            // Every generated-form origin was ruled out: either the role is confidently another
+            // part of speech, or the role is unresolved and only participial origins existed
+            // (an -ed/-ing or irregular past/participle form is flagged only when confidently
+            // a verb).
+            return null;
+        }
 
         if (role is not null && candidates.Count == 0)
         {
@@ -438,13 +464,16 @@ internal static class DictionaryChecker
 
     /// <summary>
     ///     Selects the senses that apply to a match of a generated word form: strictly the senses
-    ///     whose part of speech equals the resolved role (all of them when the role is unknown),
-    ///     each with its alternatives inflected to the flagged form where that is safe.
+    ///     whose part of speech equals the resolved role. When the role is unknown, participial
+    ///     origins (-ed, -ing, past, past participle) are dropped and the remaining origins are kept.
+    ///     Each candidate has its alternatives inflected to the flagged form where that is safe.
     /// </summary>
     private static List<Candidate> InflectedCandidates(List<FormOrigin> origins, PartOfSpeech? role)
     {
         var candidates = new List<Candidate>();
-        foreach (var origin in origins.Where(o => role is null || o.Sense.Pos == role))
+        foreach (var origin in origins.Where(o => role is null
+            ? !WordFormInflector.IsParticipial(o.Forms)
+            : o.Sense.Pos == role))
         {
             var alternatives = new List<string>();
             var fallback = false;

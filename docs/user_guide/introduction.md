@@ -280,7 +280,11 @@ By default a disallowed verb or noun also matches its inflected spellings. If `p
 disallowed verb, the checker also flags "produces", "produced", and "producing"; a disallowed
 noun also flags its plural. Matching is whole-word and case-insensitive, and an inflected
 spelling goes through the same part-of-speech check as the base term, so a noun use of a
-verb-only word is not flagged. Adjective, adverb, and general senses are matched only as
+verb-only word is not flagged. The "-ed", "-ing", and irregular past or past-participle forms
+(for example "produced" or "taken") are flagged only where the checker is confident the word
+is used as a verb, because such forms are often adjectives ("the produced item") or nouns; an
+uncertain match is not flagged. The base form and the "-s" and plural forms are unaffected.
+Adjective, adverb, and general senses are matched only as
 written, and for a multi-word term only the head verb of a phrasal verb inflects.
 
 A spelling you allow (`dictionary.allow`, `dictionary.ignore`, an allowed phrase, or a

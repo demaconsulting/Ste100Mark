@@ -180,6 +180,16 @@ lookup, whole-term matching, and suggestions. This scenario is tested by
 `Evaluate_LargeSegment_CompletesAndMatches`, and, end-to-end through the CLI,
 `Ste100Mark_LintInflectedDictionaryTerm_FlaggedUnlessWordFormsDisabled`.
 
+**Ste100Mark-Linting-DictionaryWordForms-ParticipleRole**: Participial gating is verified by
+`Evaluate_ParticipleInNonVerbRole_NotFlagged` (a confident adjective, noun, or adverb is not
+flagged), `Evaluate_ParticipleResolvedAsVerb_Flagged`, `Evaluate_IrregularParticiple_FlaggedOnlyAsVerb`,
+`Evaluate_ParticipleWithInconclusiveRole_NotFlagged` (expected: no finding),
+`Evaluate_ThirdPersonAndBaseWithInconclusiveRole_StillFlagged` (expected: unchanged finding),
+`Evaluate_NounVerbEntryWithInconclusiveRole_ParticipialOriginDropped`,
+`Evaluate_PhrasalParticiple_FlaggedOnlyForVerbHead` (head-word resolution),
+`Evaluate_ParticipleWithProductionResolver_VerbFlaggedAdjectiveNot`, and
+`IsParticipial_ClassifiesFlagCombinations`.
+
 **Ste100Mark-Linting-DictionaryWordForms-Precedence**: Allow and explicit-key precedence is
 verified by `Evaluate_AllowedInflectedSpelling_WinsOverGeneratedForm`,
 `Evaluate_ExtraAllowedInflectedSpelling_WinsOverGeneratedForm`,

@@ -185,4 +185,22 @@ public class WordFormInflectorTests
         Assert.Null(WordFormInflector.Inflect("fast", WordForm.Past, PartOfSpeech.Adjective));
         Assert.Equal("licence" + "s", WordFormInflector.Inflect("licence", WordForm.Plural, PartOfSpeech.Noun));
     }
+
+    /// <summary>
+    ///     Test that IsParticipial classifies every flag combination.
+    /// </summary>
+    [Fact]
+    public void IsParticipial_ClassifiesFlagCombinations()
+    {
+        // Arrange / Act / Assert: participial-only forms, then forms with a non-participial bit
+        Assert.True(WordFormInflector.IsParticipial(WordForm.Past));
+        Assert.True(WordFormInflector.IsParticipial(WordForm.PastParticiple));
+        Assert.True(WordFormInflector.IsParticipial(WordForm.Gerund));
+        Assert.True(WordFormInflector.IsParticipial(WordForm.Past | WordForm.PastParticiple));
+        Assert.False(WordFormInflector.IsParticipial(WordForm.None));
+        Assert.False(WordFormInflector.IsParticipial(WordForm.ThirdPersonSingular));
+        Assert.False(WordFormInflector.IsParticipial(WordForm.Plural));
+        Assert.False(WordFormInflector.IsParticipial(WordForm.Past | WordForm.Plural));
+        Assert.False(WordFormInflector.IsParticipial(WordForm.Gerund | WordForm.ThirdPersonSingular));
+    }
 }

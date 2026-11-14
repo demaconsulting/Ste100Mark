@@ -15,6 +15,11 @@ message instead of "make".
 `Gerund`, and `Plural`. Spellings that coincide (for example a regular past and past
 participle) are merged into one `InflectedSpelling(Spelling, Forms)` record.
 
+**IsParticipial**: classifies a `WordForm` value as participial (Past, PastParticiple, and/or
+Gerund with no ThirdPersonSingular or Plural bit). The form kind already travels on each
+generated spelling, so no data-model field is added; `DictionaryChecker` uses this to require
+a confident verb role for participial matches.
+
 **Irregular verb table**: a small, fixed, documented table (about 85 verbs, for example
 "take", "give", "begin", "have") mapping each base to its past, participle, and where
 needed its gerund. The verb "be" is never inflected. A small table of irregular noun plurals

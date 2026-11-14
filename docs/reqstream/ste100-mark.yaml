@@ -203,6 +203,7 @@ sections:
           - Ste100Mark-Linting-Dictionary
           - Ste100Mark-Linting-DictionaryDisable
           - Ste100Mark-Linting-DictionaryWordForms
+          - Ste100Mark-Linting-DictionaryWordForms-ParticipleRole
           - Ste100Mark-Linting-DictionaryWordForms-Precedence
           - Ste100Mark-Linting-DictionaryWordForms-Diagnostics
           - Ste100Mark-Linting-DictionaryWordForms-Switch

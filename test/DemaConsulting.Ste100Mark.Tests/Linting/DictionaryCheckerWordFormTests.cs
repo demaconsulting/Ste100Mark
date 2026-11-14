@@ -362,6 +362,174 @@ public class DictionaryCheckerWordFormTests
     }
 
     /// <summary>
+    ///     Test that a participial form is not flagged in a noun or adjective role.
+    /// </summary>
+    [Theory]
+    [InlineData("Adjective")]
+    [InlineData("Noun")]
+    [InlineData("Adverb")]
+    public void Evaluate_ParticipleInNonVerbRole_NotFlagged(string roleName)
+    {
+        var role = Enum.Parse<PartOfSpeech>(roleName);
+        // Arrange: a verb entry
+        var dictionary = Inline(Entry("produce", PartOfSpeech.Verb, "make"));
+
+        // Act: evaluate participial forms in a confident non-verb role
+        var past = Run("The produced item is ready.", dictionary, role);
+        var gerund = Run("The producing unit is ready.", dictionary, role);
+
+        // Assert: nothing flagged
+        Assert.Empty(past);
+        Assert.Empty(gerund);
+    }
+
+    /// <summary>
+    ///     Test that regular and irregular participial forms are flagged for a confident verb.
+    /// </summary>
+    [Theory]
+    [InlineData("produced", "made")]
+    [InlineData("producing", "making")]
+    public void Evaluate_ParticipleResolvedAsVerb_Flagged(string form, string expected)
+    {
+        // Arrange: a verb entry
+        var dictionary = Inline(Entry("produce", PartOfSpeech.Verb, "make"));
+
+        // Act: evaluate with a confident verb
+        var diagnostic = Assert.Single(Run($"The crew {form} the part.", dictionary, PartOfSpeech.Verb));
+
+        // Assert: flagged with the inflected alternative
+        Assert.Contains($"use '{expected}' instead", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that irregular past and past-participle forms need a confident verb.
+    /// </summary>
+    [Theory]
+    [InlineData("took")]
+    [InlineData("taken")]
+    [InlineData("taking")]
+    public void Evaluate_IrregularParticiple_FlaggedOnlyAsVerb(string form)
+    {
+        // Arrange: an irregular verb entry
+        var dictionary = Inline(Entry("take", PartOfSpeech.Verb, "pick"));
+
+        // Act: evaluate as verb, with an inconclusive role, and as an adjective
+        var asVerb = Run($"The crew {form} the part.", dictionary, PartOfSpeech.Verb);
+        var unknown = Run($"The crew {form} the part.", dictionary, null);
+        var asAdjective = Run($"The {form} part is ready.", dictionary, PartOfSpeech.Adjective);
+
+        // Assert: flagged only for the confident verb
+        Assert.Single(asVerb);
+        Assert.Empty(unknown);
+        Assert.Empty(asAdjective);
+    }
+
+    /// <summary>
+    ///     Test that regular -ed and -ing forms are not flagged when the role is inconclusive.
+    /// </summary>
+    [Theory]
+    [InlineData("produced")]
+    [InlineData("producing")]
+    public void Evaluate_ParticipleWithInconclusiveRole_NotFlagged(string form)
+    {
+        // Arrange: a verb entry
+        var dictionary = Inline(Entry("produce", PartOfSpeech.Verb, "make"));
+
+        // Act: evaluate with an inconclusive role
+        var diagnostics = Run($"The {form} item is ready.", dictionary, null);
+
+        // Assert: not flagged
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that third-person forms and the base form still report with an inconclusive role.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ThirdPersonAndBaseWithInconclusiveRole_StillFlagged()
+    {
+        // Arrange: a verb entry
+        var dictionary = Inline(Entry("produce", PartOfSpeech.Verb, "make"));
+
+        // Act: evaluate the third-person and base forms with an inconclusive role
+        var third = Assert.Single(Run("The pump produces heat.", dictionary, null));
+        var baseForm = Assert.Single(Run("The pump will produce heat.", dictionary, null));
+
+        // Assert: still reported
+        Assert.Contains("'produces'", third.Message, StringComparison.Ordinal);
+        Assert.Contains("'produce'", baseForm.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that with a noun-and-verb entry and an inconclusive role only non-participial
+    ///     origins survive.
+    /// </summary>
+    [Fact]
+    public void Evaluate_NounVerbEntryWithInconclusiveRole_ParticipialOriginDropped()
+    {
+        // Arrange: noun and verb senses of the same term
+        var dictionary = Inline(new Dictionary<string, List<DictionarySenseYaml>>
+        {
+            ["box"] =
+            [
+                new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["tool"] },
+                new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["fit"] }
+            ]
+        });
+
+        // Act: evaluate a participle and a plural/third-person form
+        var participle = Run("The boxed part is ready.", dictionary, null);
+        var plural = Assert.Single(Run("The crew has boxes.", dictionary, null));
+
+        // Assert: the participle is dropped, the plural keeps reporting
+        Assert.Empty(participle);
+        Assert.StartsWith("Ambiguous part of speech for 'boxes'", plural.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that a phrasal participial form resolves on its head word.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PhrasalParticiple_FlaggedOnlyForVerbHead()
+    {
+        // Arrange: a phrasal-verb entry
+        var dictionary = Inline(Entry("carry out", PartOfSpeech.Verb, "do"));
+
+        // Act: evaluate with a verb, an inconclusive role and the base phrase
+        var asVerb = Run("The crew carried out the task.", dictionary, PartOfSpeech.Verb);
+        var unknown = Run("The crew carried out the task.", dictionary, null);
+        var asAdjective = Run("The carried out task is done.", dictionary, PartOfSpeech.Adjective);
+        var baseUnknown = Run("The crew carry out the task.", dictionary, null);
+
+        // Assert: participle needs the verb; the base phrase is unchanged
+        Assert.Single(asVerb);
+        Assert.Empty(unknown);
+        Assert.Empty(asAdjective);
+        Assert.Single(baseUnknown);
+    }
+
+    /// <summary>
+    ///     Test that an attributive adjective use is not flagged but a verb use is, with the
+    ///     production resolver.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ParticipleWithProductionResolver_VerbFlaggedAdjectiveNot()
+    {
+        // Arrange: the embedded "utilize" entry
+        var dictionary = LintDictionary.Load(new LintConfig(), Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> verbUse = [new ProseSegment("The crew utilized the tool yesterday.", 1, SegmentRole.Paragraph)];
+        IReadOnlyList<ProseSegment> adjectiveUse = [new ProseSegment("The utilized tool is old.", 1, SegmentRole.Paragraph)];
+
+        // Act: evaluate both with the default resolver
+        var verbDiagnostics = DictionaryChecker.Evaluate("file.md", verbUse, dictionary);
+        var adjectiveDiagnostics = DictionaryChecker.Evaluate("file.md", adjectiveUse, dictionary);
+
+        // Assert: only the verb use is flagged
+        Assert.Single(verbDiagnostics);
+        Assert.Empty(adjectiveDiagnostics);
+    }
+
+    /// <summary>
     ///     Test that turning off word-form matching restores exact-term matching.
     /// </summary>
     [Fact]
