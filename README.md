@@ -29,22 +29,17 @@ Ste100Mark provides:
 - 🔎 **ASD-STE100 Linting**: Checks Markdown sentences against configurable STE100 style rules
 - 🗂️ **Configurable File Scope**: Selects files using globs, includes, and overrides
 - 🧾 **Text and JSON Output**: Produces readable diagnostics or structured CI-friendly output
-- 🔬 **Detailed JSON Output**: Opt-in `json-detailed` format adds sentence, context, tagger evidence,
-  confidence class and suppression hints to each dictionary finding
+- 🔬 **Detailed JSON Output**: Adds context, evidence, and fix hints to each finding
 - 🚦 **Strict Mode**: Promotes warnings to build-breaking failures on demand
-- 📖 **Embedded Example Dictionary**: Ships illustrative vocabulary for immediate linter evaluation
-- 🔤 **Word-Form Matching**: Flags inflected spellings of disallowed verbs and nouns (for example
-  "produced" for "produce", when used as a verb), with `dictionary.match-word-forms: false` to switch it off
-- 🧩 **Project Glossary**: Approves project terms with a part of speech, and reports deprecated terms
-  with a replacement
+- 📖 **Embedded Example Dictionary**: Ships illustrative vocabulary for immediate evaluation
+- 🔤 **Word-Form Matching**: Catches "produced" and "produces" as well as "produce"
+- 🧩 **Project Glossary**: Approves project terms and reports deprecated ones
 - ✅ **Self-Validation**: Built-in validation tests with TRX and JUnit output
 - 🖥️ **Multi-Platform Support**: Builds and runs on Windows, Linux, macOS
 - ⚙️ **Multi-Runtime Support**: Targets .NET 10 and 11 runtimes
 - 🔁 **Comprehensive CI/CD**: GitHub Actions workflows for quality checks, builds, tests
-- 🛡️ **Continuous Compliance**: This repository's CI pipeline generates compliance evidence and
-  reports using the [Continuous Compliance][link-continuous-compliance] methodology
-- 📚 **Repository Documentation Tooling**: This repository also automates build notes, user guide,
-  and compliance report generation
+- 🛡️ **Continuous Compliance**: CI generates evidence using [Continuous Compliance][link-continuous-compliance]
+- 📚 **Documentation Tooling**: Automates build notes, user guide, and compliance reports
 
 ## Installation
 
