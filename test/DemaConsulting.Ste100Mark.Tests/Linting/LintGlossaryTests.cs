@@ -502,6 +502,7 @@ public sealed class LintGlossaryTests : IDisposable
 
         // Assert
         Assert.NotNull(glossary.Tagging);
+        Assert.Contains("Zorbix", glossary.GetAllowedTerms());
     }
 
     /// <summary>
