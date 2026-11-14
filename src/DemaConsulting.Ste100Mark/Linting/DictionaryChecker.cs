@@ -553,7 +553,7 @@ internal static class DictionaryChecker
         var fragmentApplies = origins is not null
             && segment.Role is SegmentRole.Heading or SegmentRole.TableRow
             && origins.All(o => WordFormInflector.IsParticipial(o.Forms));
-        if (fragmentApplies && !HasAuxiliary(segment.Text, codeSpans))
+        if (fragmentApplies && !HasAuxiliary(segment.Text, hit.Index, codeSpans))
         {
             // Fragment guard: a participial form in a heading or table cell with no auxiliary word
             // is a label ("Terminated", "Producing reports"), not a verb in a clause.
@@ -746,14 +746,15 @@ internal static class DictionaryChecker
     }
 
     /// <summary>
-    ///     Determines whether a segment contains an auxiliary or modal word outside its inline code
-    ///     spans (see <see cref="AuxiliaryWords"/>); such a word shows that a participial form is
-    ///     part of a clause rather than a bare label.
+    ///     Determines whether a segment contains an auxiliary or modal word that ends before the
+    ///     matched form starts, outside inline code spans (see <see cref="AuxiliaryWords"/>); such a
+    ///     word shows that a participial form is part of a clause rather than a bare label.
     /// </summary>
-    private static bool HasAuxiliary(string text, IReadOnlyList<(int Start, int Length)> codeSpans)
+    private static bool HasAuxiliary(string text, int matchIndex, IReadOnlyList<(int Start, int Length)> codeSpans)
     {
         return WordRegex.Matches(text).Any(word =>
-            AuxiliaryWords.Contains(word.Value)
+            word.Index + word.Length <= matchIndex
+            && AuxiliaryWords.Contains(word.Value)
             && !MarkdownProseExtractor.OverlapsInlineCodeSpan(word.Index, word.Length, codeSpans));
     }
 

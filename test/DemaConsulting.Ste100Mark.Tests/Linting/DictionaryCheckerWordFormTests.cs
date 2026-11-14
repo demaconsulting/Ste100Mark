@@ -648,6 +648,7 @@ public class DictionaryCheckerWordFormTests
     [Theory]
     [InlineData("Performed checks")]
     [InlineData("Performing the checks")]
+    [InlineData("Performed checks will follow")]
     public void Evaluate_ParticipleInHeadingWithoutAuxiliary_NotFlagged(string heading)
     {
         // Arrange: a verb entry and a heading that is a label

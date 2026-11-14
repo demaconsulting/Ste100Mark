@@ -237,7 +237,7 @@ and `IsPhrasalVerb_RequiresVerbTwoWordParticle`, and end-to-end by
 **Ste100Mark-Linting-DictionaryWordForms-CompoundIrregular**: Compound forms are verified by
 `Generate_CompoundIrregularVerb_UsesStemForms`, `Generate_CompoundIrregularExceptions_UseRegularRules`,
 `Inflect_CompoundIrregular_Inflects`, and `Evaluate_CompoundIrregularParticiple_FlaggedAsWithstood`,
-and end-to-end by `Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms.
+and end-to-end by `Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms`.
 
 **Ste100Mark-Linting-DictionaryDisable**: The `dictionary.enabled: false` switch is verified
 end-to-end to suppress every `STE100-DICT` finding while leaving structural/mechanical checks

@@ -557,9 +557,9 @@ The classifier uses the first row that matches:
 
 | Reason | Class | Condition |
 | --- | --- | --- |
-| `role-inconclusive` | uncertain | The tagger gave no role, and the outcome is not below-threshold or unknown-word |
-| `multiple-senses` | uncertain | The word has more than one sense for the matched role |
-| `tagger-below-threshold` | uncertain | The tagger was below the threshold, or did not know the word |
+| `role-inconclusive` | doubtful | The tagger gave no role, and the outcome is not below-threshold or unknown-word |
+| `multiple-senses` | doubtful | The word has more than one sense for the matched role |
+| `tagger-below-threshold` | doubtful | The tagger was below the threshold, or did not know the word |
 | `split-phrasal` | probable | A phrasal verb split by other words |
 | `hyphenated-form` | probable | A hyphenated spelling of the term |
 | `fragment-with-auxiliary` | probable | The match is in a fragment with an auxiliary verb |
