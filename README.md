@@ -81,14 +81,11 @@ exclude:
 default-mode: descriptive
 rules:
   max-words-descriptive: 25
-dictionary:
-  file: your-licensed-asd-ste-dictionary.yaml
-  use-embedded: false
 ```
 
 > **Dictionary notice:** The embedded dictionary is a small, illustrative example. It is **not** the
 > official ASD-STE100 Part 2 Dictionary. Organizations that need true compliance must supply their own
-> licensed dictionary through `dictionary.file`.
+> licensed dictionary through `dictionary.file` (with `dictionary.use-embedded: false`).
 
 ## Project Glossary
 
