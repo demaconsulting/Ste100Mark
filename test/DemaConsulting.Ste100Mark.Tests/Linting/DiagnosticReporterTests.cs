@@ -284,4 +284,95 @@ public class DiagnosticReporterTests
             Console.SetOut(originalOut);
         }
     }
+
+    /// <summary>
+    ///     Test that the default JSON output of a fixed scenario (a structural finding plus two
+    ///     dictionary findings with citations) is byte-identical to a golden string captured before
+    ///     any later output-format work, so the default schema stays frozen.
+    /// </summary>
+    [Fact]
+    public void Report_JsonDefault_ByteIdenticalToGolden()
+    {
+        // Arrange: the fixed scenario and the literal golden document
+        const string golden = """
+            {
+              "filesChecked": 1,
+              "noFilesMatched": false,
+              "errorCount": 3,
+              "warningCount": 0,
+              "files": [
+                {
+                  "path": "doc.md",
+                  "status": "checked"
+                }
+              ],
+              "diagnostics": [
+                {
+                  "file": "doc.md",
+                  "line": 3,
+                  "column": null,
+                  "ruleCode": "STE100-8.1",
+                  "severity": "error",
+                  "message": "Semicolons are not permitted in ASD-STE100 prose.",
+                  "suggestion": "Split into two separate sentences.",
+                  "citations": null
+                },
+                {
+                  "file": "doc.md",
+                  "line": 3,
+                  "column": null,
+                  "ruleCode": "STE100-DICT",
+                  "severity": "error",
+                  "message": "Avoid \u0027performed\u0027 (a form of \u0027perform\u0027); use \u0027started\u0027 instead.",
+                  "suggestion": "started",
+                  "citations": [
+                    {
+                      "term": "start",
+                      "pos": "verb"
+                    }
+                  ]
+                },
+                {
+                  "file": "doc.md",
+                  "line": 7,
+                  "column": null,
+                  "ruleCode": "STE100-DICT",
+                  "severity": "error",
+                  "message": "Avoid \u0027performs\u0027 (a form of \u0027perform\u0027); use \u0027starts\u0027 instead.",
+                  "suggestion": "starts",
+                  "citations": [
+                    {
+                      "term": "start",
+                      "pos": "verb"
+                    }
+                  ]
+                }
+              ]
+            }
+            """;
+        IReadOnlyList<Diagnostic> diagnostics =
+        [
+            new Diagnostic("doc.md", 3, null, "STE100-8.1", Severity.Error, "Semicolons are not permitted in ASD-STE100 prose.", "Split into two separate sentences."),
+            new Diagnostic("doc.md", 3, null, "STE100-DICT", Severity.Error, "Avoid 'performed' (a form of 'perform'); use 'started' instead.", "started", [new DictionaryCitation("start", "verb")]),
+            new Diagnostic("doc.md", 7, null, "STE100-DICT", Severity.Error, "Avoid 'performs' (a form of 'perform'); use 'starts' instead.", "starts", [new DictionaryCitation("start", "verb")])
+        ];
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["--format", "json"]);
+
+            // Act: execute the operation being tested
+            DiagnosticReporter.Report(context, diagnostics, ["doc.md"], false);
+
+            // Assert: the output equals the golden text (line endings normalized)
+            var output = outWriter.ToString().Replace("\r\n", "\n").TrimEnd();
+            Assert.Equal(golden.Replace("\r\n", "\n"), output);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
 }

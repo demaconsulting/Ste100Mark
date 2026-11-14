@@ -897,5 +897,190 @@ public class IntegrationTests
             Directory.Delete(shared, true);
         }
     }
-}
 
+    /// <summary>
+    ///     Test that the default text output, default JSON output and rule listing of a fixed
+    ///     generic scenario stay byte-identical to goldens captured before any later
+    ///     output-format work.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintDefaultOutputs_Unchanged()
+    {
+        // Arrange: a dictionary entry, a document with a heading, a table, a structural finding
+        // and word-form dictionary findings, and the literal goldens
+        const string expectedText = "doc.md:3: [ERROR] STE100-8.1 \u2014 Semicolons are not permitted in ASD-STE100 prose. (Suggestion: Split into two separate sentences.)\n" +
+                                    "doc.md:3: [ERROR] STE100-DICT \u2014 Avoid 'performed' (a form of 'perform'); use 'started' instead. (Suggestion: started)\n" +
+                                    "doc.md:7: [ERROR] STE100-DICT \u2014 Avoid 'performs' (a form of 'perform'); use 'starts' instead. (Suggestion: starts)\n" +
+                                    "Checked 1 file(s): 3 error(s), 0 warning(s).\n" +
+                                    "Ste100Mark found linting issues (3 error(s)).";
+        const string expectedJson = """
+            {
+              "filesChecked": 1,
+              "noFilesMatched": false,
+              "errorCount": 3,
+              "warningCount": 0,
+              "files": [
+                {
+                  "path": "doc.md",
+                  "status": "checked"
+                }
+              ],
+              "diagnostics": [
+                {
+                  "file": "doc.md",
+                  "line": 3,
+                  "column": null,
+                  "ruleCode": "STE100-8.1",
+                  "severity": "error",
+                  "message": "Semicolons are not permitted in ASD-STE100 prose.",
+                  "suggestion": "Split into two separate sentences.",
+                  "citations": null
+                },
+                {
+                  "file": "doc.md",
+                  "line": 3,
+                  "column": null,
+                  "ruleCode": "STE100-DICT",
+                  "severity": "error",
+                  "message": "Avoid \u0027performed\u0027 (a form of \u0027perform\u0027); use \u0027started\u0027 instead.",
+                  "suggestion": "started",
+                  "citations": [
+                    {
+                      "term": "start",
+                      "pos": "verb"
+                    }
+                  ]
+                },
+                {
+                  "file": "doc.md",
+                  "line": 7,
+                  "column": null,
+                  "ruleCode": "STE100-DICT",
+                  "severity": "error",
+                  "message": "Avoid \u0027performs\u0027 (a form of \u0027perform\u0027); use \u0027starts\u0027 instead.",
+                  "suggestion": "starts",
+                  "citations": [
+                    {
+                      "term": "start",
+                      "pos": "verb"
+                    }
+                  ]
+                }
+              ]
+            }
+            """;
+        const string expectedRules = """
+            [
+              {
+                "code": "STE100-4.1",
+                "title": "Sentence word-count limit (Rules 4.1, 8.4-8.7).",
+                "classification": "official",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-8.1",
+                "title": "No semicolons (Rule 8.1).",
+                "classification": "official",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-4.2",
+                "title": "No contractions (Rule 4.2).",
+                "classification": "official",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-DICT",
+                "title": "Dictionary/vocabulary enforcement against the effective (default or configured) dictionary.",
+                "classification": "mechanical",
+                "suggestionKind": "citationForm",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-ADV-PARA",
+                "title": "Paragraph sentence-count cap (advisory heuristic, not an official STE100 rule).",
+                "classification": "advisory",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-ADV-PASSIVE",
+                "title": "Passive-voice detection (advisory heuristic, not an official STE100 rule).",
+                "classification": "advisory",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-ADV-COMPLEXVERB",
+                "title": "Perfect/modal-perfect tense detection (advisory heuristic, not an official STE100 rule).",
+                "classification": "advisory",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-ADV-INGFORM",
+                "title": "-ing form detection (advisory heuristic, not an official STE100 rule).",
+                "classification": "advisory",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              }
+            ]
+            """;
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(workingDirectory, ".ste100mark.yaml"),
+                "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [start]\n");
+            File.WriteAllText(
+                Path.Combine(workingDirectory, "doc.md"),
+                "# Report Overview\n\nThe crew performed the task; the valve opened.\n\n| Item | Note |\n| --- | --- |\n| Valve | The crew performs the check. |\n");
+
+            // Act: run the default text, default JSON and rule listing outputs
+            Runner.RunInDirectory(out var textOutput, workingDirectory, "dotnet", _dllPath, "doc.md");
+            Runner.RunInDirectory(out var jsonOutput, workingDirectory, "dotnet", _dllPath, "doc.md", "--format", "json");
+            Runner.RunInDirectory(out var rulesOutput, workingDirectory, "dotnet", _dllPath, "--list-rules");
+
+            // Assert: each output equals its golden (banner lines and line endings normalized)
+            // The em dash separator may be encoded as a hyphen when output is redirected
+            var textLines = textOutput.Replace("\u2014", "-").Replace("\r\n", "\n").Split('\n')
+                .Where(line => line.Length > 0 &&
+                               !line.StartsWith("Ste100Mark version ", StringComparison.Ordinal) &&
+                               !line.StartsWith("Copyright (c)", StringComparison.Ordinal));
+            Assert.Equal(expectedText.Replace("\u2014", "-"), string.Join("\n", textLines));
+            Assert.Equal(expectedJson.Replace("\r\n", "\n"), jsonOutput.Replace("\r\n", "\n").TrimEnd());
+            Assert.Equal(expectedRules.Replace("\r\n", "\n"), rulesOutput.Replace("\r\n", "\n").TrimEnd());
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+}
