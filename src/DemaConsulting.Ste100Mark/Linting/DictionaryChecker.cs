@@ -105,6 +105,11 @@ internal static class DictionaryChecker
     ///     The part-of-speech resolver to use; <see langword="null"/> selects the process-wide default
     ///     <see cref="PartOfSpeechResolver"/> (supplied explicitly only by tests).
     /// </param>
+    /// <param name="collectDetail">
+    ///     When <see langword="true"/>, each diagnostic carries a <see cref="DictionaryEvidence"/>
+    ///     record (see <see cref="Diagnostic.Evidence"/>) for the detailed JSON output; the
+    ///     message, suggestion, citations, line and column are identical either way.
+    /// </param>
     /// <returns>One diagnostic per matched occurrence, in segment order.</returns>
     public static IReadOnlyList<Diagnostic> Evaluate(
         string file,
@@ -112,7 +117,8 @@ internal static class DictionaryChecker
         LintDictionary dictionary,
         IReadOnlyCollection<string>? extraAllowedTerms = null,
         IReadOnlyCollection<string>? allowedPhrases = null,
-        IPartOfSpeechResolver? resolver = null)
+        IPartOfSpeechResolver? resolver = null,
+        bool collectDetail = false)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(segments);
@@ -196,7 +202,7 @@ internal static class DictionaryChecker
                         continue;
                     }
 
-                    var diagnostic = BuildDiagnostic(file, segment, compiled, hit, resolver, codeSpans);
+                    var diagnostic = BuildDiagnostic(file, segment, compiled, hit, resolver, codeSpans, collectDetail);
                     if (diagnostic is not null)
                     {
                         diagnostics.Add(diagnostic);
@@ -288,7 +294,15 @@ internal static class DictionaryChecker
     /// <param name="Sense">The matching dictionary sense.</param>
     /// <param name="Alternatives">The alternatives to show (inflected, or base where not safe).</param>
     /// <param name="UsesBaseFallback">Whether any alternative fell back to its base form.</param>
-    private sealed record Candidate(DictionarySense Sense, IReadOnlyList<string> Alternatives, bool UsesBaseFallback);
+    /// <param name="Safe">
+    ///     For each alternative, whether it was inflected safely to the flagged form (always
+    ///     <see langword="true"/> for a base-term match, which needs no inflection).
+    /// </param>
+    private sealed record Candidate(
+        DictionarySense Sense,
+        IReadOnlyList<string> Alternatives,
+        bool UsesBaseFallback,
+        IReadOnlyList<bool> Safe);
 
     /// <summary>
     ///     Compiles one alternation pattern per entry and builds its generated word-form map.
@@ -493,7 +507,8 @@ internal static class DictionaryChecker
         CompiledEntry compiled,
         Hit hit,
         IPartOfSpeechResolver resolver,
-        IReadOnlyList<(int Start, int Length)> codeSpans)
+        IReadOnlyList<(int Start, int Length)> codeSpans,
+        bool collectDetail)
     {
         var entry = compiled.Entry;
         var origins = FindOrigins(compiled, hit.Key);
@@ -532,12 +547,13 @@ internal static class DictionaryChecker
             }
         }
 
-        var role = resolver.Resolve(resolveText, spanIndex, spanLength);
+        var roleEvidence = resolver.ResolveWithEvidence(resolveText, spanIndex, spanLength);
+        var role = roleEvidence.Role;
 
-        if (origins is not null
+        var fragmentApplies = origins is not null
             && segment.Role is SegmentRole.Heading or SegmentRole.TableRow
-            && origins.All(o => WordFormInflector.IsParticipial(o.Forms))
-            && !HasAuxiliary(segment.Text, codeSpans))
+            && origins.All(o => WordFormInflector.IsParticipial(o.Forms));
+        if (fragmentApplies && !HasAuxiliary(segment.Text, codeSpans))
         {
             // Fragment guard: a participial form in a heading or table cell with no auxiliary word
             // is a label ("Terminated", "Producing reports"), not a verb in a clause.
@@ -615,9 +631,104 @@ internal static class DictionaryChecker
         {
             formNote = $" (a prefixed form of '{term}')";
         }
-        return candidates.Count == 1
+        var diagnostic = candidates.Count == 1
             ? ConfidentDiagnostic(file, segment, hit, entry.Term, candidates[0], entry.Senses.Count > 1, formNote)
             : AmbiguousDiagnostic(file, segment, hit, entry.Term, candidates, formNote);
+        if (!collectDetail)
+        {
+            return diagnostic;
+        }
+
+        var participleRule = origins is not null
+            && role == PartOfSpeech.Verb
+            && origins.Any(o => WordFormInflector.IsParticipial(o.Forms))
+                ? FindingDetail.RuleKeptConfidentVerb
+                : FindingDetail.RuleNotApplicable;
+        var evidence = new DictionaryEvidence(
+            segment,
+            hit.Index,
+            hit.Length,
+            hit.Value,
+            entry.Term,
+            FormKindsOf(origins),
+            hit.IsSplit,
+            hit.PrefixLength > 0,
+            origins is not null,
+            entry.Senses.Select(s => new EvidenceSense(PosLabel(s.Pos), s.Alternatives)).ToList(),
+            candidates.Count == 1 ? PosLabel(candidates[0].Sense.Pos) : FindingDetail.SensePosAmbiguous,
+            candidates.Count,
+            DetailSuggestions(candidates, entry.Term, hit.Value),
+            roleEvidence,
+            participleRule,
+            fragmentApplies ? FindingDetail.RuleKeptAuxiliaryPresent : FindingDetail.RuleNotApplicable);
+        return diagnostic with { Evidence = evidence };
+    }
+
+    /// <summary>
+    ///     Names the grammatical forms a matched spelling represents, or <c>base</c> for the base term.
+    /// </summary>
+    private static IReadOnlyList<string> FormKindsOf(List<FormOrigin>? origins)
+    {
+        if (origins is null)
+        {
+            return [FindingDetail.FormBase];
+        }
+
+        var forms = origins.Aggregate(WordForm.None, (all, o) => all | o.Forms);
+        var kinds = new List<string>();
+        if (forms.HasFlag(WordForm.ThirdPersonSingular))
+        {
+            kinds.Add("third-person");
+        }
+
+        if (forms.HasFlag(WordForm.Past))
+        {
+            kinds.Add("past");
+        }
+
+        if (forms.HasFlag(WordForm.PastParticiple))
+        {
+            kinds.Add("participle");
+        }
+
+        if (forms.HasFlag(WordForm.Gerund))
+        {
+            kinds.Add("gerund");
+        }
+
+        if (forms.HasFlag(WordForm.Plural))
+        {
+            kinds.Add("plural");
+        }
+
+        return kinds;
+    }
+
+    /// <summary>
+    ///     Lists the suggested alternatives of every candidate sense with their inflection-safe flag,
+    ///     using the same filtering as the diagnostic's suggestion text.
+    /// </summary>
+    private static List<EvidenceSuggestion> DetailSuggestions(
+        IReadOnlyList<Candidate> candidates,
+        string term,
+        string matchedWord)
+    {
+        var suggestions = new List<EvidenceSuggestion>();
+        foreach (var candidate in candidates.Where(c => !IsPureSelfReferentialSense(c.Sense, term)))
+        {
+            for (var i = 0; i < candidate.Alternatives.Count; i++)
+            {
+                if (!string.Equals(candidate.Alternatives[i], matchedWord, StringComparison.OrdinalIgnoreCase))
+                {
+                    suggestions.Add(new EvidenceSuggestion(
+                        candidate.Alternatives[i],
+                        candidate.Safe[i],
+                        PosLabel(candidate.Sense.Pos)));
+                }
+            }
+        }
+
+        return suggestions;
     }
 
     /// <summary>
@@ -670,7 +781,7 @@ internal static class DictionaryChecker
             senses = senses.Where(s => s.Pos == PartOfSpeech.Verb).ToList();
         }
 
-        return senses.Select(s => new Candidate(s, s.Alternatives, false)).ToList();
+        return senses.Select(s => new Candidate(s, s.Alternatives, false, s.Alternatives.Select(_ => true).ToList())).ToList();
     }
 
     /// <summary>
@@ -689,6 +800,7 @@ internal static class DictionaryChecker
             : o.Sense.Pos == role))
         {
             var alternatives = new List<string>();
+            var safe = new List<bool>();
             var fallback = false;
             foreach (var alternative in origin.Sense.Alternatives)
             {
@@ -697,9 +809,10 @@ internal static class DictionaryChecker
                     : WordFormInflector.Inflect(alternative, origin.Forms, origin.Sense.Pos);
                 fallback |= inflected is null;
                 alternatives.Add(inflected ?? alternative);
+                safe.Add(inflected is not null);
             }
 
-            candidates.Add(new Candidate(origin.Sense, alternatives, fallback));
+            candidates.Add(new Candidate(origin.Sense, alternatives, fallback, safe));
         }
 
         return candidates;

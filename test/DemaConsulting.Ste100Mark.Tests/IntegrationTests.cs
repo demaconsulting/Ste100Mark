@@ -1115,4 +1115,109 @@ public class IntegrationTests
             Directory.Delete(workingDirectory, true);
         }
     }
+
+    /// <summary>
+    ///     Test that the real tool writes a valid detailed JSON document for generic findings in a
+    ///     heading, a paragraph and a table cell, with the documented fields.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument()
+    {
+        // Arrange: a dictionary entry and a document with findings in several block kinds
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(workingDirectory, ".ste100mark.yaml"),
+                "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [carry out]\n");
+            File.WriteAllText(
+                Path.Combine(workingDirectory, "doc.md"),
+                "# Report Overview\n\nThe crew will perform the check. The valve opened.\n\n| Item | Note |\n| --- | --- |\n| Valve | The crew performs the check. |\n");
+
+            // Act: run the real tool with detailed output
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "doc.md", "--format", "json-detailed", "--context-lines", "1");
+
+            // Assert: a lint failure exit code, one JSON document with no banner, and detail fields
+            Assert.NotEqual(0, exitCode);
+            var json = output[output.IndexOf('{', StringComparison.Ordinal)..];
+            Assert.DoesNotContain("Ste100Mark version", output[..output.IndexOf('{', StringComparison.Ordinal)], StringComparison.Ordinal);
+            using var document = System.Text.Json.JsonDocument.Parse(json[..(json.LastIndexOf('}') + 1)]);
+            var root = document.RootElement;
+            Assert.Equal("ste100mark-detailed/1", root.GetProperty("schema").GetString());
+            Assert.Equal(1, root.GetProperty("contextLines").GetInt32());
+            var diagnostics = root.GetProperty("diagnostics").EnumerateArray().ToList();
+            Assert.Equal(2, diagnostics.Count);
+
+            var paragraph = diagnostics[0].GetProperty("detail");
+            Assert.Equal("paragraph", paragraph.GetProperty("contextKind").GetString());
+            Assert.Equal("The crew will perform the check.", paragraph.GetProperty("sentence").GetProperty("text").GetString());
+            Assert.Equal(15, paragraph.GetProperty("span").GetProperty("startColumn").GetInt32());
+            Assert.Equal("base", paragraph.GetProperty("match").GetProperty("formKind").GetString());
+            Assert.Equal("certain", paragraph.GetProperty("confidence").GetProperty("class").GetString());
+            Assert.Equal("carry out", paragraph.GetProperty("suggestions")[0].GetProperty("text").GetString());
+
+            var cell = diagnostics[1].GetProperty("detail");
+            Assert.Equal("table-cell", cell.GetProperty("contextKind").GetString());
+            Assert.Equal("third-person", cell.GetProperty("match").GetProperty("formKind").GetString());
+            Assert.Equal("carries out", cell.GetProperty("suggestions")[0].GetProperty("text").GetString());
+            var kinds = cell.GetProperty("suppression").GetProperty("options").EnumerateArray()
+                .Select(o => o.GetProperty("kind").GetString()).ToList();
+            Assert.Contains("allow", kinds);
+            Assert.Contains("allow-in-phrase", kinds);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that --context-lines is rejected without json-detailed and that the help lists both
+    ///     new options.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions()
+    {
+        // Act: run with the option on the default format, and request help
+        var errorExit = Runner.Run(out var errorOutput, "dotnet", _dllPath, "--context-lines", "3");
+        Runner.Run(out var helpOutput, "dotnet", _dllPath, "--help");
+
+        // Assert: an error naming the requirement, and the help text lists both options
+        Assert.NotEqual(0, errorExit);
+        Assert.Contains("json-detailed", errorOutput, StringComparison.Ordinal);
+        Assert.Contains("json-detailed", helpOutput, StringComparison.Ordinal);
+        Assert.Contains("--context-lines", helpOutput, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that adding the detailed format leaves the default text and JSON outputs of the
+    ///     same input unchanged: neither carries a schema or detail member.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithJsonDetailed_DefaultTextAndJsonUnchanged()
+    {
+        // Arrange: a dictionary entry and a document with one finding
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(workingDirectory, ".ste100mark.yaml"),
+                "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [carry out]\n");
+            File.WriteAllText(Path.Combine(workingDirectory, "doc.md"), "# Title\n\nThe crew will perform the check.\n");
+
+            // Act: run the text and JSON formats
+            Runner.RunInDirectory(out var text, workingDirectory, "dotnet", _dllPath, "doc.md");
+            Runner.RunInDirectory(out var json, workingDirectory, "dotnet", _dllPath, "doc.md", "--format", "json");
+
+            // Assert: the plain formats have no detailed members
+            Assert.Contains("STE100-DICT", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"schema\"", json, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"detail\"", json, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"contextLines\"", json, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
 }

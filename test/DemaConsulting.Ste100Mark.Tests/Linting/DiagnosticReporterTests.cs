@@ -23,6 +23,8 @@ using DemaConsulting.Ste100Mark.Linting;
 
 namespace DemaConsulting.Ste100Mark.Tests.Linting;
 
+using PartOfSpeech = DemaConsulting.Ste100Mark.Linting.PartOfSpeech;
+
 /// <summary>
 ///     Unit tests for the DiagnosticReporter class.
 /// </summary>
@@ -278,6 +280,103 @@ public class DiagnosticReporterTests
             Assert.Contains("\"filesChecked\": 0", output);
             Assert.Contains("\"noFilesMatched\": true", output);
             Assert.Contains("\"files\": []", output);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that the detailed JSON report keeps every default field for each diagnostic, adds the
+    ///     schema and context size, attaches detail only to diagnostics that have one, and leaves
+    ///     the default JSON writer unchanged.
+    /// </summary>
+    [Fact]
+    public void Report_JsonDetailed_KeepsDefaultFieldsAndAddsDetail()
+    {
+        // Arrange: a structural and a dictionary diagnostic with detail for the second
+        var evidence = new DictionaryEvidence(
+            new ProseSegment("We perform it.", 3, SegmentRole.Paragraph),
+            3,
+            7,
+            "perform",
+            "perform",
+            ["base"],
+            false,
+            false,
+            false,
+            [new EvidenceSense("verb", ["carry out"])],
+            "verb",
+            1,
+            [new EvidenceSuggestion("carry out", true, "verb")],
+            new RoleEvidence(PartOfSpeech.Verb, "resolved", "verb", 0.97, 0.9, true, false, "noun", 0.07, true),
+            FindingDetail.RuleNotApplicable,
+            FindingDetail.RuleNotApplicable);
+        var structural = new Diagnostic("doc.md", 3, null, "STE100-8.1", Severity.Error, "Semicolons are not permitted.", "Split.");
+        var dictionary = new Diagnostic(
+            "doc.md", 3, null, "STE100-DICT", Severity.Error, "Avoid 'perform'; use 'carry out' instead.", "carry out",
+            [new DictionaryCitation("carry out", "verb")], evidence);
+        var detail = FindingDetail.Build(dictionary, ["", "", "We perform it."], 2);
+        var originalOut = Console.Out;
+        try
+        {
+            using var outWriter = new StringWriter();
+            Console.SetOut(outWriter);
+            using var context = Context.Create(["--format", "json-detailed"]);
+
+            // Act: write the detailed report
+            DiagnosticReporter.Report(context, [structural, dictionary], ["doc.md"], false, [null, detail]);
+
+            // Assert: schema first, existing fields kept (null column), detail only on the second
+            var output = outWriter.ToString();
+            using var document = System.Text.Json.JsonDocument.Parse(output);
+            var root = document.RootElement;
+            Assert.StartsWith("{\n  \"schema\": \"ste100mark-detailed/1\"", output.Replace("\r\n", "\n"), StringComparison.Ordinal);
+            Assert.Equal(2, root.GetProperty("contextLines").GetInt32());
+            Assert.Equal(2, root.GetProperty("errorCount").GetInt32());
+            var first = root.GetProperty("diagnostics")[0];
+            Assert.Equal(System.Text.Json.JsonValueKind.Null, first.GetProperty("column").ValueKind);
+            Assert.Equal(System.Text.Json.JsonValueKind.Null, first.GetProperty("citations").ValueKind);
+            Assert.False(first.TryGetProperty("detail", out _));
+            var second = root.GetProperty("diagnostics")[1];
+            Assert.Equal("carry out", second.GetProperty("suggestion").GetString());
+            var detailElement = second.GetProperty("detail");
+            Assert.Equal("perform", detailElement.GetProperty("match").GetProperty("surface").GetString());
+            Assert.Equal("certain", detailElement.GetProperty("confidence").GetProperty("class").GetString());
+            Assert.Equal("role-confident", detailElement.GetProperty("confidence").GetProperty("reason").GetString());
+            Assert.Equal("allow", detailElement.GetProperty("suppression").GetProperty("options")[0].GetProperty("kind").GetString());
+            Assert.True(detailElement.GetProperty("suppression").TryGetProperty("warning", out _));
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
+    /// <summary>
+    ///     Test that the default JSON format ignores any detail that is passed in.
+    /// </summary>
+    [Fact]
+    public void Report_JsonDefaultWithDetails_IgnoresDetail()
+    {
+        // Arrange: a diagnostic and a detail object
+        var diagnostic = new Diagnostic("doc.md", 1, null, "STE100-8.1", Severity.Error, "Semicolons are not permitted.", "Split.");
+        var originalOut = Console.Out;
+        try
+        {
+            using var plainWriter = new StringWriter();
+            using var withWriter = new StringWriter();
+            using var context = Context.Create(["--format", "json"]);
+
+            // Act: report with and without a details list
+            Console.SetOut(plainWriter);
+            DiagnosticReporter.Report(context, [diagnostic], ["doc.md"], false);
+            Console.SetOut(withWriter);
+            DiagnosticReporter.Report(context, [diagnostic], ["doc.md"], false, [null]);
+
+            // Assert: identical output
+            Assert.Equal(plainWriter.ToString(), withWriter.ToString());
         }
         finally
         {

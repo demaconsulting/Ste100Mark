@@ -60,6 +60,11 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     data instead of parsing it back out of prose, without breaking existing text-mode/JSON
 ///     consumers of <paramref name="Suggestion"/>.
 /// </param>
+/// <param name="Evidence">
+///     Optional match and tagger evidence for a dictionary finding, collected only when detailed
+///     output was requested (see <see cref="FindingDetail"/>); <see langword="null"/> otherwise and
+///     for every other rule. It is never written to the text or default JSON output.
+/// </param>
 internal sealed record Diagnostic(
     string File,
     int Line,
@@ -68,7 +73,8 @@ internal sealed record Diagnostic(
     Severity Severity,
     string Message,
     string? Suggestion,
-    IReadOnlyList<DictionaryCitation>? Citations = null);
+    IReadOnlyList<DictionaryCitation>? Citations = null,
+    DictionaryEvidence? Evidence = null);
 
 /// <summary>
 ///     One structured approved-term citation backing a <see cref="Diagnostic.Citations"/> list:

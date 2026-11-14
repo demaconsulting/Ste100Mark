@@ -125,7 +125,7 @@ internal static class Program
 
         // Suppress the banner only when main lint execution is emitting JSON so stdout remains a
         // single parseable document; help and validation still print the banner even with --format json.
-        var suppressBanner = context.Format == OutputFormat.Json && !context.Help && !context.Validate;
+        var suppressBanner = context.Format.IsJson() && !context.Help && !context.Validate;
         if (!suppressBanner)
         {
             PrintBanner(context);
@@ -179,7 +179,9 @@ internal static class Program
               --depth <#>                Set heading depth for markdown output (default: 1)
               --log <file>               Write output to log file
               --config <file>            Path to lint configuration file (default: .ste100mark.yaml)
-              --format <text|json>       Diagnostic output format (default: text)
+              --format <text|json|json-detailed>
+                                         Diagnostic output format (default: text); json-detailed adds evidence
+              --context-lines <#>        Context lines per finding for json-detailed, 0 to 10 (default: 2)
               --strict                   Promote warn-severity findings to errors for exit code
               --allow-empty              Treat zero matched files as success (default: exit code {Context.NoFilesMatchedExitCode})
               --list-rules               Display the rule catalog as JSON and exit
