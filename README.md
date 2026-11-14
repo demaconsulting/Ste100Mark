@@ -31,6 +31,8 @@ Ste100Mark provides:
 - 🧾 **Text and JSON Output**: Produces readable diagnostics or structured CI-friendly output
 - 🚦 **Strict Mode**: Promotes warnings to build-breaking failures on demand
 - 📖 **Embedded Example Dictionary**: Ships illustrative vocabulary for immediate linter evaluation
+- 🔤 **Word-Form Matching**: Flags inflected spellings of disallowed verbs and nouns (for example
+  "produced" for "produce", when used as a verb), with `dictionary.match-word-forms: false` to switch it off
 - 🧩 **Project Glossary**: Approves project terms with a part of speech, and reports deprecated terms
   with a replacement
 - ✅ **Self-Validation**: Built-in validation tests with TRX and JUnit output
@@ -256,6 +258,17 @@ part-of-speech-tagged senses**. Each sense has a `pos` (`noun`, `verb`, `adjecti
 replacement words or phrases for that sense, and an optional free-text `note` explaining the
 rationale. Ste100Mark merges this file with the embedded default dictionary (unless
 `dictionary.use-embedded: false` is set) and the inline `dictionary.disallow` entries.
+
+Verb and noun senses also match their inflected spellings: a disallowed verb `produce` also
+flags "produces", "produced", and "producing", and a disallowed noun flags its plural. A match
+must still fit the sense's part of speech, and "-ed", "-ing", and irregular past or participle forms
+are flagged only when the word is confidently a verb (not in an adjective or uncertain use);
+adjective, adverb, and `any` senses are matched
+only as written, and in a multi-word term only the head verb of a phrasal verb inflects.
+An allowed spelling or an explicit dictionary key always wins over a generated form. The
+message names the flagged form and shows each alternative in the same form when it can; if an
+alternative cannot be inflected safely it is shown in its base form and the message says so.
+Set `dictionary.match-word-forms: false` to match only the exact spelling.
 
 ```yaml
 utilize:

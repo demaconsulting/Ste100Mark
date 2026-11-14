@@ -87,6 +87,31 @@ public class LintDictionaryTests
     }
 
     /// <summary>
+    ///     Test that the word-form switch defaults on and that allow/ignore spellings are retained.
+    /// </summary>
+    [Fact]
+    public void Load_WordFormSettings_DefaultOnAndAllowedSpellingsRetained()
+    {
+        // Arrange: a config with an allowed and an ignored inflected spelling, and one with the switch off
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig { Allow = ["performed"], Ignore = ["Performs"] }
+        };
+        var off = new LintConfig { Dictionary = new DictionaryConfig { MatchWordForms = false } };
+
+        // Act: load both
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        var disabled = LintDictionary.Load(off, Directory.GetCurrentDirectory());
+
+        // Assert: default on, spellings retained case-insensitively, switch off honored
+        Assert.True(dictionary.MatchWordForms);
+        Assert.True(dictionary.IsAllowedSpelling("PERFORMED"));
+        Assert.True(dictionary.IsAllowedSpelling("performs"));
+        Assert.False(dictionary.IsAllowedSpelling("performing"));
+        Assert.False(disabled.MatchWordForms);
+    }
+
+    /// <summary>
     ///     Test that an inline disallow entry is added to the merged dictionary.
     /// </summary>
     [Fact]

@@ -956,6 +956,52 @@ public sealed class LinterTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that word-form matching flags an inflected spelling by default and not when
+    ///     dictionary.match-word-forms is false.
+    /// </summary>
+    [Fact]
+    public void Run_MatchWordFormsSwitch_ControlsInflectedMatches()
+    {
+        // Arrange: a verb entry and a document using an inflected form
+        const string entry = "  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [start]\n";
+        WriteFile("doc.md", "# Title\n\nThe crew performed the task.\n");
+        WriteFile(".ste100mark.yaml", "dictionary:\n" + entry);
+
+        // Act: default configuration
+        var (defaultExit, defaultOutput) = RunLinter("doc.md");
+        WriteFile(".ste100mark.yaml", "dictionary:\n" + entry + "  match-word-forms: false\n");
+        var (offExit, offOutput) = RunLinter("doc.md");
+
+        // Assert: flagged by default, silent when the switch is off
+        Assert.Contains("a form of 'perform'", defaultOutput);
+        Assert.Equal(1, defaultExit);
+        Assert.DoesNotContain("STE100-DICT", offOutput);
+        Assert.Equal(0, offExit);
+    }
+
+    /// <summary>
+    ///     Test that a glossary-approved variant that equals an inflected spelling wins over the
+    ///     generated form.
+    /// </summary>
+    [Fact]
+    public void Run_GlossaryVariantEqualsInflectedSpelling_NotFlagged()
+    {
+        // Arrange: the glossary approves "performed" as a variant of a defined term
+        WriteFile(
+            ".ste100mark.yaml",
+            "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [start]\n" +
+            "  glossary:\n    Performing:\n      definition: A timed run.\n      variants: [performed]\n");
+        WriteFile("doc.md", "# Title\n\nThe crew performed the task.\n");
+
+        // Act
+        var (exitCode, output) = RunLinter("doc.md");
+
+        // Assert: the approved spelling is not flagged
+        Assert.DoesNotContain("a form of 'perform'", output);
+        Assert.Equal(0, exitCode);
+    }
+
+    /// <summary>
     ///     Test that a glossary term that is also a dictionary key reports an error naming the term.
     /// </summary>
     [Fact]

@@ -4,7 +4,7 @@
 
 The `Linting` subsystem is verified by a combination of unit tests and end-to-end integration
  tests. The unit tests exercise `MarkdownProseExtractor`, `SentenceAnalyzer`, `StructuralRules`,
-`LintConfig`, `LintDictionary`, `LintGlossary`, `PartOfSpeechResolver`, `PartOfSpeechGuesser`,
+`LintConfig`, `LintDictionary`, `LintGlossary`, `WordFormInflector`, `PartOfSpeechResolver`, `PartOfSpeechGuesser`,
 `DictionaryChecker`, `DiagnosticReporter`,
 and `Linter` directly with controlled inputs. Integration tests invoke the published tool
 assembly through `Runner.RunInDirectory`, confirming that command-line parsing, dispatch,
@@ -165,6 +165,48 @@ lookup, whole-term matching, and suggestions. This scenario is tested by
 `Evaluate_InlineOverriddenTerm_UsesOverriddenSuggestion`, and
 `Evaluate_AllowListedTerm_NotFlagged`.
 
+**Ste100Mark-Linting-DictionaryWordForms**: Inflection generation is verified directly by
+`Generate_Verb_ProducesExpectedForms` (regular, doubling, y-to-ied, and irregular verbs),
+`Generate_RegularVerbPastEqualsParticiple_MergesForms`, `Generate_Noun_ProducesPlural`,
+`Generate_PhrasalVerb_InflectsHeadOnly`, `Generate_NotInflectedCases_ReturnEmpty`,
+`Inflect_CasePattern_IsPreserved`, `Inflect_IrregularAndPhrasalAlternatives_Inflect`, and
+`Inflect_UnsafeCases_ReturnNull`. Matching is verified with inline and embedded entries by
+`Evaluate_VerbWordForm_FlaggedWithInflectedAlternative`, `Evaluate_EmbeddedProduceForms_Flagged`,
+`Evaluate_EmbeddedPermitForms_FollowResolvedRole`,
+`Evaluate_InflectedFormOfEmbeddedTerm_FlaggedWithProductionResolver`,
+`Evaluate_NounPlural_GatedByResolvedRole`, `Evaluate_VerbForm_NotFlaggedWhenResolvedAsNoun`,
+`Evaluate_PhrasalVerbForms_HeadVerbInflects`, `Evaluate_NonNounVerbSense_NotInflected`,
+`Evaluate_InflectedFormBoundaries_RespectedAndCaseInsensitive`,
+`Evaluate_LargeSegment_CompletesAndMatches`, and, end-to-end through the CLI,
+`Ste100Mark_LintInflectedDictionaryTerm_FlaggedUnlessWordFormsDisabled`.
+
+**Ste100Mark-Linting-DictionaryWordForms-ParticipleRole**: Participial gating is verified by
+`Evaluate_ParticipleInNonVerbRole_NotFlagged` (a confident adjective, noun, or adverb is not
+flagged), `Evaluate_ParticipleResolvedAsVerb_Flagged`, `Evaluate_IrregularParticiple_FlaggedOnlyAsVerb`,
+`Evaluate_ParticipleWithInconclusiveRole_NotFlagged` (expected: no finding),
+`Evaluate_ThirdPersonAndBaseWithInconclusiveRole_StillFlagged` (expected: unchanged finding),
+`Evaluate_NounVerbEntryWithInconclusiveRole_ParticipialOriginDropped`,
+`Evaluate_PhrasalParticiple_FlaggedOnlyForVerbHead` (head-word resolution),
+`Evaluate_ParticipleWithProductionResolver_VerbFlaggedAdjectiveNot`, and
+`IsParticipial_ClassifiesFlagCombinations`.
+
+**Ste100Mark-Linting-DictionaryWordForms-Precedence**: Allow and explicit-key precedence is
+verified by `Evaluate_AllowedInflectedSpelling_WinsOverGeneratedForm`,
+`Evaluate_ExtraAllowedInflectedSpelling_WinsOverGeneratedForm`,
+`Evaluate_AllowedBaseTerm_SuppressesAllForms`, `Evaluate_InflectedFormInsideAllowedPhrase_NotFlagged`,
+`Evaluate_ExplicitInflectedKey_WinsOverGeneratedForm`, and
+`Run_GlossaryVariantEqualsInflectedSpelling_NotFlagged`.
+
+**Ste100Mark-Linting-DictionaryWordForms-Diagnostics**: Message wording is verified by
+`Evaluate_BaseForm_MessageUnchanged`, `Evaluate_IrregularAlternative_InflectsForUnambiguousForm`,
+and `Evaluate_IrregularAlternative_FallsBackToBaseAndSaysSo` (which also checks that citations
+keep the base alternatives).
+
+**Ste100Mark-Linting-DictionaryWordForms-Switch**: The default and the `false` binding are
+verified by `Load_MatchWordForms_DefaultsTrueAndBindsFalse` and
+`Load_WordFormSettings_DefaultOnAndAllowedSpellingsRetained`; the effect is verified by
+`Evaluate_MatchWordFormsOff_OnlyBaseTermMatches` and
+`Run_MatchWordFormsSwitch_ControlsInflectedMatches`.
 **Ste100Mark-Linting-DictionaryDisable**: The `dictionary.enabled: false` switch is verified
 end-to-end to suppress every `STE100-DICT` finding while leaving structural/mechanical checks
 (the semicolon rule) unaffected, and the default (`enabled` omitted) is verified to still run

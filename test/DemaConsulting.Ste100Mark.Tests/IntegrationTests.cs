@@ -471,6 +471,38 @@ public class IntegrationTests
     }
 
     /// <summary>
+    ///     Test that an inflected spelling of a disallowed term is flagged by the CLI by default and
+    ///     not when match-word-forms is false.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintInflectedDictionaryTerm_FlaggedUnlessWordFormsDisabled()
+    {
+        // Arrange: a verb entry and a document that uses an inflected form of it
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            const string entry = "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [start]\n";
+            File.WriteAllText(Path.Combine(workingDirectory, "doc.md"), "# Title\n\nThe crew performed the task.\n");
+            File.WriteAllText(Path.Combine(workingDirectory, ".ste100mark.yaml"), entry);
+
+            // Act: run with the default setting, then with word-form matching disabled
+            var defaultExit = Runner.RunInDirectory(out var defaultOutput, workingDirectory, "dotnet", _dllPath, "doc.md");
+            File.WriteAllText(Path.Combine(workingDirectory, ".ste100mark.yaml"), entry + "  match-word-forms: false\n");
+            var offExit = Runner.RunInDirectory(out var offOutput, workingDirectory, "dotnet", _dllPath, "doc.md");
+
+            // Assert: flagged with the inflected alternative by default, clean when disabled
+            Assert.NotEqual(0, defaultExit);
+            Assert.Contains("Avoid 'performed' (a form of 'perform'); use 'started' instead.", defaultOutput);
+            Assert.Equal(0, offExit);
+            Assert.DoesNotContain("STE100-DICT", offOutput);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
     ///     Test that linting a clean Markdown file exits zero.
     /// </summary>
     [Fact]

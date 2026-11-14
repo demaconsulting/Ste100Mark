@@ -274,6 +274,31 @@ licensed ASD-STE100 dictionary file through `dictionary.file`. To avoid mixing i
 content with licensed vocabulary, set `dictionary.use-embedded: false` when you use your own
 dictionary file.
 
+### Word-Form Matching
+
+By default a disallowed verb or noun also matches its inflected spellings. If `produce` is a
+disallowed verb, the checker also flags "produces", "produced", and "producing"; a disallowed
+noun also flags its plural. Matching is whole-word and case-insensitive, and an inflected
+spelling goes through the same part-of-speech check as the base term, so a noun use of a
+verb-only word is not flagged. The "-ed", "-ing", and irregular past or past-participle forms
+(for example "produced" or "taken") are flagged only where the checker is confident the word
+is used as a verb, because such forms are often adjectives ("the produced item") or nouns; an
+uncertain match is not flagged. The base form and the "-s" and plural forms are unaffected.
+Adjective, adverb, and general senses are matched only as
+written, and for a multi-word term only the head verb of a phrasal verb inflects.
+
+A spelling you allow (`dictionary.allow`, `dictionary.ignore`, an allowed phrase, or a
+glossary term or variant) or list as its own dictionary key is never flagged as a generated
+form. Allowing a base term also allows its forms. The message names the flagged form, for
+example "Avoid 'produced' (a form of 'produce'); use 'made' instead." Alternatives are
+inflected to match when this is safe. Otherwise the base alternative is shown and the message
+says so. To match only exact spellings, set:
+
+```yaml
+dictionary:
+  match-word-forms: false
+```
+
 The project dictionary file uses the same YAML shape as the embedded example: each top-level
 key is a disallowed term, mapping to a **list of one or more part-of-speech-tagged senses**.
 Each sense has a `pos` (`noun`, `verb`, `adjective`, `adverb`, or `any` for a role-independent
