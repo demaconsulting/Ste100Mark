@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Collections.Frozen;
 using System.Text.RegularExpressions;
 
 namespace DemaConsulting.Ste100Mark.Linting;
@@ -104,6 +105,11 @@ internal static class DictionaryChecker
     ///     The part-of-speech resolver to use; <see langword="null"/> selects the process-wide default
     ///     <see cref="PartOfSpeechResolver"/> (supplied explicitly only by tests).
     /// </param>
+    /// <param name="collectDetail">
+    ///     When <see langword="true"/>, each diagnostic carries a <see cref="DictionaryEvidence"/>
+    ///     record (see <see cref="Diagnostic.Evidence"/>) for the detailed JSON output; the
+    ///     message, suggestion, citations, line and column are identical either way.
+    /// </param>
     /// <returns>One diagnostic per matched occurrence, in segment order.</returns>
     public static IReadOnlyList<Diagnostic> Evaluate(
         string file,
@@ -111,7 +117,8 @@ internal static class DictionaryChecker
         LintDictionary dictionary,
         IReadOnlyCollection<string>? extraAllowedTerms = null,
         IReadOnlyCollection<string>? allowedPhrases = null,
-        IPartOfSpeechResolver? resolver = null)
+        IPartOfSpeechResolver? resolver = null,
+        bool collectDetail = false)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(segments);
@@ -153,21 +160,33 @@ internal static class DictionaryChecker
             var admonitionSpans = MarkdownProseExtractor.FindAdmonitionLabelSpans(segment.Text);
             var quotedSpans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(segment.Text);
 
+            // Head-word spans of split phrasal verb findings already reported in this segment, so
+            // a later (shorter) entry does not report the same head word again.
+            var splitHeadSpans = new List<(int Start, int Length)>();
+            var reportedSpans = new List<(int Start, int Length)>();
+
             foreach (var compiled in compiledEntries)
             {
-                foreach (Match match in compiled.Pattern.Matches(segment.Text))
+                foreach (var hit in FindHits(compiled, segment.Text, dictionary, allowedTerms))
                 {
-                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, codeSpans))
+                    if (hit.IsSplit
+                        ? IntersectsAny(hit.Index, hit.Length, reportedSpans)
+                        : IntersectsAny(hit.Index, hit.Length, splitHeadSpans))
                     {
                         continue;
                     }
 
-                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, phraseSpans))
+                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(hit.Index, hit.Length, codeSpans))
                     {
                         continue;
                     }
 
-                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, admonitionSpans))
+                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(hit.Index, hit.Length, phraseSpans))
+                    {
+                        continue;
+                    }
+
+                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(hit.Index, hit.Length, admonitionSpans))
                     {
                         // A bold admonition label at the start of a block (for example
                         // "**Caution.**") is a label, not a prose sentence, so it is not run
@@ -175,7 +194,7 @@ internal static class DictionaryChecker
                         continue;
                     }
 
-                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(match.Index, match.Length, quotedSpans))
+                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(hit.Index, hit.Length, quotedSpans))
                     {
                         // A word inside a quotation or cited title (for example a document title
                         // in quotes or italics) is a mention of that exact text, not a use of the
@@ -183,10 +202,15 @@ internal static class DictionaryChecker
                         continue;
                     }
 
-                    var diagnostic = BuildDiagnostic(file, segment, compiled, match, resolver);
+                    var diagnostic = BuildDiagnostic(file, segment, compiled, hit, resolver, codeSpans, collectDetail);
                     if (diagnostic is not null)
                     {
                         diagnostics.Add(diagnostic);
+                        reportedSpans.Add((hit.Index, hit.Length));
+                        if (hit.IsSplit)
+                        {
+                            splitHeadSpans.Add((hit.Index, hit.HeadLength));
+                        }
                     }
                 }
             }
@@ -212,10 +236,57 @@ internal static class DictionaryChecker
     ///     Generated spellings (lower case, single spaces) to their origins; the base term is
     ///     never a key.
     /// </param>
+    /// <param name="SplitPattern">
+    ///     Pattern for a phrasal verb split by other words, or <see langword="null"/> when the entry has none.
+    /// </param>
     private sealed record CompiledEntry(
         DictionaryEntry Entry,
         Regex Pattern,
-        IReadOnlyDictionary<string, List<FormOrigin>> Forms);
+        IReadOnlyDictionary<string, List<FormOrigin>> Forms,
+        Regex? SplitPattern);
+
+    /// <summary>
+    ///     One matched occurrence of an entry: a contiguous match of the base term or a generated
+    ///     spelling (optionally with an allowed hyphen prefix), or a split phrasal verb.
+    /// </summary>
+    /// <param name="Index">Start of the flagged text within the segment.</param>
+    /// <param name="Length">Length of the flagged text.</param>
+    /// <param name="Value">The flagged text exactly as written.</param>
+    /// <param name="Key">The matched spelling without prefix or gap (lower case, single spaces).</param>
+    /// <param name="PrefixLength">Length of the hyphen prefix including the hyphen, or zero.</param>
+    /// <param name="IsSplit">Whether the match is a phrasal verb split by other words.</param>
+    /// <param name="HeadLength">For a split match, the length of the head word.</param>
+    private sealed record Hit(int Index, int Length, string Value, string Key, int PrefixLength, bool IsSplit, int HeadLength);
+
+    /// <summary>
+    ///     Auxiliary and modal words (lower case) whose presence in a heading or table cell shows
+    ///     that a participial form is part of a clause. Used by the fragment guard.
+    /// </summary>
+    private static readonly FrozenSet<string> AuxiliaryWords = new[]
+    {
+        "am", "is", "are", "was", "were", "be", "been", "being",
+        "has", "have", "had", "having",
+        "get", "gets", "got", "gotten", "getting",
+        "can", "could", "shall", "should", "will", "would", "may", "might", "must"
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    ///     Words that may not appear between the verb and the particle of a split phrasal verb:
+    ///     prepositions, conjunctions and relative words (which start a new phrase or clause) and
+    ///     the auxiliary words.
+    /// </summary>
+    private static readonly string[] SplitGapStopWords =
+    [
+        "to", "of", "in", "on", "at", "by", "with", "for", "from", "as", "and", "or", "but",
+        "that", "which", "when", "if", "because", "than",
+        "am", "is", "are", "was", "were", "be", "been", "being",
+        "has", "have", "had", "having",
+        "get", "gets", "got", "gotten", "getting",
+        "can", "could", "shall", "should", "will", "would", "may", "might", "must"
+    ];
+
+    /// <summary>A word of letters, used to find auxiliary words.</summary>
+    private static readonly Regex WordRegex = new(@"[A-Za-z]+", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 
     /// <summary>
     ///     A sense plus the alternatives to show for it, already inflected where that was safe.
@@ -223,7 +294,15 @@ internal static class DictionaryChecker
     /// <param name="Sense">The matching dictionary sense.</param>
     /// <param name="Alternatives">The alternatives to show (inflected, or base where not safe).</param>
     /// <param name="UsesBaseFallback">Whether any alternative fell back to its base form.</param>
-    private sealed record Candidate(DictionarySense Sense, IReadOnlyList<string> Alternatives, bool UsesBaseFallback);
+    /// <param name="Safe">
+    ///     For each alternative, whether it was inflected safely to the flagged form (always
+    ///     <see langword="true"/> for a base-term match, which needs no inflection).
+    /// </param>
+    private sealed record Candidate(
+        DictionarySense Sense,
+        IReadOnlyList<string> Alternatives,
+        bool UsesBaseFallback,
+        IReadOnlyList<bool> Safe);
 
     /// <summary>
     ///     Compiles one alternation pattern per entry and builds its generated word-form map.
@@ -247,15 +326,94 @@ internal static class DictionaryChecker
                 : new Dictionary<string, List<FormOrigin>>();
             claimed.UnionWith(forms.Keys);
 
-            var spellings = forms.Keys.Prepend(entry.Term).OrderByDescending(s => s.Length);
-            var pattern = $@"(?<![\w-])(?:{string.Join("|", spellings.Select(SpellingToPattern))})(?![\w-])";
+            var spellings = forms.Keys.Prepend(entry.Term).OrderByDescending(s => s.Length).ToList();
+            var verbSense = entry.Senses.Any(s => s.Pos == PartOfSpeech.Verb);
+            var allowsPrefix = dictionary.MatchWordForms
+                                && verbSense
+                                && entry.Term.All(c => char.ToLowerInvariant(c) is >= 'a' and <= 'z');
+            var prefixGroup = allowsPrefix
+                ? $"(?:(?<prefix>(?:{string.Join("|", WordFormInflector.HyphenPrefixes)})-))?"
+                : string.Empty;
+            var pattern = $@"(?<![\w-]){prefixGroup}(?<form>{string.Join("|", spellings.Select(SpellingToPattern))})(?![\w-])";
             compiled.Add(new CompiledEntry(
                 entry,
                 new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1)),
-                forms));
+                forms,
+                dictionary.MatchWordForms ? BuildSplitPattern(entry, forms) : null));
         }
 
         return compiled;
+    }
+
+    /// <summary>
+    ///     Builds the pattern for a phrasal verb split by one to three other words ("carry the test
+    ///     out"), or <see langword="null"/> when the entry has no phrasal verb sense.
+    /// </summary>
+    private static Regex? BuildSplitPattern(DictionaryEntry entry, Dictionary<string, List<FormOrigin>> forms)
+    {
+        if (!entry.Senses.Any(s => WordFormInflector.IsPhrasalVerb(entry.Term, s.Pos)))
+        {
+            return null;
+        }
+
+        var words = entry.Term.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var heads = forms.Keys
+            .Select(f => f.Split(' ')[0])
+            .Prepend(words[0])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(h => h.Length)
+            .Select(Regex.Escape);
+        var stop = string.Join("|", SplitGapStopWords);
+        var gapWord = $@"\s+(?!(?:{stop})(?![\w'’-]))[\w'’-]+";
+        var pattern = $@"(?<![\w-])(?<head>{string.Join("|", heads)})(?:{gapWord}){{1,3}}\s+(?<particle>{Regex.Escape(words[1])})(?![\w-])";
+        return new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+    }
+
+    /// <summary>
+    ///     Finds every occurrence of an entry in a segment: contiguous matches (with an allowed hyphen
+    ///     prefix where one applies) followed by split phrasal verb matches.
+    /// </summary>
+    private static IEnumerable<Hit> FindHits(
+        CompiledEntry compiled,
+        string text,
+        LintDictionary dictionary,
+        HashSet<string>? allowedTerms)
+    {
+        foreach (Match match in compiled.Pattern.Matches(text))
+        {
+            var form = match.Groups["form"];
+            var key = string.Join(' ', form.Value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+            var prefix = match.Groups["prefix"];
+            if (!prefix.Success)
+            {
+                yield return new Hit(match.Index, match.Length, match.Value, key, 0, false, 0);
+                continue;
+            }
+
+            // A prefixed spelling that is itself an explicit entry, or allowed, is not a form of
+            // this entry (mirrors the precedence of generated spellings).
+            var whole = (prefix.Value + key).ToLowerInvariant();
+            if (dictionary.TryGetEntry(whole, out _)
+                || dictionary.IsAllowedSpelling(whole)
+                || (allowedTerms?.Contains(whole) ?? false))
+            {
+                continue;
+            }
+
+            yield return new Hit(match.Index, match.Length, match.Value, key, prefix.Length, false, 0);
+        }
+
+        if (compiled.SplitPattern is null)
+        {
+            yield break;
+        }
+
+        foreach (Match match in compiled.SplitPattern.Matches(text))
+        {
+            var head = match.Groups["head"].Value;
+            var key = $"{head} {match.Groups["particle"].Value}";
+            yield return new Hit(match.Index, match.Length, match.Value, key, 0, true, head.Length);
+        }
     }
 
     /// <summary>
@@ -347,31 +505,66 @@ internal static class DictionaryChecker
         string file,
         ProseSegment segment,
         CompiledEntry compiled,
-        Match match,
-        IPartOfSpeechResolver resolver)
+        Hit hit,
+        IPartOfSpeechResolver resolver,
+        IReadOnlyList<(int Start, int Length)> codeSpans,
+        bool collectDetail)
     {
         var entry = compiled.Entry;
-        var origins = FindOrigins(compiled, match);
-
-        // A phrasal participial form ("carried out") is resolved on its head word only, because
-        // the resolver does not resolve a multi-token span.
-        var spanLength = match.Length;
-        if (origins is not null && origins.Any(o => WordFormInflector.IsParticipial(o.Forms)))
+        var origins = FindOrigins(compiled, hit.Key);
+        if (hit.PrefixLength > 0 && origins is not null)
         {
-            var headLength = match.Value.IndexOfAny([' ', '\t', '\r', '\n']);
+            // A prefixed (hyphenated) form is only ever a form of a verb sense.
+            origins = origins.Where(o => o.Sense.Pos == PartOfSpeech.Verb).ToList();
+            if (origins.Count == 0)
+            {
+                return null;
+            }
+        }
+
+        // The role is resolved on one token: the head word of a split or phrasal participial form
+        // (the resolver does not resolve a multi-token span), or the stem of a hyphenated form
+        // (the tagger does not know a prefixed word, so the prefix is left out of the sentence it
+        // sees, which keeps every character offset after the prefix valid).
+        var resolveText = segment.Text;
+        var spanIndex = hit.Index;
+        var spanLength = hit.Length;
+        if (hit.IsSplit)
+        {
+            spanLength = hit.HeadLength;
+        }
+        else if (hit.PrefixLength > 0)
+        {
+            resolveText = resolveText.Remove(hit.Index, hit.PrefixLength);
+            spanLength = hit.Length - hit.PrefixLength;
+        }
+        else if (origins is not null && origins.Any(o => WordFormInflector.IsParticipial(o.Forms)))
+        {
+            var headLength = hit.Value.IndexOfAny([' ', '\t', '\r', '\n']);
             if (headLength > 0)
             {
                 spanLength = headLength;
             }
         }
 
-        var role = resolver.Resolve(segment.Text, match.Index, spanLength);
+        var roleEvidence = resolver.ResolveWithEvidence(resolveText, spanIndex, spanLength);
+        var role = roleEvidence.Role;
+
+        var fragmentApplies = origins is not null
+            && segment.Role is SegmentRole.Heading or SegmentRole.TableRow
+            && origins.All(o => WordFormInflector.IsParticipial(o.Forms));
+        if (fragmentApplies && !HasAuxiliary(segment.Text, codeSpans))
+        {
+            // Fragment guard: a participial form in a heading or table cell with no auxiliary word
+            // is a label ("Terminated", "Producing reports"), not a verb in a clause.
+            return null;
+        }
 
         // The base term keeps the original sense selection (including any-role senses); a
         // generated form is strict: only the noun/verb sense that generated it can apply.
         var candidates = origins is null
-            ? BaseCandidates(entry, role)
-            : InflectedCandidates(origins, role);
+            ? BaseCandidates(entry, role, hit.PrefixLength > 0)
+            : InflectedCandidates(origins, role, hit.IsSplit);
 
         if (origins is not null && candidates.Count == 0)
         {
@@ -428,47 +621,178 @@ internal static class DictionaryChecker
             return null;
         }
 
-        var formNote = origins is null ? string.Empty : $" (a form of '{entry.Term}')";
-        return candidates.Count == 1
-            ? ConfidentDiagnostic(file, segment, match, entry.Term, candidates[0], entry.Senses.Count > 1, formNote)
-            : AmbiguousDiagnostic(file, segment, match, entry.Term, candidates, formNote);
+        var term = entry.Term;
+        var formNote = origins is null ? string.Empty : $" (a form of '{term}')";
+        if (hit.IsSplit)
+        {
+            formNote = $" (a split form of '{term}')";
+        }
+        else if (hit.PrefixLength > 0)
+        {
+            formNote = $" (a prefixed form of '{term}')";
+        }
+        var diagnostic = candidates.Count == 1
+            ? ConfidentDiagnostic(file, segment, hit, entry.Term, candidates[0], entry.Senses.Count > 1, formNote)
+            : AmbiguousDiagnostic(file, segment, hit, entry.Term, candidates, formNote);
+        if (!collectDetail)
+        {
+            return diagnostic;
+        }
+
+        var participleRule = origins is not null
+            && role == PartOfSpeech.Verb
+            && origins.Any(o => WordFormInflector.IsParticipial(o.Forms))
+                ? FindingDetail.RuleKeptConfidentVerb
+                : FindingDetail.RuleNotApplicable;
+        var evidence = new DictionaryEvidence(
+            segment,
+            hit.Index,
+            hit.Length,
+            hit.Value,
+            entry.Term,
+            FormKindsOf(origins),
+            hit.IsSplit,
+            hit.PrefixLength > 0,
+            origins is not null,
+            entry.Senses.Select(s => new EvidenceSense(PosLabel(s.Pos), s.Alternatives)).ToList(),
+            candidates.Count == 1 ? PosLabel(candidates[0].Sense.Pos) : FindingDetail.SensePosAmbiguous,
+            candidates.Count,
+            DetailSuggestions(candidates, entry.Term, hit.Value),
+            roleEvidence,
+            participleRule,
+            fragmentApplies ? FindingDetail.RuleKeptAuxiliaryPresent : FindingDetail.RuleNotApplicable);
+        return diagnostic with { Evidence = evidence };
     }
 
     /// <summary>
-    ///     Returns the generated-form origins when the match is an inflected spelling, or
+    ///     Names the grammatical forms a matched spelling represents, or <c>base</c> for the base term.
+    /// </summary>
+    private static IReadOnlyList<string> FormKindsOf(List<FormOrigin>? origins)
+    {
+        if (origins is null)
+        {
+            return [FindingDetail.FormBase];
+        }
+
+        var forms = origins.Aggregate(WordForm.None, (all, o) => all | o.Forms);
+        var kinds = new List<string>();
+        if (forms.HasFlag(WordForm.ThirdPersonSingular))
+        {
+            kinds.Add("third-person");
+        }
+
+        if (forms.HasFlag(WordForm.Past))
+        {
+            kinds.Add("past");
+        }
+
+        if (forms.HasFlag(WordForm.PastParticiple))
+        {
+            kinds.Add("participle");
+        }
+
+        if (forms.HasFlag(WordForm.Gerund))
+        {
+            kinds.Add("gerund");
+        }
+
+        if (forms.HasFlag(WordForm.Plural))
+        {
+            kinds.Add("plural");
+        }
+
+        return kinds;
+    }
+
+    /// <summary>
+    ///     Lists the suggested alternatives of every candidate sense with their inflection-safe flag,
+    ///     using the same filtering as the diagnostic's suggestion text.
+    /// </summary>
+    private static List<EvidenceSuggestion> DetailSuggestions(
+        IReadOnlyList<Candidate> candidates,
+        string term,
+        string matchedWord)
+    {
+        var suggestions = new List<EvidenceSuggestion>();
+        foreach (var candidate in candidates.Where(c => !IsPureSelfReferentialSense(c.Sense, term)))
+        {
+            for (var i = 0; i < candidate.Alternatives.Count; i++)
+            {
+                if (!string.Equals(candidate.Alternatives[i], matchedWord, StringComparison.OrdinalIgnoreCase))
+                {
+                    suggestions.Add(new EvidenceSuggestion(
+                        candidate.Alternatives[i],
+                        candidate.Safe[i],
+                        PosLabel(candidate.Sense.Pos)));
+                }
+            }
+        }
+
+        return suggestions;
+    }
+
+    /// <summary>
+    ///     Returns the generated-form origins when the matched spelling is an inflected spelling, or
     ///     <see langword="null"/> when it is the base term.
     /// </summary>
-    private static List<FormOrigin>? FindOrigins(CompiledEntry compiled, Match match)
+    private static List<FormOrigin>? FindOrigins(CompiledEntry compiled, string key)
     {
         if (compiled.Forms.Count == 0)
         {
             return null;
         }
 
-        // Whitespace inside a phrasal verb may span several characters or a line break.
-        var key = string.Join(' ', match.Value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         return compiled.Forms.TryGetValue(key, out var origins) ? origins : null;
     }
 
     /// <summary>
-    ///     Selects the senses that apply to a match of the base term, unchanged from the
-    ///     pre-word-form behavior: any resolved role keeps matching and any-role senses.
+    ///     Determines whether a segment contains an auxiliary or modal word outside its inline code
+    ///     spans (see <see cref="AuxiliaryWords"/>); such a word shows that a participial form is
+    ///     part of a clause rather than a bare label.
     /// </summary>
-    private static List<Candidate> BaseCandidates(DictionaryEntry entry, PartOfSpeech? role)
+    private static bool HasAuxiliary(string text, IReadOnlyList<(int Start, int Length)> codeSpans)
+    {
+        return WordRegex.Matches(text).Any(word =>
+            AuxiliaryWords.Contains(word.Value)
+            && !MarkdownProseExtractor.OverlapsInlineCodeSpan(word.Index, word.Length, codeSpans));
+    }
+
+    /// <summary>
+    ///     Determines whether a span intersects any span in a list (any shared character).
+    /// </summary>
+    private static bool IntersectsAny(int start, int length, List<(int Start, int Length)> spans)
+    {
+        var end = start + length;
+        return spans.Any(s => start < s.Start + s.Length && s.Start < end);
+    }
+
+    /// <summary>
+    ///     Selects the senses that apply to a match of the base term, unchanged from the
+    ///     pre-word-form behavior: any resolved role keeps matching and any-role senses. A
+    ///     prefixed (hyphenated) match is restricted to verb senses.
+    /// </summary>
+    private static List<Candidate> BaseCandidates(DictionaryEntry entry, PartOfSpeech? role, bool verbOnly)
     {
         var senses = role is null
             ? entry.Senses
             : entry.Senses.Where(s => s.Pos == role || s.Pos == PartOfSpeech.Any).ToList();
-        return senses.Select(s => new Candidate(s, s.Alternatives, false)).ToList();
+        if (verbOnly)
+        {
+            senses = senses.Where(s => s.Pos == PartOfSpeech.Verb).ToList();
+        }
+
+        return senses.Select(s => new Candidate(s, s.Alternatives, false, s.Alternatives.Select(_ => true).ToList())).ToList();
     }
 
     /// <summary>
     ///     Selects the senses that apply to a match of a generated word form: strictly the senses
     ///     whose part of speech equals the resolved role. When the role is unknown, participial
     ///     origins (-ed, -ing, past, past participle) are dropped and the remaining origins are kept.
-    ///     Each candidate has its alternatives inflected to the flagged form where that is safe.
+    ///     Each candidate has its alternatives inflected to the flagged form where that is safe; a
+    ///     split phrasal match never inflects a phrasal alternative, because the alternative cannot
+    ///     be split around the same words.
     /// </summary>
-    private static List<Candidate> InflectedCandidates(List<FormOrigin> origins, PartOfSpeech? role)
+    private static List<Candidate> InflectedCandidates(List<FormOrigin> origins, PartOfSpeech? role, bool split)
     {
         var candidates = new List<Candidate>();
         foreach (var origin in origins.Where(o => role is null
@@ -476,15 +800,19 @@ internal static class DictionaryChecker
             : o.Sense.Pos == role))
         {
             var alternatives = new List<string>();
+            var safe = new List<bool>();
             var fallback = false;
             foreach (var alternative in origin.Sense.Alternatives)
             {
-                var inflected = WordFormInflector.Inflect(alternative, origin.Forms, origin.Sense.Pos);
+                var inflected = split && alternative.Contains(' ')
+                    ? null
+                    : WordFormInflector.Inflect(alternative, origin.Forms, origin.Sense.Pos);
                 fallback |= inflected is null;
                 alternatives.Add(inflected ?? alternative);
+                safe.Add(inflected is not null);
             }
 
-            candidates.Add(new Candidate(origin.Sense, alternatives, fallback));
+            candidates.Add(new Candidate(origin.Sense, alternatives, fallback, safe));
         }
 
         return candidates;
@@ -565,7 +893,7 @@ internal static class DictionaryChecker
     private static Diagnostic ConfidentDiagnostic(
         string file,
         ProseSegment segment,
-        Match match,
+        Hit hit,
         string term,
         Candidate candidate,
         bool labelPos,
@@ -580,23 +908,23 @@ internal static class DictionaryChecker
             // word-substitution suggestion is offered.
             return new Diagnostic(
                 file,
-                segment.ResolveLine(match.Index),
+                segment.ResolveLine(hit.Index),
                 null,
                 RuleCodes.Dictionary,
                 Severity.Error,
-                $"Avoid using '{match.Value}' as a {PosLabel(sense.Pos)}; ASD-STE100 approves " +
+                $"Avoid using '{hit.Value}' as a {PosLabel(sense.Pos)}; ASD-STE100 approves " +
                 $"'{term}' only in a different grammatical role.",
                 $"Rewrite the sentence so '{term}' is not used as a {PosLabel(sense.Pos)}.");
         }
 
-        var alternatives = FilterSelfAlternatives(candidate.Alternatives, match.Value);
+        var alternatives = FilterSelfAlternatives(candidate.Alternatives, hit.Value);
 
         string message;
         if (alternatives.Count > 0)
         {
             message = labelPos
-                ? $"Avoid '{match.Value}'{formNote}; use {JoinAlternatives(alternatives)} instead (used as a {PosLabel(sense.Pos)})."
-                : $"Avoid '{match.Value}'{formNote}; use {JoinAlternatives(alternatives)} instead.";
+                ? $"Avoid '{hit.Value}'{formNote}; use {JoinAlternatives(alternatives)} instead (used as a {PosLabel(sense.Pos)})."
+                : $"Avoid '{hit.Value}'{formNote}; use {JoinAlternatives(alternatives)} instead.";
             if (candidate.UsesBaseFallback)
             {
                 message += BaseFallbackNote;
@@ -605,15 +933,15 @@ internal static class DictionaryChecker
         else
         {
             message = labelPos
-                ? $"Avoid '{match.Value}'{formNote}; it is not an approved ASD-STE100-style term (used as a {PosLabel(sense.Pos)})."
-                : $"Avoid '{match.Value}'{formNote}; it is not an approved ASD-STE100-style term.";
+                ? $"Avoid '{hit.Value}'{formNote}; it is not an approved ASD-STE100-style term (used as a {PosLabel(sense.Pos)})."
+                : $"Avoid '{hit.Value}'{formNote}; it is not an approved ASD-STE100-style term.";
         }
 
         // Citations always cite the dictionary's own (base-form) alternatives.
-        var citations = FilterSelfAlternatives(sense.Alternatives, match.Value);
+        var citations = FilterSelfAlternatives(sense.Alternatives, hit.Value);
         return new Diagnostic(
             file,
-            segment.ResolveLine(match.Index),
+            segment.ResolveLine(hit.Index),
             null,
             RuleCodes.Dictionary,
             Severity.Error,
@@ -655,7 +983,7 @@ internal static class DictionaryChecker
     private static Diagnostic AmbiguousDiagnostic(
         string file,
         ProseSegment segment,
-        Match match,
+        Hit hit,
         string term,
         IReadOnlyList<Candidate> candidates,
         string formNote)
@@ -669,19 +997,19 @@ internal static class DictionaryChecker
         // " (adjective)") in the combined string; its role restriction is still surfaced via
         // CorrectionClause in the message's "possible corrections" text. Citations keep the
         // dictionary's own base-form alternatives.
-        var corrections = string.Join("; ", candidates.Select(c => CorrectionClause(c, term, match.Value)));
+        var corrections = string.Join("; ", candidates.Select(c => CorrectionClause(c, term, hit.Value)));
         var citableCandidates = candidates
-            .Select(c => (Candidate: c, Alternatives: FilterSelfAlternatives(c.Alternatives, match.Value)))
+            .Select(c => (Candidate: c, Alternatives: FilterSelfAlternatives(c.Alternatives, hit.Value)))
             .Where(c => !IsPureSelfReferentialSense(c.Candidate.Sense, term) && c.Alternatives.Count > 0)
             .ToList();
         var suggestion = string.Join("; ", citableCandidates
             .Select(c => $"{string.Join(", ", c.Alternatives)} ({PosLabel(c.Candidate.Sense.Pos)})"));
         var citations = citableCandidates
-            .SelectMany(c => FilterSelfAlternatives(c.Candidate.Sense.Alternatives, match.Value)
+            .SelectMany(c => FilterSelfAlternatives(c.Candidate.Sense.Alternatives, hit.Value)
                 .Select(a => new DictionaryCitation(a, PosLabel(c.Candidate.Sense.Pos))))
             .ToList();
 
-        var message = $"Ambiguous part of speech for '{match.Value}'{formNote} \u2014 possible corrections: {corrections}.";
+        var message = $"Ambiguous part of speech for '{hit.Value}'{formNote} \u2014 possible corrections: {corrections}.";
         if (candidates.Any(c => c.UsesBaseFallback && c.Alternatives.Count > 0))
         {
             message += BaseFallbackNote;
@@ -689,7 +1017,7 @@ internal static class DictionaryChecker
 
         return new Diagnostic(
             file,
-            segment.ResolveLine(match.Index),
+            segment.ResolveLine(hit.Index),
             null,
             RuleCodes.Dictionary,
             Severity.Error,

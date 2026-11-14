@@ -603,6 +603,71 @@ public class ContextTests
     }
 
     /// <summary>
+    ///     Test that --format json-detailed selects the detailed JSON format with two context lines.
+    /// </summary>
+    [Fact]
+    public void Context_Create_FormatFlagJsonDetailed_SetsDetailedFormatAndDefaultContext()
+    {
+        // Act: create a context
+        using var context = Context.Create(["--format", "json-detailed"]);
+
+        // Assert: detailed format, default of two context lines, and IsJson is true
+        Assert.Equal(OutputFormat.JsonDetailed, context.Format);
+        Assert.Equal(2, context.ContextLines);
+        Assert.True(context.Format.IsJson());
+        Assert.False(OutputFormat.Text.IsJson());
+    }
+
+    /// <summary>
+    ///     Test that --context-lines accepts the boundary values with json-detailed, in either order.
+    /// </summary>
+    [Theory]
+    [InlineData("0")]
+    [InlineData("5")]
+    [InlineData("10")]
+    public void Context_Create_ContextLines_ValidValue_IsStored(string value)
+    {
+        // Act: create contexts with the flags in both orders
+        using var first = Context.Create(["--format", "json-detailed", "--context-lines", value]);
+        using var second = Context.Create(["--context-lines", value, "--format", "json-detailed"]);
+
+        // Assert: the value is stored
+        Assert.Equal(int.Parse(value), first.ContextLines);
+        Assert.Equal(int.Parse(value), second.ContextLines);
+    }
+
+    /// <summary>
+    ///     Test that an out-of-range, non-numeric or missing --context-lines value is rejected.
+    /// </summary>
+    [Theory]
+    [InlineData("-1")]
+    [InlineData("11")]
+    [InlineData("abc")]
+    public void Context_Create_ContextLines_InvalidValue_ThrowsArgumentException(string value)
+    {
+        // Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() =>
+            Context.Create(["--format", "json-detailed", "--context-lines", value]));
+        Assert.Contains("--context-lines", exception.Message);
+        Assert.Throws<ArgumentException>(() => Context.Create(["--format", "json-detailed", "--context-lines"]));
+    }
+
+    /// <summary>
+    ///     Test that --context-lines without json-detailed is an argument error.
+    /// </summary>
+    [Theory]
+    [InlineData("text")]
+    [InlineData("json")]
+    public void Context_Create_ContextLines_WithoutDetailedFormat_ThrowsArgumentException(string format)
+    {
+        // Act & Assert: explicit text or json, and the default format
+        var exception = Assert.Throws<ArgumentException>(() =>
+            Context.Create(["--format", format, "--context-lines", "3"]));
+        Assert.Contains("json-detailed", exception.Message);
+        Assert.Throws<ArgumentException>(() => Context.Create(["--context-lines", "3"]));
+    }
+
+    /// <summary>
     ///     Test creating a context with --format flag and an unsupported value throws exception.
     /// </summary>
     [Fact]

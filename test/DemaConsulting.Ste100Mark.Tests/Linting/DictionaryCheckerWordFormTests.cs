@@ -561,7 +561,7 @@ public class DictionaryCheckerWordFormTests
 
         // Act: evaluate code, hyphenated and capitalized text
         var code = Run("Use `performed` as written.", dictionary, PartOfSpeech.Verb);
-        var prefixed = Run("The re-performed task is done.", dictionary, PartOfSpeech.Verb);
+        var prefixed = Run("The non-performed task is done.", dictionary, PartOfSpeech.Verb);
         var suffixed = Run("The performed-task is done.", dictionary, PartOfSpeech.Verb);
         var capital = Run("Performed tasks are listed.", dictionary, PartOfSpeech.Verb);
 
@@ -607,5 +607,437 @@ public class DictionaryCheckerWordFormTests
 
         // Assert: exactly one finding
         Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Evaluates one segment of a given role with a fixed resolver.
+    /// </summary>
+    private static IReadOnlyList<Diagnostic> RunSegment(
+        string text,
+        string segmentRole,
+        LintDictionary dictionary,
+        PartOfSpeech? role)
+    {
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment(text, 1, Enum.Parse<SegmentRole>(segmentRole))];
+        return DictionaryChecker.Evaluate("file.md", segments, dictionary, null, null, new FixedPartOfSpeechResolver(role));
+    }
+
+    /// <summary>
+    ///     Test double that records the text and span it was asked to resolve.
+    /// </summary>
+    private sealed class RecordingResolver : IPartOfSpeechResolver
+    {
+        /// <summary>Gets the text of the last request.</summary>
+        public string? Text { get; private set; }
+
+        /// <summary>Gets the matched text of the last request.</summary>
+        public string? Span { get; private set; }
+
+        /// <inheritdoc />
+        public PartOfSpeech? Resolve(string segmentText, int matchIndex, int matchLength)
+        {
+            Text = segmentText;
+            Span = segmentText.Substring(matchIndex, matchLength);
+            return PartOfSpeech.Verb;
+        }
+    }
+
+    /// <summary>
+    ///     Test that a participial form that is the whole heading text is not flagged.
+    /// </summary>
+    [Theory]
+    [InlineData("Performed checks")]
+    [InlineData("Performing the checks")]
+    public void Evaluate_ParticipleInHeadingWithoutAuxiliary_NotFlagged(string heading)
+    {
+        // Arrange: a verb entry and a heading that is a label
+        var dictionary = Inline(Entry("perform", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate the heading with a resolver that says verb
+        var diagnostics = RunSegment(heading, "Heading", dictionary, PartOfSpeech.Verb);
+
+        // Assert: nothing is flagged
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a participial form that is a whole table cell is not flagged.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ParticipleInTableCellWithoutAuxiliary_NotFlagged()
+    {
+        // Arrange: a verb entry and a table cell with a bare participle
+        var dictionary = Inline(Entry("perform", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate the cell
+        var diagnostics = RunSegment("Performed", "TableRow", dictionary, PartOfSpeech.Verb);
+
+        // Assert: nothing is flagged
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a participial form in a heading or cell is flagged when an auxiliary word is present.
+    /// </summary>
+    [Theory]
+    [InlineData("The checks were performed", "Heading")]
+    [InlineData("Checks will be performed", "TableRow")]
+    public void Evaluate_ParticipleInHeadingWithAuxiliary_Flagged(string text, string segmentRole)
+    {
+        // Arrange: a verb entry
+        var dictionary = Inline(Entry("perform", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate a clause in a heading or cell
+        var diagnostics = RunSegment(text, segmentRole, dictionary, PartOfSpeech.Verb);
+
+        // Assert: the verb use is flagged
+        Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that the fragment guard does not apply to paragraphs or list items.
+    /// </summary>
+    [Theory]
+    [InlineData("Paragraph")]
+    [InlineData("ListItem")]
+    public void Evaluate_ParticipleInParagraphWithoutAuxiliary_StillFlagged(string segmentRole)
+    {
+        // Arrange: a verb entry
+        var dictionary = Inline(Entry("perform", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate the same bare participle outside a heading or cell
+        var diagnostics = RunSegment("Performed checks", segmentRole, dictionary, PartOfSpeech.Verb);
+
+        // Assert: it is flagged
+        Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that base and third-person forms are still flagged in a heading or cell.
+    /// </summary>
+    [Theory]
+    [InlineData("Perform the checks", "Heading")]
+    [InlineData("The crew performs", "Heading")]
+    [InlineData("Performs", "TableRow")]
+    public void Evaluate_BaseAndThirdPersonInHeading_StillFlagged(string text, string segmentRole)
+    {
+        // Arrange: a verb entry
+        var dictionary = Inline(Entry("perform", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate base or third-person text with an inconclusive resolver
+        var diagnostics = RunSegment(text, segmentRole, dictionary, null);
+
+        // Assert: the guard does not touch these forms, which keep reporting
+        Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a split phrasal verb is flagged with the full span and an inflected alternative.
+    /// </summary>
+    [Theory]
+    [InlineData("The crew must carry the test out today.", "carry the test out", "start")]
+    [InlineData("The crew carries the final test out today.", "carries the final test out", "starts")]
+    [InlineData("The crew carried the old test out today.", "carried the old test out", "started")]
+    public void Evaluate_SplitPhrasalVerb_FlaggedWithFullSpan(string text, string span, string suggestion)
+    {
+        // Arrange: a phrasal verb entry with a single-word alternative
+        var dictionary = Inline(Entry("carry out", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate prose with the particle separated from the verb
+        var diagnostic = Assert.Single(Run(text, dictionary, PartOfSpeech.Verb));
+
+        // Assert: the message quotes the full span and the alternative is inflected
+        Assert.Equal($"Avoid '{span}' (a split form of 'carry out'); use '{suggestion}' instead.", diagnostic.Message);
+        Assert.Equal(suggestion, diagnostic.Suggestion);
+    }
+
+    /// <summary>
+    ///     Test that a phrasal alternative is shown contiguous and flagged as not inflected.
+    /// </summary>
+    [Fact]
+    public void Evaluate_SplitPhrasalVerbWithPhrasalAlternative_ShownInBaseForm()
+    {
+        // Arrange: a phrasal entry whose alternative is itself a phrasal verb
+        var dictionary = Inline(Entry("carry out", PartOfSpeech.Verb, "start up"));
+
+        // Act: evaluate an inflected split form
+        var diagnostic = Assert.Single(Run("The crew carried the test out.", dictionary, PartOfSpeech.Verb));
+
+        // Assert: the alternative is shown in its base form with the fallback note
+        Assert.Contains("use 'start up' instead.", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("shown in its base form", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that a gap of more than three words, or a gap with a stop word, is not a split match.
+    /// </summary>
+    [Theory]
+    [InlineData("The crew must carry one two three four out today.")]
+    [InlineData("The crew must carry the load and the test out today.")]
+    [InlineData("The crew must carry the test to the pad out today.")]
+    public void Evaluate_SplitPhrasalGapLimits_FourWordsNotFlagged(string text)
+    {
+        // Arrange: a phrasal verb entry
+        var dictionary = Inline(Entry("carry out", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate text whose gap is too long or holds a stop word
+        var diagnostics = Run(text, dictionary, PartOfSpeech.Verb);
+
+        // Assert: nothing is flagged
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that the longest allowed gap (three words) is still flagged.
+    /// </summary>
+    [Fact]
+    public void Evaluate_SplitPhrasalGapOfThreeWords_Flagged()
+    {
+        // Arrange: a phrasal verb entry
+        var dictionary = Inline(Entry("carry out", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate a three-word gap
+        var diagnostics = Run("The crew must carry one two three out today.", dictionary, PartOfSpeech.Verb);
+
+        // Assert: one finding
+        Assert.Single(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that sentence punctuation in the gap prevents a split match.
+    /// </summary>
+    [Theory]
+    [InlineData("We carry the test. The crew goes out.")]
+    [InlineData("We carry the test, then go out.")]
+    [InlineData("We carry (the test) out.")]
+    public void Evaluate_SplitPhrasalWithSentencePunctuationInGap_NotFlagged(string text)
+    {
+        // Arrange: a phrasal verb entry
+        var dictionary = Inline(Entry("carry out", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate text with punctuation between the verb and the particle
+        var diagnostics = Run(text, dictionary, null);
+
+        // Assert: nothing is flagged
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a multi-word term that is not a phrasal verb is never split.
+    /// </summary>
+    [Fact]
+    public void Evaluate_MultiWordNonPhrasalTerm_NotSplit()
+    {
+        // Arrange: a three-word term
+        var dictionary = Inline(Entry("at the time of", PartOfSpeech.Verb, "when"));
+
+        // Act: evaluate the contiguous term and a split form of it
+        var contiguous = Run("It failed at the time of the test.", dictionary, PartOfSpeech.Verb);
+        var split = Run("It failed at the old time of the test.", dictionary, PartOfSpeech.Verb);
+
+        // Assert: only the contiguous term is flagged
+        Assert.Single(contiguous);
+        Assert.Empty(split);
+    }
+
+    /// <summary>
+    ///     Test that a split match does not also report its head word through a shorter entry.
+    /// </summary>
+    [Fact]
+    public void Evaluate_SplitPhrasalOverlap_ReportsHeadWordOnce()
+    {
+        // Arrange: a phrasal entry and a single-word entry for its verb
+        var disallow = Entry("carry out", PartOfSpeech.Verb, "start");
+        disallow["carry"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["move"] }];
+        var dictionary = Inline(disallow);
+
+        // Act: evaluate a split form
+        var diagnostics = Run("The crew must carry the test out today.", dictionary, PartOfSpeech.Verb);
+
+        // Assert: one finding, for the phrasal entry
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Contains("'carry out'", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that an allowed prefix before a verb form is flagged as a prefixed form.
+    /// </summary>
+    [Theory]
+    [InlineData("re-perform", "start")]
+    [InlineData("re-performed", "started")]
+    [InlineData("pre-performs", "starts")]
+    [InlineData("cross-perform", "start")]
+    [InlineData("over-performing", "starting")]
+    [InlineData("under-performed", "started")]
+    [InlineData("out-performs", "starts")]
+    [InlineData("mis-performed", "started")]
+    [InlineData("co-perform", "start")]
+    [InlineData("Re-Perform", "start")]
+    public void Evaluate_HyphenatedPrefixForms_Flagged(string token, string suggestion)
+    {
+        // Arrange: a verb entry
+        var dictionary = Inline(Entry("perform", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate prose with a prefixed verb form
+        var diagnostic = Assert.Single(Run($"The crew must {token} the task.", dictionary, PartOfSpeech.Verb));
+
+        // Assert: the whole hyphenated token is named
+        Assert.Equal($"Avoid '{token}' (a prefixed form of 'perform'); use '{suggestion}' instead.", diagnostic.Message);
+    }
+
+    /// <summary>
+    ///     Test that the role of a hyphenated form is resolved on its stem, with the prefix left out.
+    /// </summary>
+    [Fact]
+    public void Evaluate_HyphenatedPrefix_ResolvesOnStem()
+    {
+        // Arrange: a verb entry and a resolver that records what it is asked
+        var dictionary = Inline(Entry("perform", PartOfSpeech.Verb, "start"));
+        var resolver = new RecordingResolver();
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("The crew will re-performed the task.", 1, SegmentRole.Paragraph)];
+
+        // Act: evaluate
+        DictionaryChecker.Evaluate("file.md", segments, dictionary, null, null, resolver);
+
+        // Assert: the resolver saw the sentence without the prefix and the stem as the span
+        Assert.Equal("The crew will performed the task.", resolver.Text);
+        Assert.Equal("performed", resolver.Span);
+    }
+
+    /// <summary>
+    ///     Test that a hyphenated participle is dropped when the role is inconclusive, but a base form is kept.
+    /// </summary>
+    [Fact]
+    public void Evaluate_HyphenatedParticipleWithInconclusiveRole_OnlyBaseFlagged()
+    {
+        // Arrange: a verb entry
+        var dictionary = Inline(Entry("perform", PartOfSpeech.Verb, "start"));
+
+        // Act: evaluate a participle and a base form with an inconclusive resolver
+        var participle = Run("The re-performed task is done.", dictionary, null);
+        var baseForm = Run("The crew must re-perform the task.", dictionary, null);
+
+        // Assert: the base form is flagged, the ambiguous participle is not
+        Assert.Empty(participle);
+        Assert.Single(baseForm);
+    }
+
+    /// <summary>
+    ///     Test that a prefix that is not on the allowlist is not a form of the verb.
+    /// </summary>
+    [Fact]
+    public void Evaluate_HyphenatedUnlistedPrefix_NotFlagged()
+    {
+        // Arrange: a verb entry
+        var dictionary = Inline(Entry("process", PartOfSpeech.Verb, "handle"));
+
+        // Act: evaluate unlisted prefixes and a hyphenated compound that ends with the term
+        var diagnostics = Run(
+            "The in-process check, the non-processed data, a self-process step and process-time are listed.",
+            dictionary,
+            PartOfSpeech.Verb);
+
+        // Assert: nothing is flagged
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a prefixed spelling that is allowed, or an explicit entry, is not flagged as a form.
+    /// </summary>
+    [Fact]
+    public void Evaluate_HyphenatedAllowedSpelling_NotFlagged()
+    {
+        // Arrange: an entry, an allowed prefixed spelling and a separate explicit entry for another one
+        var disallow = Entry("perform", PartOfSpeech.Verb, "start");
+        disallow["pre-perform"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["prepare"] }];
+        var dictionary = Inline(disallow, allow: ["re-perform"]);
+
+        // Act: evaluate the allowed spelling, the explicit entry and another prefixed form
+        var allowed = Run("The crew must re-perform the task.", dictionary, PartOfSpeech.Verb);
+        var explicitEntry = Run("The crew must pre-perform the task.", dictionary, PartOfSpeech.Verb);
+        var other = Run("The crew must co-perform the task.", dictionary, PartOfSpeech.Verb);
+
+        // Assert: the allowed spelling is silent, the explicit entry reports once under its own term
+        Assert.Empty(allowed);
+        var explicitDiagnostic = Assert.Single(explicitEntry);
+        Assert.Contains("use 'prepare' instead", explicitDiagnostic.Message, StringComparison.Ordinal);
+        Assert.Single(other);
+    }
+
+    /// <summary>
+    ///     Test that a hyphenated form is not matched for a noun-only entry or when word forms are off.
+    /// </summary>
+    [Fact]
+    public void Evaluate_HyphenatedPrefixOnNounEntryOrWithFormsOff_NotFlagged()
+    {
+        // Arrange: a noun-only entry and a verb entry with word forms off
+        var nounEntry = Inline(Entry("report", PartOfSpeech.Noun, "document"));
+        var formsOff = Inline(Entry("perform", PartOfSpeech.Verb, "start"), matchWordForms: false);
+
+        // Act: evaluate prefixed text
+        var noun = Run("The co-report is ready.", nounEntry, null);
+        var off = Run("The crew must re-perform the task.", formsOff, PartOfSpeech.Verb);
+
+        // Assert: neither is flagged
+        Assert.Empty(noun);
+        Assert.Empty(off);
+    }
+
+    /// <summary>
+    ///     Test that the compound irregular past participle is flagged with the stem-based forms.
+    /// </summary>
+    [Fact]
+    public void Evaluate_CompoundIrregularParticiple_FlaggedAsWithstood()
+    {
+        // Arrange: a compound irregular verb entry
+        var dictionary = Inline(Entry("withstand", PartOfSpeech.Verb, "resist"));
+
+        // Act: evaluate the irregular form and the wrong regular spelling
+        var diagnostic = Assert.Single(Run("The valve withstood the load.", dictionary, PartOfSpeech.Verb));
+        var regular = Run("The valve " + "withstand" + "ed the load.", dictionary, PartOfSpeech.Verb);
+
+        // Assert: the irregular form is flagged and inflects the alternative; the regular one is not a word
+        Assert.Equal("Avoid 'withstood' (a form of 'withstand'); use 'resisted' instead.", diagnostic.Message);
+        Assert.Empty(regular);
+    }
+
+    /// <summary>
+    ///     Test the behavior of a small generic corpus for each form type and context.
+    /// </summary>
+    [Theory]
+    [InlineData("The crew must perform the check.", "Paragraph", 1)]
+    [InlineData("The crew performs the check.", "Paragraph", 1)]
+    [InlineData("The crew performed the check.", "Paragraph", 1)]
+    [InlineData("The crew is performing the check.", "Paragraph", 1)]
+    [InlineData("The check was performed.", "ListItem", 1)]
+    [InlineData("Performed checks", "ListItem", 1)]
+    [InlineData("Performed checks", "Heading", 0)]
+    [InlineData("Performing checks", "TableRow", 0)]
+    [InlineData("The checks were performed", "Heading", 1)]
+    [InlineData("Perform checks", "Heading", 1)]
+    [InlineData("The crew must carry the check out.", "Paragraph", 1)]
+    [InlineData("The crew must carry out the check.", "Paragraph", 1)]
+    [InlineData("The crew carried the whole check out.", "Paragraph", 1)]
+    [InlineData("The crew carry the check, and go out.", "Paragraph", 0)]
+    [InlineData("The crew must re-perform the check.", "Paragraph", 1)]
+    [InlineData("The crew must pre-perform the check.", "Paragraph", 1)]
+    [InlineData("The in-process check is done.", "Paragraph", 0)]
+    [InlineData("The valve withstood the load.", "Paragraph", 1)]
+    [InlineData("The valve withstands the load.", "Paragraph", 1)]
+    [InlineData("The valve " + "withstand" + "ed the load.", "Paragraph", 0)]
+    [InlineData("The valve is listed.", "Paragraph", 0)]
+    public void Evaluate_GenericCorpus_MeetsPerFormExpectations(string text, string segmentRole, int expected)
+    {
+        // Arrange: three entries covering a regular verb, a phrasal verb and a compound irregular verb
+        var disallow = Entry("perform", PartOfSpeech.Verb, "start");
+        disallow["carry out"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["do"] }];
+        disallow["withstand"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Verb, Alternatives = ["resist"] }];
+        var dictionary = Inline(disallow);
+
+        // Act: evaluate the sentence as a verb
+        var diagnostics = RunSegment(text, segmentRole, dictionary, PartOfSpeech.Verb);
+
+        // Assert: the finding count matches the expectation
+        Assert.Equal(expected, diagnostics.Count);
     }
 }

@@ -32,6 +32,7 @@ input-files:
   - docs/design/ste100-mark/linting/sentence-analyzer.md
   - docs/design/ste100-mark/linting/structural-rules.md
   - docs/design/ste100-mark/linting/dictionary-checker.md
+  - docs/design/ste100-mark/linting/finding-detail.md
   - docs/design/ste100-mark/linting/diagnostic-reporter.md
   - docs/design/ste100-mark/linting/rule-codes.md
   - docs/design/ste100-mark/linting/rule-catalog.md

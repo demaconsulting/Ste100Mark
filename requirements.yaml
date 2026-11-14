@@ -24,6 +24,7 @@ includes:
   - docs/reqstream/ste100-mark/linting.yaml
   - docs/reqstream/ste100-mark/linting/part-of-speech-resolver.yaml
   - docs/reqstream/ste100-mark/linting/lint-glossary.yaml
+  - docs/reqstream/ste100-mark/linting/finding-detail.yaml
   - docs/reqstream/ste100-mark/platform-requirements.yaml
   - docs/reqstream/quality.yaml
   - docs/reqstream/ots/xunit.yaml

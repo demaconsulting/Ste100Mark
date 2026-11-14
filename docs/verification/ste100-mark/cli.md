@@ -89,6 +89,13 @@ configuration path is preserved in `Context.ConfigFile`. This scenario verifies
 suppressed, and exit code is 0. This scenario verifies `Ste100Mark-Cli-ArgumentParsing` and
 `Ste100Mark-Cli-Format`.
 
+**CliSubsystem_DetailedFormatFlow_ContextAndProgram_SuppressesBannerAndWritesDetailedJson**:
+A temporary project with one dictionary entry and one finding is linted through `Context.Create`
+and `Program.Run` with `--format json-detailed --context-lines 1`; `Context.Format` is the
+detailed format, the banner is suppressed, and stdout is one JSON document whose `schema` is
+`ste100mark-detailed/1` and whose `contextLines` is 1. This scenario verifies
+`Ste100Mark-Cli-FormatJsonDetailed` and `Ste100Mark-Cli-ContextLines`.
+
 **CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag**: Arguments `[`"`--strict`"`]` are
 parsed through `Context.Create`; `Context.Strict` is true. This scenario verifies
 `Ste100Mark-Cli-ArgumentParsing` and `Ste100Mark-Cli-Strict`.

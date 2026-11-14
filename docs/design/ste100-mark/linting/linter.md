@@ -51,6 +51,13 @@ resolver. The allowed terms passed to `DictionaryChecker` are the union of the c
 terms and the glossary's allowed terms. A glossary or dictionary load failure is reported as an
 error and fails the run. When `dictionary.enabled` is false, the glossary is not loaded.
 
+When `Format` is `JsonDetailed`, `RunCore` calls `DictionaryChecker.Evaluate` with detail
+collection on and keeps a parallel list of `FindingDetail?` (one entry per diagnostic, `null`
+for a rule without detail), built with `FindingDetail.Build` from the file's lines and
+`Context.ContextLines`, then passes it to `DiagnosticReporter.Report`. The two places that keep
+stdout to one JSON document (the zero-files case and the configuration-error path) test
+`Format.IsJson()`, so they treat both JSON formats alike.
+
 Immediately after resolving files, `RunCore` computes
 `noFilesMatched = files.Count == 0 && !context.AllowEmpty` and passes it to
 `DiagnosticReporter.Report`. When `true`, it calls `context.MarkNoFilesMatched()` (JSON format)

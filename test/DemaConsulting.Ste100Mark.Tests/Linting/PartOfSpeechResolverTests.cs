@@ -946,4 +946,110 @@ public class PartOfSpeechResolverTests
         Assert.Throws<ArgumentNullException>(() =>
             new PartOfSpeechResolver((DemaConsulting.PartOfSpeech.Glossary)null!));
     }
+
+    /// <summary>
+    ///     Test that a confident token yields a resolved outcome with its margin, runner-up and flags.
+    /// </summary>
+    [Fact]
+    public void ResolveWithEvidence_ConfidentToken_ReportsTaggerEvidence()
+    {
+        // Arrange: a confident verb token with a runner-up reading
+        var resolver = new PartOfSpeechResolver(_ =>
+            [new TaggedSpan(4, 4, Upos.Verb, 0.97, true, 0.90, Upos.Noun, 0.07, false)]);
+
+        // Act: resolve with evidence
+        var evidence = resolver.ResolveWithEvidence("The test passed.", 4, 4);
+
+        // Assert: the evidence carries every tagger field
+        Assert.Equal(PartOfSpeech.Verb, evidence.Role);
+        Assert.Equal("resolved", evidence.Outcome);
+        Assert.Equal("verb", evidence.Tag);
+        Assert.Equal(0.97, evidence.Confidence);
+        Assert.Equal(0.90, evidence.Margin);
+        Assert.True(evidence.IsKnownWord);
+        Assert.False(evidence.IsConstrained);
+        Assert.Equal("noun", evidence.RunnerUpTag);
+        Assert.Equal(0.07, evidence.RunnerUpProbability);
+        Assert.True(evidence.ThresholdMet);
+    }
+
+    /// <summary>
+    ///     Test that each inconclusive cause maps to its own outcome.
+    /// </summary>
+    [Theory]
+    [InlineData(Upos.Verb, 0.50, true, "below-threshold")]
+    [InlineData(Upos.Verb, 0.99, false, "unknown-word")]
+    [InlineData(Upos.Adp, 0.99, true, "unsupported-tag")]
+    public void ResolveWithEvidence_InconclusiveToken_ReportsOutcome(Upos tag, double confidence, bool known, string expected)
+    {
+        // Arrange: one token with the given tag, confidence and lexicon status
+        var resolver = new PartOfSpeechResolver(_ => [new TaggedSpan(4, 4, tag, confidence, known)]);
+
+        // Act: resolve with evidence
+        var evidence = resolver.ResolveWithEvidence("The test passed.", 4, 4);
+
+        // Assert: no role, and the outcome names the cause
+        Assert.Null(evidence.Role);
+        Assert.Equal(expected, evidence.Outcome);
+    }
+
+    /// <summary>
+    ///     Test that a multi-token match and a match no token covers have their own outcomes.
+    /// </summary>
+    [Fact]
+    public void ResolveWithEvidence_MultiTokenAndNoToken_ReportOutcomes()
+    {
+        // Arrange: one resolver with a confident token for every word, one with no tokens
+        const string text = "Do this prior to the test.";
+        var tagged = new PartOfSpeechResolver(Uniform(Upos.Noun, 0.99));
+        var empty = new PartOfSpeechResolver(_ => []);
+
+        // Act: resolve a two-word span, and a span with no token
+        var multi = tagged.ResolveWithEvidence(text, text.IndexOf("prior to", StringComparison.Ordinal), "prior to".Length);
+        var none = empty.ResolveWithEvidence(text, 3, 4);
+
+        // Assert: multi-token and unavailable
+        Assert.Equal("multi-token", multi.Outcome);
+        Assert.Equal("unavailable", none.Outcome);
+    }
+
+    /// <summary>
+    ///     Test that Resolve and ResolveWithEvidence agree for the same occurrence.
+    /// </summary>
+    [Fact]
+    public void ResolveWithEvidence_AgreesWithResolve()
+    {
+        // Arrange: the real tagger on a confident verb use
+        var resolver = new PartOfSpeechResolver();
+        const string text = "Open the valve now.";
+
+        // Act: resolve both ways
+        var role = resolver.Resolve(text, 0, 4);
+        var evidence = resolver.ResolveWithEvidence(text, 0, 4);
+
+        // Assert: identical role
+        Assert.Equal(role, evidence.Role);
+    }
+
+    /// <summary>
+    ///     Test that the default interface implementation wraps Resolve with no tagger evidence.
+    /// </summary>
+    [Fact]
+    public void ResolveWithEvidence_DefaultImplementation_WrapsResolve()
+    {
+        // Arrange: a resolver that only implements Resolve
+        IPartOfSpeechResolver resolver = new FixedPartOfSpeechResolver(PartOfSpeech.Noun);
+        IPartOfSpeechResolver inconclusive = new FixedPartOfSpeechResolver(null);
+
+        // Act: resolve with evidence through the interface
+        var resolved = resolver.ResolveWithEvidence("The valve.", 4, 5);
+        var unknown = inconclusive.ResolveWithEvidence("The valve.", 4, 5);
+
+        // Assert: role and outcome only
+        Assert.Equal(PartOfSpeech.Noun, resolved.Role);
+        Assert.Equal("resolved", resolved.Outcome);
+        Assert.Null(resolved.Tag);
+        Assert.Null(unknown.Role);
+        Assert.Equal("unavailable", unknown.Outcome);
+    }
 }

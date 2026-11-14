@@ -207,6 +207,38 @@ verified by `Load_MatchWordForms_DefaultsTrueAndBindsFalse` and
 `Load_WordFormSettings_DefaultOnAndAllowedSpellingsRetained`; the effect is verified by
 `Evaluate_MatchWordFormsOff_OnlyBaseTermMatches` and
 `Run_MatchWordFormsSwitch_ControlsInflectedMatches`.
+
+**Ste100Mark-Linting-DictionaryWordForms-FragmentGuard**: The guard is verified by
+`Evaluate_ParticipleInHeadingWithoutAuxiliary_NotFlagged`,
+`Evaluate_ParticipleInTableCellWithoutAuxiliary_NotFlagged`,
+`Evaluate_ParticipleInHeadingWithAuxiliary_Flagged`,
+`Evaluate_ParticipleInParagraphWithoutAuxiliary_StillFlagged`, and
+`Evaluate_BaseAndThirdPersonInHeading_StillFlagged`, and end-to-end by
+`Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms`.
+
+**Ste100Mark-Linting-DictionaryWordForms-SplitPhrasal**: Split matching is verified by
+`Evaluate_SplitPhrasalVerb_FlaggedWithFullSpan`,
+`Evaluate_SplitPhrasalVerbWithPhrasalAlternative_ShownInBaseForm`,
+`Evaluate_SplitPhrasalGapLimits_FourWordsNotFlagged`,
+`Evaluate_SplitPhrasalGapOfThreeWords_Flagged`,
+`Evaluate_SplitPhrasalWithSentencePunctuationInGap_NotFlagged`,
+`Evaluate_MultiWordNonPhrasalTerm_NotSplit`, `Evaluate_SplitPhrasalOverlap_ReportsHeadWordOnce`,
+and `IsPhrasalVerb_RequiresVerbTwoWordParticle`, and end-to-end by
+`Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms`.
+
+**Ste100Mark-Linting-DictionaryWordForms-HyphenatedPrefix**: Prefix matching is verified by
+`Evaluate_HyphenatedPrefixForms_Flagged`, `Evaluate_HyphenatedPrefix_ResolvesOnStem`,
+`Evaluate_HyphenatedParticipleWithInconclusiveRole_OnlyBaseFlagged`,
+`Evaluate_HyphenatedUnlistedPrefix_NotFlagged`, `Evaluate_HyphenatedAllowedSpelling_NotFlagged`,
+`Evaluate_HyphenatedPrefixOnNounEntryOrWithFormsOff_NotFlagged`, and the table-driven
+`Evaluate_GenericCorpus_MeetsPerFormExpectations`, and end-to-end by
+`Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms`.
+
+**Ste100Mark-Linting-DictionaryWordForms-CompoundIrregular**: Compound forms are verified by
+`Generate_CompoundIrregularVerb_UsesStemForms`, `Generate_CompoundIrregularExceptions_UseRegularRules`,
+`Inflect_CompoundIrregular_Inflects`, and `Evaluate_CompoundIrregularParticiple_FlaggedAsWithstood`,
+and end-to-end by `Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms.
+
 **Ste100Mark-Linting-DictionaryDisable**: The `dictionary.enabled: false` switch is verified
 end-to-end to suppress every `STE100-DICT` finding while leaving structural/mechanical checks
 (the semicolon rule) unaffected, and the default (`enabled` omitted) is verified to still run
@@ -538,6 +570,51 @@ omit files removed by a configured exclude pattern. This scenario is tested by
 `Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField`,
 `Run_JsonFormat_FilesArrayListsCheckedFilesAndOmitsExcludedFiles`, and
 `Ste100Mark_LintWithJsonFormat_ReportsCheckedFilesArray`.
+
+**Ste100Mark-Linting-DetailedOutput**: The detailed JSON format is verified at the formatter
+level (schema, context lines, every default field kept, detail only on dictionary findings),
+through the linter (a heading, paragraph, list item and table cell finding, with a structural
+finding without detail), and through the real tool. This scenario is tested by
+`Report_JsonDetailed_KeepsDefaultFieldsAndAddsDetail`,
+`Run_JsonDetailed_ReportsDetailForEachBlockKind`,
+`Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument`, and
+`Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions`.
+
+**Ste100Mark-Linting-DetailedOutput-Compatibility**: The default text, default JSON and rule
+listing outputs of a fixed scenario are held against reference documents, and the default
+formats are shown to carry no detailed member. This scenario is tested by
+`Report_JsonDefault_ByteIdenticalToGolden`, `Report_JsonDefaultWithDetails_IgnoresDetail`,
+`Run_JsonDetailed_ZeroContextOmitsContext_DefaultFormatsHaveNoDetail`,
+`Ste100Mark_LintDefaultOutputs_Unchanged`, and
+`Ste100Mark_LintWithJsonDetailed_DefaultTextAndJsonUnchanged`.
+
+**Ste100Mark-Linting-DetailedOutput-Evidence**: Evidence collection is verified at the checker
+(off by default, on for base, inflected, split, hyphenated, participle and inconclusive cases),
+at the resolver (each outcome, agreement with `Resolve`, and the default interface method), and
+at the detail builder (tagger fields and empty optional fields). This scenario is tested by the
+unit tests listed for `Ste100Mark-Linting-DetailedOutput-Evidence` in `finding-detail.yaml`.
+
+**Ste100Mark-Linting-DetailedOutput-Confidence**: Every row of the confidence table, including
+precedence between rows, is verified with one theory case per row. This scenario is tested by
+`Classify_ConfidenceTable_ReturnsClassAndReason`.
+
+**Ste100Mark-Linting-DetailedOutput-SuppressionHints**: The hint options for base, generated,
+third-person, split and hyphenated forms, phrase neighbors, quoting and the standing warning are
+verified. This scenario is tested by `Hints_BaseTerm_HasNoGlossaryOption`,
+`Hints_GlossaryOnlyForGeneratedForms`, `Hints_ThirdPersonForm_HasNoGlossaryOption`,
+`Hints_AllowInPhrase_UsesNeighborWords`, `Hints_AllowInPhrase_OmittedWithoutNeighbors`,
+`Hints_AllowInPhrase_SkipsPunctuationAndQuotesSpecialCharacters`,
+`Hints_SplitPhrasal_AllowsBaseTermWithoutGlossary`, `Hints_Hyphenated_AllowsPrefixedSpelling`,
+and `Hints_AlwaysIncludeWarning`.
+
+**Ste100Mark-Linting-DetailedOutput-Context**: The sentence, its cap, the column location for
+the n-th occurrence, the unverifiable and table cases, multi-line line resolution, context
+clamping and capping, and the context kind are verified. This scenario is tested by
+`Build_Sentence_IsTheSentenceHoldingTheSpan`, `Build_LongSentence_IsCappedAndMarkedTruncated`,
+`Build_Span_LocatesNthOccurrenceColumn`, `Build_Span_ColumnsNotExactWhenSourceDiffers`,
+`Build_TableCell_RequiresSingleOccurrenceInRow`, `Build_Span_UsesResolvedSourceLine`,
+`Build_Context_ClampsToFileAndOmitsForZero`, `Build_Context_CapsLongLines`, and
+`Build_ContextKind_FollowsSegmentRole`.
 
 **Ste100Mark-Linting-ExitCode**: Exit-code behavior is verified for clean files, build-breaking
 errors, strict-mode warning promotion, configuration failures, and JSON-mode failure signaling.

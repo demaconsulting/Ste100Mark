@@ -98,6 +98,27 @@ internal sealed class Context : IDisposable
     public OutputFormat Format { get; private init; } = OutputFormat.Text;
 
     /// <summary>
+    ///     Gets the number of source lines of context written before and after a finding in the
+    ///     <see cref="OutputFormat.JsonDetailed"/> format, selected via <c>--context-lines</c>
+    ///     (0 to <see cref="MaxContextLines"/>, default <see cref="DefaultContextLines"/>).
+    /// </summary>
+    /// <remarks>
+    ///     Only meaningful for <see cref="OutputFormat.JsonDetailed"/>; the option is rejected with
+    ///     any other format.
+    /// </remarks>
+    public int ContextLines { get; private init; } = DefaultContextLines;
+
+    /// <summary>
+    ///     Default value of <see cref="ContextLines"/>.
+    /// </summary>
+    internal const int DefaultContextLines = 2;
+
+    /// <summary>
+    ///     Largest accepted value of <see cref="ContextLines"/>.
+    /// </summary>
+    internal const int MaxContextLines = 10;
+
+    /// <summary>
     ///     Gets a value indicating whether the strict flag was specified.
     /// </summary>
     /// <remarks>
@@ -199,6 +220,7 @@ internal sealed class Context : IDisposable
             Globs = parser.Globs,
             ConfigFile = parser.ConfigFile,
             Format = parser.Format,
+            ContextLines = parser.ContextLines,
             Strict = parser.Strict,
             AllowEmpty = parser.AllowEmpty,
             ListRules = parser.ListRules
@@ -290,6 +312,16 @@ internal sealed class Context : IDisposable
         public OutputFormat Format { get; private set; } = OutputFormat.Text;
 
         /// <summary>
+        ///     Gets the number of context lines for the detailed JSON format.
+        /// </summary>
+        public int ContextLines { get; private set; } = DefaultContextLines;
+
+        /// <summary>
+        ///     Gets a value indicating whether <c>--context-lines</c> was specified.
+        /// </summary>
+        private bool ContextLinesSpecified { get; set; }
+
+        /// <summary>
         ///     Gets a value indicating whether the strict flag was specified.
         /// </summary>
         public bool Strict { get; private set; }
@@ -318,6 +350,12 @@ internal sealed class Context : IDisposable
             {
                 var arg = args[i++];
                 i = ParseArgument(arg, args, i);
+            }
+
+            // Cross-option validation is done after parsing so the order of the options does not matter.
+            if (ContextLinesSpecified && Format != OutputFormat.JsonDetailed)
+            {
+                throw new ArgumentException("--context-lines is only valid with --format json-detailed", nameof(args));
             }
         }
 
@@ -372,6 +410,12 @@ internal sealed class Context : IDisposable
                     Format = GetRequiredFormatArgument(arg, args, index);
                     return index + 1;
 
+                case "--context-lines":
+                    ContextLines = GetRequiredIntArgument(
+                        arg, args, index, "a context line count argument", 0, MaxContextLines);
+                    ContextLinesSpecified = true;
+                    return index + 1;
+
                 case "--strict":
                     Strict = true;
                     return index;
@@ -409,12 +453,13 @@ internal sealed class Context : IDisposable
         /// <returns>Parsed <see cref="OutputFormat"/> value</returns>
         private static OutputFormat GetRequiredFormatArgument(string arg, string[] args, int index)
         {
-            var value = GetRequiredStringArgument(arg, args, index, "a format argument (text or json)");
+            var value = GetRequiredStringArgument(arg, args, index, "a format argument (text, json or json-detailed)");
             return value.ToLowerInvariant() switch
             {
                 "text" => OutputFormat.Text,
                 "json" => OutputFormat.Json,
-                _ => throw new ArgumentException($"{arg} requires 'text' or 'json', got '{value}'", nameof(args))
+                "json-detailed" => OutputFormat.JsonDetailed,
+                _ => throw new ArgumentException($"{arg} requires 'text', 'json' or 'json-detailed', got '{value}'", nameof(args))
             };
         }
 
