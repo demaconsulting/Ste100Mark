@@ -571,6 +571,51 @@ omit files removed by a configured exclude pattern. This scenario is tested by
 `Run_JsonFormat_FilesArrayListsCheckedFilesAndOmitsExcludedFiles`, and
 `Ste100Mark_LintWithJsonFormat_ReportsCheckedFilesArray`.
 
+**Ste100Mark-Linting-DetailedOutput**: The detailed JSON format is verified at the formatter
+level (schema, context lines, every default field kept, detail only on dictionary findings),
+through the linter (a heading, paragraph, list item and table cell finding, with a structural
+finding without detail), and through the real tool. This scenario is tested by
+`Report_JsonDetailed_KeepsDefaultFieldsAndAddsDetail`,
+`Run_JsonDetailed_ReportsDetailForEachBlockKind`,
+`Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument`, and
+`Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions`.
+
+**Ste100Mark-Linting-DetailedOutput-Compatibility**: The default text, default JSON and rule
+listing outputs of a fixed scenario are held against reference documents, and the default
+formats are shown to carry no detailed member. This scenario is tested by
+`Report_JsonDefault_ByteIdenticalToGolden`, `Report_JsonDefaultWithDetails_IgnoresDetail`,
+`Run_JsonDetailed_ZeroContextOmitsContext_DefaultFormatsHaveNoDetail`,
+`Ste100Mark_LintDefaultOutputs_Unchanged`, and
+`Ste100Mark_LintWithJsonDetailed_DefaultTextAndJsonUnchanged`.
+
+**Ste100Mark-Linting-DetailedOutput-Evidence**: Evidence collection is verified at the checker
+(off by default, on for base, inflected, split, hyphenated, participle and inconclusive cases),
+at the resolver (each outcome, agreement with `Resolve`, and the default interface method), and
+at the detail builder (tagger fields and empty optional fields). This scenario is tested by the
+unit tests listed for `Ste100Mark-Linting-DetailedOutput-Evidence` in `finding-detail.yaml`.
+
+**Ste100Mark-Linting-DetailedOutput-Confidence**: Every row of the confidence table, including
+precedence between rows, is verified with one theory case per row. This scenario is tested by
+`Classify_ConfidenceTable_ReturnsClassAndReason`.
+
+**Ste100Mark-Linting-DetailedOutput-SuppressionHints**: The hint options for base, generated,
+third-person, split and hyphenated forms, phrase neighbors, quoting and the standing warning are
+verified. This scenario is tested by `Hints_BaseTerm_HasNoGlossaryOption`,
+`Hints_GlossaryOnlyForGeneratedForms`, `Hints_ThirdPersonForm_HasNoGlossaryOption`,
+`Hints_AllowInPhrase_UsesNeighborWords`, `Hints_AllowInPhrase_OmittedWithoutNeighbors`,
+`Hints_AllowInPhrase_SkipsPunctuationAndQuotesSpecialCharacters`,
+`Hints_SplitPhrasal_AllowsBaseTermWithoutGlossary`, `Hints_Hyphenated_AllowsPrefixedSpelling`,
+and `Hints_AlwaysIncludeWarning`.
+
+**Ste100Mark-Linting-DetailedOutput-Context**: The sentence, its cap, the column location for
+the n-th occurrence, the unverifiable and table cases, multi-line line resolution, context
+clamping and capping, and the context kind are verified. This scenario is tested by
+`Build_Sentence_IsTheSentenceHoldingTheSpan`, `Build_LongSentence_IsCappedAndMarkedTruncated`,
+`Build_Span_LocatesNthOccurrenceColumn`, `Build_Span_ColumnsNotExactWhenSourceDiffers`,
+`Build_TableCell_RequiresSingleOccurrenceInRow`, `Build_Span_UsesResolvedSourceLine`,
+`Build_Context_ClampsToFileAndOmitsForZero`, `Build_Context_CapsLongLines`, and
+`Build_ContextKind_FollowsSegmentRole`.
+
 **Ste100Mark-Linting-ExitCode**: Exit-code behavior is verified for clean files, build-breaking
 errors, strict-mode warning promotion, configuration failures, and JSON-mode failure signaling.
 This scenario is tested by `Run_CleanMarkdownFile_ProducesSuccessExitCode`,

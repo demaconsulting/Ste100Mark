@@ -1,0 +1,94 @@
+---
+# Software Unit Requirements for the FindingDetail Class
+#
+# The FindingDetail class turns the evidence that the dictionary checker collected for one
+# finding into the detail object of the json-detailed report: location, sentence, context lines,
+# match and tagger evidence, a confidence class, and suppression hints. It performs no new
+# analysis and does not change what is reported.
+
+sections:
+  - title: FindingDetail Unit Requirements
+    requirements:
+      - id: Ste100Mark-Linting-DetailedOutput-Evidence
+        title: >-
+          The FindingDetail class shall report the flagged text, the dictionary term, the form
+          kind and the grammatical forms, every sense of the entry, the suggestions, and the
+          tagger evidence (role, tag, confidence, threshold, margin, runner-up, lexicon and
+          glossary flags, and outcome), leaving optional tagger fields empty when the resolver
+          gives no evidence.
+        justification: |
+          A reviewer can judge a finding only when the evidence behind it is visible. Each field
+          is copied from what the checker and the tagger already decided, so the report explains
+          the decision without making a new one.
+        tests:
+          - Build_NoEvidence_ReturnsNull
+          - Build_Tagger_CarriesEvidenceAndThreshold
+          - Build_Tagger_WithoutEvidenceLeavesFieldsNull
+          - Evaluate_DetailOff_NoEvidenceAttached
+          - Evaluate_DetailOn_AttachesEvidenceAndKeepsDefaultFields
+          - Evaluate_DetailOn_FormKindsAndInflectedSuggestion
+          - Evaluate_DetailOn_SplitPhrasalMarkedSplit
+          - Evaluate_DetailOn_HyphenPrefixMarkedHyphenated
+          - Evaluate_DetailOn_ParticipleKeptAsConfidentVerb_RecordsRule
+          - Evaluate_DetailOn_InconclusiveRole_RecordsOutcome
+          - ResolveWithEvidence_ConfidentToken_ReportsTaggerEvidence
+          - ResolveWithEvidence_InconclusiveToken_ReportsOutcome
+          - ResolveWithEvidence_MultiTokenAndNoToken_ReportOutcomes
+          - ResolveWithEvidence_AgreesWithResolve
+          - ResolveWithEvidence_DefaultImplementation_WrapsResolve
+
+      - id: Ste100Mark-Linting-DetailedOutput-Confidence
+        title: >-
+          The FindingDetail class shall assign each finding a confidence class (certain,
+          probable or doubtful) and a reason code by a fixed, ordered table in which the first
+          matching row wins.
+        justification: |
+          A deterministic class lets a consumer order findings for review without guessing how
+          the tool weighs its own signals. Because the table is ordered and fixed, the same
+          evidence always gives the same class.
+        tests:
+          - Classify_ConfidenceTable_ReturnsClassAndReason
+
+      - id: Ste100Mark-Linting-DetailedOutput-SuppressionHints
+        title: >-
+          The FindingDetail class shall offer suppression hints as configuration snippets (allow,
+          allow-in-phrase with neighbor-word phrases from the same sentence, and glossary only
+          for a generated word form with a suggested part of speech), shall quote text that is
+          not a plain YAML scalar, and shall always attach the standing warning that
+          suppression hides true findings as well.
+        justification: |
+          A false positive needs a way to be silenced that the writer can paste into the
+          configuration. The glossary option is limited to generated forms because the loader
+          rejects a glossary term that is a dictionary entry, and the warning keeps the
+          writer from suppressing a true finding.
+        tests:
+          - Hints_BaseTerm_HasNoGlossaryOption
+          - Hints_GlossaryOnlyForGeneratedForms
+          - Hints_ThirdPersonForm_HasNoGlossaryOption
+          - Hints_AllowInPhrase_UsesNeighborWords
+          - Hints_AllowInPhrase_OmittedWithoutNeighbors
+          - Hints_AllowInPhrase_SkipsPunctuationAndQuotesSpecialCharacters
+          - Hints_SplitPhrasal_AllowsBaseTermWithoutGlossary
+          - Hints_Hyphenated_AllowsPrefixedSpelling
+          - Hints_AlwaysIncludeWarning
+
+      - id: Ste100Mark-Linting-DetailedOutput-Context
+        title: >-
+          The FindingDetail class shall report the source lines and, when the text can be found
+          in the source line, the columns of the flagged text, the capped sentence that holds
+          it, the requested number of context lines clamped to the file, and the kind of
+          Markdown element that holds it.
+        justification: |
+          A reviewer needs to see where the finding is and the words around it. Columns are only
+          reported when verified against the source line, so a wrong position is never given.
+          Sentence and line caps keep the report size bounded.
+        tests:
+          - Build_Sentence_IsTheSentenceHoldingTheSpan
+          - Build_LongSentence_IsCappedAndMarkedTruncated
+          - Build_Span_LocatesNthOccurrenceColumn
+          - Build_Span_ColumnsNotExactWhenSourceDiffers
+          - Build_TableCell_RequiresSingleOccurrenceInRow
+          - Build_Span_UsesResolvedSourceLine
+          - Build_Context_ClampsToFileAndOmitsForZero
+          - Build_Context_CapsLongLines
+          - Build_ContextKind_FollowsSegmentRole

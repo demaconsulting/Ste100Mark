@@ -162,7 +162,8 @@ differ from the entry's headword (for example "run"), so both comparisons are ne
   terms (typically `LintConfig.ResolveAllowedTerms`), defaulting to `null` (no per-file
   allowance); `IReadOnlyCollection<string>? allowedPhrases` - optional phrase-scoped
   allowances (typically `LintConfig.ResolveAllowedPhrases`), defaulting to `null` (no
-  phrase-scoped allowance).
+  phrase-scoped allowance); `bool collectDetail` - when `true`, every diagnostic also carries a
+  `DictionaryEvidence` (see below), defaulting to `false`.
 - *Returns*: `IReadOnlyList<Diagnostic>` - one diagnostic per matched occurrence, excluding
   matches suppressed by a confident-but-non-matching part-of-speech resolution, by `extraAllowedTerms`, or by
   falling wholly inside an `allowedPhrases`, admonition-label, or quoted/emphasis span
@@ -181,7 +182,14 @@ against.
 
 **BuildDiagnostic**: Selects the applicable sense(s) for one match and builds its diagnostic,
 or returns `null` when a confident part-of-speech resolution rules out every sense (the term is not
-disallowed in the grammatical role it is being used in here).
+disallowed in the grammatical role it is being used in here). It resolves the role with
+`ResolveWithEvidence`, which returns the same role as `Resolve`. When `collectDetail` is set, the
+diagnostic is returned with a `DictionaryEvidence` that records the flagged text, the term, the
+form kinds (`FormKindsOf`), the split and hyphen flags, every sense, the reported sense label
+(`ambiguous` for more than one), the suggestions (`DetailSuggestions`, each marked inflection-safe
+or not), the tagger evidence, and the outcome of the participle rule
+(`kept-confident-verb`) and the fragment rule (`kept-auxiliary-present`). Collecting the
+evidence changes neither the message, nor the suggestion, nor the citations.
 
 **FilterSelfAlternatives**: Removes the exact matched surface form (case-insensitive) from a
 sense's alternatives list.
@@ -259,6 +267,7 @@ one-second timeout and no local exception handling.
   `FindAdmonitionLabelSpans`, and `FindQuotedOrEmphasisSpans` helpers used to exclude matches.
 - **LintConfig** - supplies the per-file `extraAllowedTerms`/`allowedPhrases` via `ResolveAllowedTerms`/`ResolveAllowedPhrases`.
 - **Diagnostic** and **Severity** - encode the reported finding.
+- **FindingDetail** - defines the `DictionaryEvidence` record that the checker fills.
 - **.NET BCL** - regex construction and matching.
 
 #### Callers

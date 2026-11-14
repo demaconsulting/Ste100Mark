@@ -262,6 +262,29 @@ sections:
         tests:
           - Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument
 
+      - id: Ste100Mark-System-LintDetailedOutput
+        title: >-
+          The tool shall, only when `--format json-detailed` is provided, report each dictionary
+          finding with its sentence, source context, match and tagger evidence, a confidence
+          class and suppression hints, and shall leave the default outputs unchanged.
+        justification: |
+          A reviewer or an automated assistant that must decide whether a dictionary finding is
+          correct needs the evidence behind it and a safe way to suppress a false positive,
+          while existing pipelines depend on the default outputs staying as they are.
+        tags: [system]
+        children:
+          - Ste100Mark-Cli-FormatJsonDetailed
+          - Ste100Mark-Cli-ContextLines
+          - Ste100Mark-Context-ContextLinesArgumentParsing
+          - Ste100Mark-Linting-DetailedOutput
+          - Ste100Mark-Linting-DetailedOutput-Compatibility
+          - Ste100Mark-Linting-DetailedOutput-Evidence
+          - Ste100Mark-Linting-DetailedOutput-Confidence
+          - Ste100Mark-Linting-DetailedOutput-SuppressionHints
+          - Ste100Mark-Linting-DetailedOutput-Context
+        tests:
+          - Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument
+
       - id: Ste100Mark-System-LintReportedFiles
         title: >-
           The JSON diagnostic report shall list every file the effective file selection resolved

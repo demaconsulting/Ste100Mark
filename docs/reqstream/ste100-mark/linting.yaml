@@ -680,6 +680,39 @@ sections:
           - Run_JsonFormat_FilesArrayListsCheckedFilesAndOmitsExcludedFiles
           - Ste100Mark_LintWithJsonFormat_ReportsCheckedFilesArray
 
+      - id: Ste100Mark-Linting-DetailedOutput
+        title: >-
+          The Linting subsystem shall, only when the json-detailed format is selected, write one
+          JSON document that carries a schema identifier, the context-lines setting, every
+          default report field for each diagnostic, and a detail object for each dictionary
+          finding.
+        justification: |
+          Tools and reviewers that decide whether a dictionary finding is correct need more than
+          a message: the sentence, the surrounding lines, the tagger evidence and a way to
+          suppress a false positive. A separate opt-in format gives them this without changing
+          the default report that existing integrations parse. A schema identifier lets a
+          consumer detect incompatible changes.
+        tests:
+          - Report_JsonDetailed_KeepsDefaultFieldsAndAddsDetail
+          - Run_JsonDetailed_ReportsDetailForEachBlockKind
+          - Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument
+          - Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions
+
+      - id: Ste100Mark-Linting-DetailedOutput-Compatibility
+        title: >-
+          The Linting subsystem shall leave the default text output, the default JSON output and
+          the rule listing byte-identical when the json-detailed format is not selected.
+        justification: |
+          Existing pipelines parse the default outputs. Adding a new opt-in format must not
+          change a single byte of them, so the default outputs are held against reference
+          documents.
+        tests:
+          - Report_JsonDefault_ByteIdenticalToGolden
+          - Report_JsonDefaultWithDetails_IgnoresDetail
+          - Run_JsonDetailed_ZeroContextOmitsContext_DefaultFormatsHaveNoDetail
+          - Ste100Mark_LintDefaultOutputs_Unchanged
+          - Ste100Mark_LintWithJsonDetailed_DefaultTextAndJsonUnchanged
+
       - id: Ste100Mark-Linting-ExitCode
         title: >-
           The Linting subsystem shall return a non-zero exit code for error-severity findings,

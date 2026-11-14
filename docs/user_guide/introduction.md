@@ -53,7 +53,7 @@ dotnet tool install -g DemaConsulting.Ste100Mark
 The default tool path runs the Markdown linter:
 
 ```bash
-ste100mark [globs...] [--config <file>] [--format text|json] [--strict]
+ste100mark [globs...] [--config <file>] [--format text|json|json-detailed] [--strict]
 ```
 
 When no positional globs are supplied, Ste100Mark uses `include` and `exclude` patterns from
@@ -514,6 +514,76 @@ tolerant of extra whitespace, identical to a multi-word `dictionary.disallow` te
 `dictionary.allow`/`dictionary.ignore`, `dictionary.allow-in-phrase` can also be layered per
 profile (see "Profiles" above) to scope a phrase allowance to matching files only.
 
+## Detailed JSON Output
+
+Use `--format json-detailed` when a tool or reviewer needs the evidence behind each dictionary
+finding. The output is one JSON document. It keeps every field of the `json` format and adds a
+`detail` object to each dictionary finding. The `text` and `json` formats do not change.
+
+```bash
+ste100mark docs/**/*.md --format json-detailed --context-lines 2
+```
+
+Use `--context-lines <n>` to set how many source lines appear before and after the finding
+(0 to 10, default 2). The value 0 omits the `context` member. The option is valid only with
+`--format json-detailed`; with any other format it is an argument error.
+
+The root object adds `schema` (always `ste100mark-detailed/1`) and `contextLines`. Structural
+findings, such as a semicolon finding, have no `detail` object. A dictionary finding has these
+members in `detail`:
+
+| Field | Description |
+| --- | --- |
+| `span` | Start and end line and column (1-based, end exclusive), segment offsets, and `columnsExact` |
+| `sentence` | `text` of the sentence with the match, and `truncated` (capped at 400 characters) |
+| `context` | `startLine` and `lines` (each capped at 300 characters); omitted when context is 0 |
+| `contextKind` | `heading`, `table-cell`, `list-item`, `paragraph`, or `block-quote` |
+| `match` | The matched text, the base term, and the form kinds (see below) |
+| `tagger` | Role, probability, margin, threshold 0.90, outcome, and the fragment and participle rules |
+| `confidence` | `class` and `reason`, from the table below |
+| `suggestions` | The replacement alternatives |
+| `suppression` | A `warning` and the `options` list of hints |
+
+Columns are best effort. The tool finds the n-th occurrence of the text on its source line and
+checks it against that line. In a table row, a column is accepted only when the text occurs once
+in the row. When the tool cannot verify the location, `columnsExact` is `false` and the line
+numbers remain correct. The form kinds are `base`, `third-person`, `past`, `participle`, `gerund`
+and `plural`; the primary kind can also be `phrasal-split` or `hyphenated`. A generated form has no
+separate "irregular" kind, because the word-form generator does not mark irregular forms.
+
+### Confidence Classes
+
+The classifier uses the first row that matches:
+
+| Reason | Class | Condition |
+| --- | --- | --- |
+| `role-inconclusive` | uncertain | The tagger gave no role, and the outcome is not below-threshold or unknown-word |
+| `multiple-senses` | uncertain | The word has more than one sense for the matched role |
+| `tagger-below-threshold` | uncertain | The tagger was below the threshold, or did not know the word |
+| `split-phrasal` | probable | A phrasal verb split by other words |
+| `hyphenated-form` | probable | A hyphenated spelling of the term |
+| `fragment-with-auxiliary` | probable | The match is in a fragment with an auxiliary verb |
+| `participle-low-margin` | probable | A participle kept as a verb with a margin below 0.50 |
+| `role-confident` | certain | The tagger gave a confident role |
+
+Row 1 is narrower than "no role", so that row 3 stays reachable for low-confidence results.
+
+### Suppression Hints
+
+Each hint has a `kind`, a `snippet` of configuration YAML, and a `scope`:
+
+- `allow` is always present. It uses the base term for a base or split match, and the lowercase
+  surface text for a generated or hyphenated form.
+- `allow-in-phrase` gives up to two phrases made of the match and a neighbor word from the same
+  sentence. Punctuation between the words blocks a neighbor.
+- `glossary` appears only for a generated form that is not split or hyphenated. The part of speech
+  is adjective for past and participle forms, noun for gerund and plural forms, and none for
+  third-person forms.
+
+The `warning` always starts with "Use only for a true false positive". A hint hides every finding
+it covers, so do not apply one to remove a real finding, for example the valve example "Perform the
+test".
+
 # Usage
 
 ## Display Version
@@ -667,7 +737,8 @@ The following command-line options are supported:
 | `--depth <#>` | Set heading depth for markdown output (default: 1) |
 | `--log <file>` | Write output to log file |
 | `--config <file>` | Path to lint configuration file (default lookup: `.ste100mark.yaml`) |
-| `--format <text\|json>` | Diagnostic output format for linting (default: `text`) |
+| `--format <text\|json\|json-detailed>` | Diagnostic output format for linting (default: `text`) |
+| `--context-lines <#>` | Context lines for `json-detailed` (0-10, default: 2; only with `json-detailed`) |
 | `--strict` | Promote warn-severity lint findings to a failing exit code |
 | `--allow-empty` | Treat a file selection that matches zero files as success (default: exit code 2) |
 | `--list-rules` | Display the rule catalog as a JSON array and exit |

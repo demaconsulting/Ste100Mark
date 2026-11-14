@@ -22,6 +22,7 @@ package Ste100Mark {
         part sentenceAnalyzer : SentenceAnalyzer;
         part structuralRules : StructuralRules;
         part dictionaryChecker : DictionaryChecker;
+        part findingDetail : FindingDetail;
         part diagnosticReporter : DiagnosticReporter;
         part ruleCodes : RuleCodes;
         part ruleCatalog : RuleCatalog;

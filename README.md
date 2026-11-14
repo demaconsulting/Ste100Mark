@@ -29,6 +29,8 @@ Ste100Mark provides:
 - 🔎 **ASD-STE100 Linting**: Checks Markdown sentences against configurable STE100 style rules
 - 🗂️ **Configurable File Scope**: Selects files using globs, includes, and overrides
 - 🧾 **Text and JSON Output**: Produces readable diagnostics or structured CI-friendly output
+- 🔬 **Detailed JSON Output**: Opt-in `json-detailed` format adds sentence, context, tagger evidence,
+  confidence class and suppression hints to each dictionary finding
 - 🚦 **Strict Mode**: Promotes warnings to build-breaking failures on demand
 - 📖 **Embedded Example Dictionary**: Ships illustrative vocabulary for immediate linter evaluation
 - 🔤 **Word-Form Matching**: Flags inflected spellings of disallowed verbs and nouns (for example
@@ -64,6 +66,8 @@ ste100mark
 # Use an explicit configuration file and JSON output
 ste100mark docs/**/*.md --config .ste100mark.yaml --format json
 
+# Add evidence, confidence and suppression hints to each dictionary finding
+ste100mark docs/**/*.md --format json-detailed --context-lines 3
 # Promote warnings to a failing exit code
 ste100mark docs/**/*.md --strict
 
@@ -85,7 +89,7 @@ ste100mark --list-rules
 The default tool path runs the Markdown linter:
 
 ```bash
-ste100mark [globs...] [--config <file>] [--format text|json] [--strict]
+ste100mark [globs...] [--config <file>] [--format text|json|json-detailed] [--strict]
 ```
 
 When `[globs...]` is omitted, Ste100Mark uses the `include` and `exclude` patterns from the
@@ -339,7 +343,8 @@ reported severity.
 | `--depth <#>` | Set heading depth for markdown output (default: 1) |
 | `--log <file>` | Write output to log file |
 | `--config <file>` | Path to lint configuration file (default lookup: `.ste100mark.yaml`) |
-| `--format <text\|json>` | Diagnostic output format for linting (default: `text`) |
+| `--format <text\|json\|json-detailed>` | Diagnostic output format for linting (default: `text`) |
+| `--context-lines <#>` | Context lines for `json-detailed` (0-10, default: 2; only with `json-detailed`) |
 | `--strict` | Promote warn-severity lint findings to a failing exit code |
 | `--allow-empty` | Treat a file selection that matches zero files as success (default: exit code 2) |
 | `--list-rules` | Display the rule catalog as a JSON array and exit |

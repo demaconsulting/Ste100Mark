@@ -109,6 +109,24 @@ is tested by `Context_Create_DepthFlag_ZeroValue_ThrowsArgumentException`.
 called with `["--depth", "7"]` (above the maximum of 6); an `ArgumentException` is thrown.
 This scenario is tested by `Context_Create_DepthFlag_ExceedsMaxValue_ThrowsArgumentException`.
 
+**Context_Create_FormatFlagJsonDetailed_SetsDetailedFormatAndDefaultContext**:
+`Context.Create` is called with `["--format", "json-detailed"]`; `Format` is the detailed JSON
+format, `ContextLines` equals 2, and `IsJson()` is true for it and false for text. This scenario
+is tested by `Context_Create_FormatFlagJsonDetailed_SetsDetailedFormatAndDefaultContext`.
+
+**Context_Create_ContextLines_ValidValue_IsStored**: `--context-lines` with 0, 5 and 10 is
+accepted with `--format json-detailed`, placed before or after `--format`, and the value is
+stored. This scenario is tested by `Context_Create_ContextLines_ValidValue_IsStored`.
+
+**Context_Create_ContextLines_InvalidValue_ThrowsArgumentException**: The values -1, 11 and
+`abc`, and a missing value, each throw an `ArgumentException` that names `--context-lines`. This
+scenario is tested by `Context_Create_ContextLines_InvalidValue_ThrowsArgumentException`.
+
+**Context_Create_ContextLines_WithoutDetailedFormat_ThrowsArgumentException**:
+`--context-lines` with `--format text`, `--format json`, or no format throws an
+`ArgumentException` that mentions `json-detailed`. This scenario is tested by
+`Context_Create_ContextLines_WithoutDetailedFormat_ThrowsArgumentException`.
+
 **Context_WriteLine_NotSilent_WritesToConsole**: A non-silent `Context` calls `WriteLine` with
 a test message; the message appears on standard output. This scenario is tested by
 `Context_WriteLine_NotSilent_WritesToConsole`.
