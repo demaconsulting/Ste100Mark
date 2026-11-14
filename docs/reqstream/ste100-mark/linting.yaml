@@ -262,6 +262,73 @@ sections:
           - Evaluate_MatchWordFormsOff_OnlyBaseTermMatches
           - Run_MatchWordFormsSwitch_ControlsInflectedMatches
 
+      - id: Ste100Mark-Linting-DictionaryWordForms-FragmentGuard
+        title: >-
+          The Linting subsystem shall not flag a past-participle, past, or -ing word-form match
+          in a heading or table cell when no auxiliary verb precedes it in the same segment.
+        justification: |
+          A heading or table cell is usually a noun-phrase fragment ("Performed checks"), where
+          a participle modifies a noun and is not a verb. Base and third-person forms and
+          paragraph text are unaffected.
+        tests:
+          - Evaluate_ParticipleInHeadingWithoutAuxiliary_NotFlagged
+          - Evaluate_ParticipleInTableCellWithoutAuxiliary_NotFlagged
+          - Evaluate_ParticipleInHeadingWithAuxiliary_Flagged
+          - Evaluate_ParticipleInParagraphWithoutAuxiliary_StillFlagged
+          - Evaluate_BaseAndThirdPersonInHeading_StillFlagged
+          - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
+
+      - id: Ste100Mark-Linting-DictionaryWordForms-SplitPhrasal
+        title: >-
+          The Linting subsystem shall flag a phrasal-verb entry whose particle is separated from
+          the verb by up to three words, reporting the span from the verb to the particle.
+        justification: |
+          A phrasal verb is often split around its object ("carry the report out"); matching
+          only the contiguous phrase misses these uses.
+        tests:
+          - Evaluate_SplitPhrasalVerb_FlaggedWithFullSpan
+          - Evaluate_SplitPhrasalVerbWithPhrasalAlternative_ShownInBaseForm
+          - Evaluate_SplitPhrasalGapLimits_FourWordsNotFlagged
+          - Evaluate_SplitPhrasalGapOfThreeWords_Flagged
+          - Evaluate_SplitPhrasalWithSentencePunctuationInGap_NotFlagged
+          - Evaluate_MultiWordNonPhrasalTerm_NotSplit
+          - Evaluate_SplitPhrasalOverlap_ReportsHeadWordOnce
+          - IsPhrasalVerb_RequiresVerbTwoWordParticle
+          - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
+
+      - id: Ste100Mark-Linting-DictionaryWordForms-HyphenatedPrefix
+        title: >-
+          The Linting subsystem shall flag a verb-sense dictionary term and its word forms when
+          written with a hyphenated prefix from a fixed list, resolving the part of speech on
+          the stem.
+        justification: |
+          Forms such as "re-perform" contain a disallowed verb; the prefix list is fixed to
+          limit false positives, and the stem is resolved because the tagger does not know
+          the whole hyphenated token.
+        tests:
+          - Evaluate_HyphenatedPrefixForms_Flagged
+          - Evaluate_HyphenatedPrefix_ResolvesOnStem
+          - Evaluate_HyphenatedParticipleWithInconclusiveRole_OnlyBaseFlagged
+          - Evaluate_HyphenatedUnlistedPrefix_NotFlagged
+          - Evaluate_HyphenatedAllowedSpelling_NotFlagged
+          - Evaluate_HyphenatedPrefixOnNounEntryOrWithFormsOff_NotFlagged
+          - Evaluate_GenericCorpus_MeetsPerFormExpectations
+          - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
+
+      - id: Ste100Mark-Linting-DictionaryWordForms-CompoundIrregular
+        title: >-
+          The Linting subsystem shall generate the irregular forms of a verb that is an
+          irregular base verb with a fixed prefix, such as "withstand".
+        justification: |
+          A compound of an irregular verb keeps its irregular forms ("withstood"); regular
+          rules would produce a wrong spelling and miss the real one.
+        tests:
+          - Generate_CompoundIrregularVerb_UsesStemForms
+          - Generate_CompoundIrregularExceptions_UseRegularRules
+          - Inflect_CompoundIrregular_Inflects
+          - Evaluate_CompoundIrregularParticiple_FlaggedAsWithstood
+          - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
+
       - id: Ste100Mark-Linting-DictionaryDisable
         title: >-
           The Linting subsystem shall let a project disable the dictionary/vocabulary check
@@ -612,6 +679,39 @@ sections:
           - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
           - Run_JsonFormat_FilesArrayListsCheckedFilesAndOmitsExcludedFiles
           - Ste100Mark_LintWithJsonFormat_ReportsCheckedFilesArray
+
+      - id: Ste100Mark-Linting-DetailedOutput
+        title: >-
+          The Linting subsystem shall, only when the json-detailed format is selected, write one
+          JSON document that carries a schema identifier, the context-lines setting, every
+          default report field for each diagnostic, and a detail object for each dictionary
+          finding.
+        justification: |
+          Tools and reviewers that decide whether a dictionary finding is correct need more than
+          a message: the sentence, the surrounding lines, the tagger evidence and a way to
+          suppress a false positive. A separate opt-in format gives them this without changing
+          the default report that existing integrations parse. A schema identifier lets a
+          consumer detect incompatible changes.
+        tests:
+          - Report_JsonDetailed_KeepsDefaultFieldsAndAddsDetail
+          - Run_JsonDetailed_ReportsDetailForEachBlockKind
+          - Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument
+          - Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions
+
+      - id: Ste100Mark-Linting-DetailedOutput-Compatibility
+        title: >-
+          The Linting subsystem shall leave the default text output, the default JSON output and
+          the rule listing byte-identical when the json-detailed format is not selected.
+        justification: |
+          Existing pipelines parse the default outputs. Adding a new opt-in format must not
+          change a single byte of them, so the default outputs are held against reference
+          documents.
+        tests:
+          - Report_JsonDefault_ByteIdenticalToGolden
+          - Report_JsonDefaultWithDetails_IgnoresDetail
+          - Run_JsonDetailed_ZeroContextOmitsContext_DefaultFormatsHaveNoDetail
+          - Ste100Mark_LintDefaultOutputs_Unchanged
+          - Ste100Mark_LintWithJsonDetailed_DefaultTextAndJsonUnchanged
 
       - id: Ste100Mark-Linting-ExitCode
         title: >-

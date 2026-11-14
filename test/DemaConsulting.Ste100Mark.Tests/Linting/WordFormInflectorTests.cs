@@ -203,4 +203,78 @@ public class WordFormInflectorTests
         Assert.False(WordFormInflector.IsParticipial(WordForm.Past | WordForm.Plural));
         Assert.False(WordFormInflector.IsParticipial(WordForm.Gerund | WordForm.ThirdPersonSingular));
     }
+
+    /// <summary>
+    ///     Test that a compound of a documented prefix and a table verb takes the stem's irregular forms.
+    /// </summary>
+    [Theory]
+    [InlineData("withstand", "withstanding,withstands,withstood")]
+    [InlineData("overtake", "overtaken,overtakes,overtaking,overtook")]
+    [InlineData("mistake", "mistaken,mistakes,mistaking,mistook")]
+    [InlineData("rewrite", "rewrites,rewriting,rewrote,rewritten")]
+    [InlineData("foresee", "foresaw,foreseeing,foreseen,foresees")]
+    public void Generate_CompoundIrregularVerb_UsesStemForms(string verb, string expected)
+    {
+        // Arrange / Act: generate forms for a compound irregular verb
+        var generated = WordFormInflector.Generate(verb, PartOfSpeech.Verb);
+
+        // Assert: the forms come from the stem verb, not from the regular rule, and include a participle
+        Assert.Equal(expected.Split(',').Order().ToList(), generated.Select(g => g.Spelling).Order().ToList());
+        Assert.Contains(generated, g => g.Forms.HasFlag(WordForm.PastParticiple));
+    }
+
+    /// <summary>
+    ///     Test that a word on the exception list is inflected by the regular rules.
+    /// </summary>
+    [Fact]
+    public void Generate_CompoundIrregularExceptions_UseRegularRules()
+    {
+        // Arrange / Act: "relay" looks like "re" plus "lay" but is regular
+        var spellings = Spellings("relay", PartOfSpeech.Verb);
+
+        // Assert: the regular forms are generated
+        Assert.Equal(new List<string> { "relayed", "relaying", "relays" }, spellings);
+    }
+
+    /// <summary>
+    ///     Test that an alternative that is a compound irregular verb is inflected from the stem.
+    /// </summary>
+    [Fact]
+    public void Inflect_CompoundIrregular_Inflects()
+    {
+        // Arrange / Act: inflect compound irregular alternatives
+        var past = WordFormInflector.Inflect("withstand", WordForm.Past | WordForm.PastParticiple, PartOfSpeech.Verb);
+        var capital = WordFormInflector.Inflect("Overtake", WordForm.Past, PartOfSpeech.Verb);
+        var participle = WordFormInflector.Inflect("overtake", WordForm.PastParticiple, PartOfSpeech.Verb);
+        var thirdPerson = WordFormInflector.Inflect("mistake", WordForm.ThirdPersonSingular, PartOfSpeech.Verb);
+        var ambiguous = WordFormInflector.Inflect("overtake", WordForm.Past | WordForm.PastParticiple, PartOfSpeech.Verb);
+
+        // Assert: irregular forms are used, and differing past and participle are unsafe
+        Assert.Equal("withstood", past);
+        Assert.Equal("Overtook", capital);
+        Assert.Equal("overtaken", participle);
+        Assert.Equal("mistakes", thirdPerson);
+        Assert.Null(ambiguous);
+    }
+
+    /// <summary>
+    ///     Test that only a two-word verb term with a listed particle is a phrasal verb.
+    /// </summary>
+    [Theory]
+    [InlineData("carry out", "Verb", true)]
+    [InlineData("Carry On", "Verb", true)]
+    [InlineData("carry out", "Noun", false)]
+    [InlineData("carry", "Verb", false)]
+    [InlineData("carry about", "Verb", false)]
+    [InlineData("carry out now", "Verb", false)]
+    [InlineData("at the time of", "Verb", false)]
+    [InlineData("carry-it out", "Verb", false)]
+    public void IsPhrasalVerb_RequiresVerbTwoWordParticle(string term, string pos, bool expected)
+    {
+        // Arrange / Act: classify the term
+        var result = WordFormInflector.IsPhrasalVerb(term, Enum.Parse<PartOfSpeech>(pos));
+
+        // Assert: only the documented shape is phrasal
+        Assert.Equal(expected, result);
+    }
 }

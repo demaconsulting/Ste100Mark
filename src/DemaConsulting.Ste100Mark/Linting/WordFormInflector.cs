@@ -112,6 +112,28 @@ internal static class WordFormInflector
     private static readonly FrozenDictionary<string, IrregularVerb> IrregularVerbs = BuildIrregularVerbs();
 
     /// <summary>
+    ///     Prefixes that form a compound of a table verb ("withstand", "overtake", "mistake",
+    ///     "rewrite"); the compound takes the irregular forms of the verb it contains.
+    /// </summary>
+    private static readonly string[] CompoundVerbPrefixes = ["with", "under", "over", "out", "mis", "up", "fore", "re"];
+
+    /// <summary>
+    ///     Words that look like a prefix plus a table verb but are regular verbs ("relay" is not
+    ///     "re" plus "lay"), so they are inflected by the regular rules.
+    /// </summary>
+    private static readonly FrozenSet<string> CompoundExceptions = new[] { "relay" }.ToFrozenSet(StringComparer.Ordinal);
+
+    /// <summary>
+    ///     The closed list of particles that make a two-word verb term a phrasal verb. Only such a
+    ///     term can match with other words between the verb and the particle.
+    /// </summary>
+    private static readonly string[] PhrasalParticles =
+    [
+        "up", "down", "out", "off", "on", "in", "over", "away", "back", "through",
+        "around", "apart", "together", "forward", "aside", "along", "across", "ahead"
+    ];
+
+    /// <summary>
     ///     Documented small irregular noun plural table, keyed by lower-case singular noun.
     /// </summary>
     private static readonly FrozenDictionary<string, string> IrregularPlurals = new Dictionary<string, string>
@@ -127,6 +149,34 @@ internal static class WordFormInflector
         ["criterion"] = "criteria",
         ["phenomenon"] = "phenomena"
     }.ToFrozenDictionary(StringComparer.Ordinal);
+
+    /// <summary>
+    ///     The prefixes that may precede a verb in a hyphenated form ("re-perform", "pre-produced"):
+    ///     the documented allowlist used by <see cref="DictionaryChecker"/>. Any other prefix
+    ///     ("non-", "self-", "in-") is not treated as a form of the verb.
+    /// </summary>
+    public static IReadOnlyList<string> HyphenPrefixes { get; } = ["re", "pre", "cross", "over", "under", "out", "mis", "co"];
+
+    /// <summary>
+    ///     Determines whether a dictionary term is a phrasal verb: a verb sense whose term is exactly
+    ///     two words, a word of letters followed by a particle from the documented closed list.
+    /// </summary>
+    /// <param name="term">The dictionary term.</param>
+    /// <param name="pos">The part of speech of the sense that carries the term.</param>
+    /// <returns>True when the term is a phrasal verb.</returns>
+    public static bool IsPhrasalVerb(string term, PartOfSpeech pos)
+    {
+        ArgumentNullException.ThrowIfNull(term);
+        if (pos != PartOfSpeech.Verb)
+        {
+            return false;
+        }
+
+        var words = term.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return words.Length == 2
+               && IsLetters(words[0].ToLowerInvariant())
+               && PhrasalParticles.Contains(words[1].ToLowerInvariant());
+    }
 
     /// <summary>
     ///     Returns <see langword="true"/> when the forms are participial only: past, past participle
@@ -278,7 +328,7 @@ internal static class WordFormInflector
             return null;
         }
 
-        IrregularVerbs.TryGetValue(word, out var irregular);
+        var irregular = LookupIrregular(word);
         return form switch
         {
             WordForm.ThirdPersonSingular => irregular?.ThirdPersonForm ?? ThirdPerson(word),
@@ -287,6 +337,43 @@ internal static class WordFormInflector
             WordForm.Gerund => Ing(word),
             _ => null
         };
+    }
+
+    /// <summary>
+    ///     Finds the irregular forms of a lower-case verb: an exact table hit, or else a compound of
+    ///     one documented prefix and a table verb (at least two letters left), so "withstand" takes
+    ///     the forms of "stand".
+    /// </summary>
+    /// <param name="word">The lower-case base verb.</param>
+    /// <returns>The irregular forms, or <see langword="null"/> when the verb is regular.</returns>
+    private static IrregularVerb? LookupIrregular(string word)
+    {
+        if (IrregularVerbs.TryGetValue(word, out var exact))
+        {
+            return exact;
+        }
+
+        if (CompoundExceptions.Contains(word))
+        {
+            return null;
+        }
+
+        foreach (var prefix in CompoundVerbPrefixes)
+        {
+            if (word.Length - prefix.Length >= 2
+                && word.StartsWith(prefix, StringComparison.Ordinal)
+                && IrregularVerbs.TryGetValue(word[prefix.Length..], out var stem))
+            {
+                // The third-person form is left to the regular rule: the table override exists
+                // only for "have", and a compound of it would not be a word.
+                return new IrregularVerb(
+                    prefix + stem.Past,
+                    stem.PastParticiples.Select(p => prefix + p).ToList(),
+                    null);
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -314,7 +401,7 @@ internal static class WordFormInflector
             return forms;
         }
 
-        IrregularVerbs.TryGetValue(verb, out var irregular);
+        var irregular = LookupIrregular(verb);
         forms.Add((irregular?.ThirdPersonForm ?? ThirdPerson(verb), WordForm.ThirdPersonSingular));
         if (irregular is null)
         {

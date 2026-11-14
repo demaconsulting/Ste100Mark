@@ -88,7 +88,10 @@ The source folder contains thirteen primary behavioral units plus two supporting
   span and allowed-phrase exclusions. The flagged word's own text is always filtered
   (case-insensitively) out of its reported suggestion/citations, so a diagnostic never
   recommends the exact word it just flagged as one of its own alternatives.
-- `DiagnosticReporter` - formatter for text and JSON diagnostic output.
+- `DiagnosticReporter` - formatter for text, JSON and detailed JSON diagnostic output.
+- `FindingDetail` - builds the detail object of a dictionary finding (location, sentence,
+  context lines, match and tagger evidence, confidence class, suppression hints) for the
+  `json-detailed` format from the evidence `DictionaryChecker` collected.
 - `Linter` - orchestration entry point that ties the subsystem together and drives the exit
   code.
 - `RuleCodes` - single shared registry of rule-code string constants, referenced by
@@ -99,7 +102,7 @@ The source folder contains thirteen primary behavioral units plus two supporting
   mode(s), serializable as JSON for `Program`'s `--list-rules` dispatch path.
 
 The unit design details for the subsystem are documented in the companion unit files in
-this folder: *Diagnostic Design*, *DiagnosticReporter Design*, *DictionaryChecker Design*,
+this folder: *Diagnostic Design*, *DiagnosticReporter Design*, *DictionaryChecker Design*, *FindingDetail Design*,
 *LintConfig Design*, *LintDictionary Design*, *LintGlossary Design*, *Linter Design*, *MarkdownProseExtractor
 Design*, *PartOfSpeechGuesser Design*, *PartOfSpeechResolver Design*, *RuleCatalog Design*, *RuleCodes Design*,
 *SentenceAnalyzer Design*, *Severity Design*, *StructuralRules Design*, and *WordFormInflector Design*.
@@ -132,6 +135,8 @@ flowchart TD
     LintDictionary --> DictionaryChecker
     DictionaryChecker --> PartOfSpeechResolver
     DictionaryChecker --> WordFormInflector
+    DictionaryChecker --> FindingDetail
+    FindingDetail --> DiagnosticReporter
     StructuralRules --> PartOfSpeechGuesser
     StructuralRules --> DiagnosticReporter
     DictionaryChecker --> DiagnosticReporter
@@ -180,7 +185,9 @@ flowchart TD
 5. `StructuralRules.Evaluate` and `DictionaryChecker.Evaluate` each return immutable
    `Diagnostic` values. `DiagnosticReporter.Report` formats the aggregated list either as
    line-oriented text or as one JSON document, threading through the zero-files-matched
-   indicator computed in step 3.
+   indicator computed in step 3. In the `json-detailed` format, `Linter` also asks
+   `DictionaryChecker` to collect evidence and builds one `FindingDetail` per dictionary
+   finding from the file's source lines and `--context-lines`; the other formats never do.
 6. `Linter` applies exit-code semantics: error-severity diagnostics always fail the run;
    warn-severity diagnostics also fail when `--strict` is active; a zero-matched file
    selection fails the run with the distinct `NoFilesMatchedExitCode` (2) unless

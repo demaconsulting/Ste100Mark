@@ -48,6 +48,21 @@ sections:
           - Context_Create_NoArguments_ReturnsLintingDefaults
           - Context_Create_FormatFlagJson_SetsJsonFormat
           - Context_Create_FormatFlagText_SetsTextFormat
+          - Context_Create_FormatFlagJsonDetailed_SetsDetailedFormatAndDefaultContext
+
+      - id: Ste100Mark-Context-ContextLinesArgumentParsing
+        title: >-
+          The Context class shall parse the --context-lines option as a whole number from 0 to
+          10 (default 2), accept it in any order relative to --format, and reject a value that is
+          out of range, not a number or missing, and any use without --format json-detailed.
+        justification: |
+          The option sizes the detailed report, so an invalid value or a use with another format
+          must fail at argument parsing rather than being ignored.
+        tests:
+          - Context_Create_FormatFlagJsonDetailed_SetsDetailedFormatAndDefaultContext
+          - Context_Create_ContextLines_ValidValue_IsStored
+          - Context_Create_ContextLines_InvalidValue_ThrowsArgumentException
+          - Context_Create_ContextLines_WithoutDetailedFormat_ThrowsArgumentException
 
       - id: Ste100Mark-Context-StrictArgumentParsing
         title: >-

@@ -57,19 +57,33 @@ internal static partial class DiagnosticReporter
     ///     otherwise, including when the selection matched zero files but was accepted via
     ///     <c>--allow-empty</c>.
     /// </param>
-    public static void Report(Context context, IReadOnlyList<Diagnostic> diagnostics, IReadOnlyList<string> files, bool noFilesMatched)
+    /// <param name="details">
+    ///     Per-diagnostic detail, parallel to <paramref name="diagnostics"/> (an entry is
+    ///     <see langword="null"/> when a diagnostic has none), used only by
+    ///     <see cref="OutputFormat.JsonDetailed"/>; <see langword="null"/> means no diagnostic has detail.
+    /// </param>
+    public static void Report(
+        Context context,
+        IReadOnlyList<Diagnostic> diagnostics,
+        IReadOnlyList<string> files,
+        bool noFilesMatched,
+        IReadOnlyList<FindingDetail?>? details = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(diagnostics);
         ArgumentNullException.ThrowIfNull(files);
 
-        if (context.Format == OutputFormat.Json)
+        switch (context.Format)
         {
-            WriteJson(context, diagnostics, files, noFilesMatched);
-        }
-        else
-        {
-            WriteText(context, diagnostics, files.Count, noFilesMatched);
+            case OutputFormat.Json:
+                WriteJson(context, diagnostics, files, noFilesMatched);
+                break;
+            case OutputFormat.JsonDetailed:
+                WriteJsonDetailed(context, diagnostics, files, noFilesMatched, details);
+                break;
+            default:
+                WriteText(context, diagnostics, files.Count, noFilesMatched);
+                break;
         }
     }
 
@@ -151,6 +165,100 @@ internal static partial class DiagnosticReporter
         var json = JsonSerializer.Serialize(document, JsonReportContext.Default.JsonReport);
         context.WriteLine(json);
     }
+
+    /// <summary>
+    ///     Writes the diagnostics as a single JSON document of the detailed schema: every field of
+    ///     the default document plus a schema identifier, the context line count and, for dictionary
+    ///     findings, a <c>detail</c> object.
+    /// </summary>
+    /// <param name="context">Output target; <see cref="Context.ContextLines"/> is reported.</param>
+    /// <param name="diagnostics">Diagnostics to report.</param>
+    /// <param name="files">Relative paths of every file that was linted, in evaluated order.</param>
+    /// <param name="noFilesMatched">Whether the empty file selection is being treated as a failure.</param>
+    /// <param name="details">Per-diagnostic detail, parallel to <paramref name="diagnostics"/>, or <see langword="null"/>.</param>
+    private static void WriteJsonDetailed(
+        Context context,
+        IReadOnlyList<Diagnostic> diagnostics,
+        IReadOnlyList<string> files,
+        bool noFilesMatched,
+        IReadOnlyList<FindingDetail?>? details)
+    {
+        var document = new JsonDetailedReport(
+            DetailedSchema,
+            context.ContextLines,
+            files.Count,
+            noFilesMatched,
+            diagnostics.Count(d => d.Severity == Severity.Error),
+            diagnostics.Count(d => d.Severity == Severity.Warn),
+            files.Select(f => new JsonFileEntry(f, "checked")).ToList(),
+            diagnostics
+                .Select((d, i) => new JsonDetailedDiagnostic(
+                    d.File,
+                    d.Line,
+                    d.Column,
+                    d.RuleCode,
+                    d.Severity.ToString().ToLowerInvariant(),
+                    d.Message,
+                    d.Suggestion,
+                    d.Citations?.Select(c => new JsonCitation(c.Term, c.Pos)).ToList(),
+                    details is not null && i < details.Count ? details[i] : null))
+                .ToList());
+
+        var json = JsonSerializer.Serialize(document, JsonDetailedReportContext.Default.JsonDetailedReport);
+        context.WriteLine(json);
+    }
+
+    /// <summary>
+    ///     Schema identifier written as the <c>schema</c> field of the detailed document.
+    /// </summary>
+    internal const string DetailedSchema = "ste100mark-detailed/1";
+
+    /// <summary>
+    ///     Root of the detailed JSON document: the fields of <see cref="JsonReport"/> plus the schema
+    ///     identifier and the context line count.
+    /// </summary>
+    /// <param name="Schema">Schema identifier, <see cref="DetailedSchema"/>.</param>
+    /// <param name="ContextLines">Number of context lines requested with <c>--context-lines</c>.</param>
+    /// <param name="FilesChecked">Number of files that were linted.</param>
+    /// <param name="NoFilesMatched">Whether an empty file selection was treated as a failure.</param>
+    /// <param name="ErrorCount">Number of error-severity diagnostics.</param>
+    /// <param name="WarningCount">Number of warn-severity diagnostics.</param>
+    /// <param name="Files">Every file the file selection resolved to.</param>
+    /// <param name="Diagnostics">All diagnostics, in the order they were produced.</param>
+    private sealed record JsonDetailedReport(
+        string Schema,
+        int ContextLines,
+        int FilesChecked,
+        bool NoFilesMatched,
+        int ErrorCount,
+        int WarningCount,
+        IReadOnlyList<JsonFileEntry> Files,
+        IReadOnlyList<JsonDetailedDiagnostic> Diagnostics);
+
+    /// <summary>
+    ///     A diagnostic of the detailed document: the eight fields of <see cref="JsonDiagnostic"/>
+    ///     (written as <c>null</c> when empty, exactly as in the default document) plus an optional
+    ///     <c>detail</c> that is omitted when absent.
+    /// </summary>
+    /// <param name="File">Path to the Markdown file.</param>
+    /// <param name="Line">1-based source line number.</param>
+    /// <param name="Column">1-based source column number, or <see langword="null"/>.</param>
+    /// <param name="RuleCode">Stable rule identifier.</param>
+    /// <param name="Severity">Lowercase severity string.</param>
+    /// <param name="Message">Human-readable description.</param>
+    /// <param name="Suggestion">Suggested fix, or <see langword="null"/>.</param>
+    /// <param name="Citations">Structured approved-term citations, or <see langword="null"/>.</param>
+    /// <param name="Detail">Evidence for a dictionary finding; omitted for other rules.</param>
+    private sealed record JsonDetailedDiagnostic(
+        string File,
+        int Line,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] int? Column,
+        string RuleCode,
+        string Severity,
+        string Message,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] string? Suggestion,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] IReadOnlyList<JsonCitation>? Citations,
+        FindingDetail? Detail);
 
     /// <summary>
     ///     Stable JSON schema root: overall summary counts plus the checked-file and diagnostic
@@ -239,4 +347,16 @@ internal static partial class DiagnosticReporter
     [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]
     [JsonSerializable(typeof(JsonReport))]
     private sealed partial class JsonReportContext : JsonSerializerContext;
+
+    /// <summary>
+    ///     Source-generated JSON serialization context for the detailed document; it omits null
+    ///     properties (the detailed schema leaves out absent optional fields), and the DTO keeps the
+    ///     eight default fields explicitly.
+    /// </summary>
+    [JsonSourceGenerationOptions(
+        PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+        WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonSerializable(typeof(JsonDetailedReport))]
+    private sealed partial class JsonDetailedReportContext : JsonSerializerContext;
 }

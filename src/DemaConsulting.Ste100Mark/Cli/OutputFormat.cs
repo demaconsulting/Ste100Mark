@@ -38,5 +38,32 @@ internal enum OutputFormat
     /// <summary>
     ///     Machine-readable, structured JSON diagnostic output for CI consumption.
     /// </summary>
-    Json
+    Json,
+
+    /// <summary>
+    ///     Machine-readable JSON diagnostic output that carries every field of <see cref="Json"/>
+    ///     plus per-finding evidence (span, sentence, context lines, match and tagger evidence,
+    ///     confidence class, and suppression hints) for agents and other tooling.
+    /// </summary>
+    JsonDetailed
+}
+
+/// <summary>
+///     Helpers for <see cref="OutputFormat"/>.
+/// </summary>
+internal static class OutputFormatExtensions
+{
+    /// <summary>
+    ///     Determines whether a format writes a JSON document to stdout (and so must keep stdout
+    ///     free of any other text).
+    /// </summary>
+    /// <param name="format">The output format.</param>
+    /// <returns>
+    ///     <see langword="true"/> for <see cref="OutputFormat.Json"/> and
+    ///     <see cref="OutputFormat.JsonDetailed"/>; otherwise <see langword="false"/>.
+    /// </returns>
+    public static bool IsJson(this OutputFormat format)
+    {
+        return format is OutputFormat.Json or OutputFormat.JsonDetailed;
+    }
 }

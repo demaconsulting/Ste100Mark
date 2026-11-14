@@ -548,5 +548,47 @@ public class CliSubsystemTests
             }
         }
     }
+
+    /// <summary>
+    ///     Test that Context and Program work together for --format json-detailed: the banner is
+    ///     suppressed, the output is one JSON document with a schema and the requested context lines.
+    /// </summary>
+    [Fact]
+    public void CliSubsystem_DetailedFormatFlow_ContextAndProgram_SuppressesBannerAndWritesDetailedJson()
+    {
+        // Arrange: a file with a finding, linted with detailed JSON output in the temp directory
+        var directory = Directory.CreateTempSubdirectory("ste100mark-cli-detailed-").FullName;
+        var originalOut = Console.Out;
+        var originalDirectory = Directory.GetCurrentDirectory();
+        using var capturedOut = new StringWriter();
+
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(directory, ".ste100mark.yaml"),
+                "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [carry out]\n");
+            File.WriteAllText(Path.Combine(directory, "doc.md"), "# Title\n\nThe crew will perform the check.\n");
+            Directory.SetCurrentDirectory(directory);
+            Console.SetOut(capturedOut);
+
+            // Act: create context and run program logic
+            using var context = Context.Create(["doc.md", "--format", "json-detailed", "--context-lines", "1"]);
+            Program.Run(context);
+
+            // Assert: no banner, a detailed document, and the requested context size
+            Assert.Equal(OutputFormat.JsonDetailed, context.Format);
+            var output = capturedOut.ToString();
+            Assert.DoesNotContain("Ste100Mark version", output, StringComparison.Ordinal);
+            using var document = System.Text.Json.JsonDocument.Parse(output);
+            Assert.Equal("ste100mark-detailed/1", document.RootElement.GetProperty("schema").GetString());
+            Assert.Equal(1, document.RootElement.GetProperty("contextLines").GetInt32());
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalDirectory);
+            Console.SetOut(originalOut);
+            Directory.Delete(directory, true);
+        }
+    }
 }
 

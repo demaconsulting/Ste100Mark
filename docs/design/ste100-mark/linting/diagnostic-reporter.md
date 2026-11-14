@@ -55,17 +55,40 @@ rule evaluation or exit-code decisions itself.
 **JsonReportContext**: source-generated `JsonSerializerContext` for reflection-free JSON
 serialization.
 
+**JsonDetailedReport**: private record for the root of the `json-detailed` document, separate
+from `JsonReport` so the default schema is untouched.
+
+- `Schema`: `string` - the constant `ste100mark-detailed/1`, written first.
+- `ContextLines`: `int` - the `--context-lines` value in effect.
+- The remaining members repeat the `JsonReport` members (`filesChecked`, `noFilesMatched`,
+  `errorCount`, `warningCount`, `files`, `diagnostics`) in the same order.
+
+**JsonDetailedDiagnostic**: private record that repeats every `JsonDiagnostic` member, with
+`column`, `suggestion` and `citations` always written (as `null` when empty) like the default
+report, plus an optional `Detail` (`FindingDetail`) that is omitted when a diagnostic has none.
+
+**JsonDetailedReportContext**: source-generated serializer context that omits null members
+(`WhenWritingNull`); the three members above opt out of that with `JsonIgnore(Never)`.
+
 #### Key Methods
 
-**Report**: Chooses text or JSON output based on `context.Format`.
+**Report**: Chooses text, JSON or detailed JSON output based on `context.Format`.
 
 - *Parameters*: `Context context` - output target and format selector;
   `IReadOnlyList<Diagnostic> diagnostics` - aggregated findings; `IReadOnlyList<string> files` -
   relative paths of every file that was linted, in evaluated order; `bool noFilesMatched` -
-  `true` when the file selection matched zero files and the run is being treated as a failure.
+  `true` when the file selection matched zero files and the run is being treated as a failure;
+  `IReadOnlyList<FindingDetail?>? details` - optional, one entry per diagnostic, used only by
+  the detailed format (ignored otherwise).
 - *Returns*: `void`.
 - *Preconditions*: `context`, `diagnostics`, and `files` are non-null.
-- *Postconditions*: Exactly one output path (`WriteText` or `WriteJson`) is executed.
+- *Postconditions*: Exactly one output path (`WriteText`, `WriteJson` or `WriteJsonDetailed`) is
+  executed.
+
+**WriteJsonDetailed**: Serializes the findings to one pretty-printed document with the
+`ste100mark-detailed/1` schema, the context-lines setting, every default diagnostic field and,
+for each diagnostic that has one, its `detail` object. It is written in a single
+`Context.WriteLine` call like `WriteJson`.
 
 **WriteText**: Emits one human-readable line per diagnostic followed by a summary line.
 
@@ -101,6 +124,7 @@ document and writes it in one call so stdout remains a single JSON value.
 
 - **Context** and **OutputFormat** - determine where and how to write the report.
 - **Diagnostic** and **Severity** - provide the source payload and summary counts.
+- **FindingDetail** - the detail object serialized by the detailed format.
 - **System.Text.Json** - serializes the stable JSON schema.
 
 #### Callers

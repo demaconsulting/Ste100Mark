@@ -594,6 +594,76 @@ public sealed class LinterTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that detailed JSON output reports the right location, context kind, sentence and
+    ///     context for dictionary findings in a heading, a table cell, a list item and a paragraph,
+    ///     and that structural findings carry no detail.
+    /// </summary>
+    [Fact]
+    public void Run_JsonDetailed_ReportsDetailForEachBlockKind()
+    {
+        // Arrange: a dictionary entry and one finding in each block kind plus a semicolon finding
+        WriteFile(
+            ".ste100mark.yaml",
+            "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [carry out]\n");
+        WriteFile(
+            "doc.md",
+            "# We perform tests\n\nThe crew will perform the check; the valve opens.\n\n- We perform the test.\n\n| Item | Note |\n| --- | --- |\n| Valve | We perform it. |\n");
+
+        // Act: run with detailed output and one context line
+        var (exitCode, output) = RunLinter("doc.md", "--format", "json-detailed", "--context-lines", "1");
+
+        // Assert: parse the document and check each finding
+        Assert.NotEqual(0, exitCode);
+        using var document = System.Text.Json.JsonDocument.Parse(output);
+        Assert.Equal("ste100mark-detailed/1", document.RootElement.GetProperty("schema").GetString());
+        var diagnostics = document.RootElement.GetProperty("diagnostics").EnumerateArray().ToList();
+        var dict = diagnostics.Where(d => d.GetProperty("ruleCode").GetString() == "STE100-DICT").ToList();
+        Assert.Equal(4, dict.Count);
+        var kinds = dict.Select(d => d.GetProperty("detail").GetProperty("contextKind").GetString()).ToList();
+        Assert.Equal(["heading", "paragraph", "list-item", "table-cell"], kinds);
+
+        var paragraph = dict[1].GetProperty("detail");
+        Assert.Equal(3, paragraph.GetProperty("span").GetProperty("startLine").GetInt32());
+        Assert.Equal(
+            "The crew will perform the check; the valve opens.",
+            paragraph.GetProperty("sentence").GetProperty("text").GetString());
+        Assert.Equal(2, paragraph.GetProperty("context").GetProperty("startLine").GetInt32());
+        Assert.Equal(3, paragraph.GetProperty("context").GetProperty("lines").GetArrayLength());
+        Assert.Equal(15, paragraph.GetProperty("span").GetProperty("startColumn").GetInt32());
+
+        var structural = diagnostics.First(d => d.GetProperty("ruleCode").GetString() == "STE100-8.1");
+        Assert.False(structural.TryGetProperty("detail", out _));
+    }
+
+    /// <summary>
+    ///     Test that detailed output with zero context lines omits the context, and that default
+    ///     text and JSON output of the same input are not affected by the detailed option.
+    /// </summary>
+    [Fact]
+    public void Run_JsonDetailed_ZeroContextOmitsContext_DefaultFormatsHaveNoDetail()
+    {
+        // Arrange: a dictionary entry and one finding
+        WriteFile(
+            ".ste100mark.yaml",
+            "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [carry out]\n");
+        WriteFile("doc.md", "# Title\n\nThe crew will perform the check.\n");
+
+        // Act: run detailed with zero context, plain JSON, and text
+        var (_, detailed) = RunLinter("doc.md", "--format", "json-detailed", "--context-lines", "0");
+        var (_, json) = RunLinter("doc.md", "--format", "json");
+        var (_, text) = RunLinter("doc.md", "--silent");
+
+        // Assert: no context on the detailed finding; no schema or detail in the default JSON
+        using var detailedDocument = System.Text.Json.JsonDocument.Parse(detailed);
+        var detail = detailedDocument.RootElement.GetProperty("diagnostics")[0].GetProperty("detail");
+        Assert.False(detail.TryGetProperty("context", out _));
+        Assert.Equal(0, detailedDocument.RootElement.GetProperty("contextLines").GetInt32());
+        Assert.DoesNotContain("\"schema\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"detail\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"detail\"", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Test that an explicit --config pointing at a missing file reports an error rather than
     ///     throwing out of Run.
     /// </summary>

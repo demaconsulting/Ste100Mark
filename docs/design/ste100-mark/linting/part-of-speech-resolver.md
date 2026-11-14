@@ -77,6 +77,19 @@ so a later call retries.
   *Unknown words* below). A match that spans more than one token (a multi-word
   term) is inconclusive, as is a match that no token covers.
 
+**ResolveWithEvidence**: Resolves the role exactly as `Resolve` does and also reports why.
+
+- *Parameters*: the same as `Resolve`.
+- *Returns*: `RoleEvidence` - the `Role` (identical to `Resolve`) and an `Outcome` of `resolved`,
+  `below-threshold`, `unknown-word`, `unsupported-tag`, `multi-token`, or `unavailable` (no token
+  covers the match), plus the chosen tag, its confidence, the margin over the runner-up,
+  the runner-up tag and probability, the lexicon and glossary flags, and whether the threshold
+  was met.
+- *Postconditions*: `Resolve` delegates to this method and returns its `Role`, so the two can
+  never disagree. `IPartOfSpeechResolver` provides a default implementation that wraps `Resolve`
+  with outcome `resolved` or `unavailable` and no tagger fields, so a resolver that implements
+  only `Resolve` keeps working.
+
 **GetTags**: Tags one sentence, maps each token to a role, and caches the outcome.
 
 #### Unknown words

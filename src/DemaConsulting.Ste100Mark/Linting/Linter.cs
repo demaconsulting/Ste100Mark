@@ -134,6 +134,8 @@ internal static class Linter
         var files = ResolveFiles(context.Globs, config);
 
         var diagnostics = new List<Diagnostic>();
+        var details = new List<FindingDetail?>();
+        var detailed = context.Format == OutputFormat.JsonDetailed;
         var relativePaths = new List<string>(files.Count);
         foreach (var file in files)
         {
@@ -145,7 +147,9 @@ internal static class Linter
             var segments = MarkdownProseExtractor.Extract(content);
             var allowedTerms = config.ResolveAllowedTerms(relativePath);
 
-            diagnostics.AddRange(StructuralRules.Evaluate(relativePath, segments, mode, rules, allowedTerms));
+            var structural = StructuralRules.Evaluate(relativePath, segments, mode, rules, allowedTerms);
+            diagnostics.AddRange(structural);
+            details.AddRange(structural.Select(_ => (FindingDetail?)null));
 
             if (dictionary is not null)
             {
@@ -153,8 +157,14 @@ internal static class Linter
                 var dictionaryAllowed = glossary is { Terms.Count: > 0 }
                     ? allowedTerms.Concat(glossary.GetAllowedTerms()).ToHashSet(StringComparer.OrdinalIgnoreCase)
                     : allowedTerms;
-                diagnostics.AddRange(DictionaryChecker.Evaluate(
-                    relativePath, segments, dictionary, dictionaryAllowed, allowedPhrases, resolver));
+                var dictionaryFindings = DictionaryChecker.Evaluate(
+                    relativePath, segments, dictionary, dictionaryAllowed, allowedPhrases, resolver, detailed);
+                diagnostics.AddRange(dictionaryFindings);
+                var sourceLines = detailed
+                    ? content.ReplaceLineEndings("\n").Split('\n')
+                    : [];
+                details.AddRange(dictionaryFindings.Select(d =>
+                    detailed ? FindingDetail.Build(d, sourceLines, context.ContextLines) : null));
             }
         }
 
@@ -164,11 +174,11 @@ internal static class Linter
         // the caller has explicitly opted in to accepting an empty selection via --allow-empty.
         var noFilesMatched = files.Count == 0 && !context.AllowEmpty;
 
-        DiagnosticReporter.Report(context, diagnostics, relativePaths, noFilesMatched);
+        DiagnosticReporter.Report(context, diagnostics, relativePaths, noFilesMatched, details);
 
         if (noFilesMatched)
         {
-            if (context.Format == OutputFormat.Json)
+            if (context.Format.IsJson())
             {
                 // Avoid emitting any additional text so the JSON document remains the only content
                 // on the combined output stream (see DiagnosticReporter remarks).
@@ -198,7 +208,7 @@ internal static class Linter
             return;
         }
 
-        if (context.Format == OutputFormat.Json)
+        if (context.Format.IsJson())
         {
             // Avoid emitting any additional text so the JSON document remains the only content on
             // the combined output stream (see DiagnosticReporter remarks).

@@ -34,7 +34,20 @@ namespace DemaConsulting.Ste100Mark.Linting;
 /// <param name="Tag">The universal part-of-speech tag chosen for the token.</param>
 /// <param name="Confidence">The confidence (0 to 1) of the chosen tag.</param>
 /// <param name="IsKnownWord">Whether the tagger's lexicon has an entry for the word.</param>
-internal readonly record struct TaggedSpan(int Start, int Length, Upos Tag, double Confidence, bool IsKnownWord);
+/// <param name="Margin">Confidence minus the runner-up probability, when the tagger reports it.</param>
+/// <param name="RunnerUpTag">The second most likely tag, when the tagger reports one.</param>
+/// <param name="RunnerUpProbability">The probability of <paramref name="RunnerUpTag"/>.</param>
+/// <param name="IsConstrained">Whether a glossary decided the tag.</param>
+internal readonly record struct TaggedSpan(
+    int Start,
+    int Length,
+    Upos Tag,
+    double Confidence,
+    bool IsKnownWord,
+    double? Margin = null,
+    Upos? RunnerUpTag = null,
+    double? RunnerUpProbability = null,
+    bool IsConstrained = false);
 
 /// <summary>
 ///     <see cref="IPartOfSpeechResolver"/> backed by the <c>DemaConsulting.PartOfSpeech</c> context-aware
@@ -168,6 +181,12 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
     /// <inheritdoc />
     public PartOfSpeech? Resolve(string segmentText, int matchIndex, int matchLength)
     {
+        return ResolveWithEvidence(segmentText, matchIndex, matchLength).Role;
+    }
+
+    /// <inheritdoc />
+    public RoleEvidence ResolveWithEvidence(string segmentText, int matchIndex, int matchLength)
+    {
         ArgumentNullException.ThrowIfNull(segmentText);
         if (matchIndex < 0 || matchIndex > segmentText.Length || matchLength <= 0
             || matchLength > segmentText.Length - matchIndex)
@@ -193,7 +212,7 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
 
         if (matchIndex + matchLength > sentenceEnd)
         {
-            return null;
+            return new RoleEvidence(null, "multi-token");
         }
 
         var sentence = segmentText[sentenceStart..sentenceEnd];
@@ -212,13 +231,13 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
             // A match that extends past its first token spans several tokens (a multi-word term).
             if (relativeEnd > start + length)
             {
-                return null;
+                return new RoleEvidence(null, "multi-token");
             }
 
-            return tags.Roles[i];
+            return BuildEvidence(tags.Tokens[i], tags.Roles[i]);
         }
 
-        return null;
+        return new RoleEvidence(null, RoleEvidence.UnavailableOutcome);
     }
 
     /// <summary>
@@ -314,7 +333,7 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
             roles[i] = MapRole(tokens[i]);
         }
 
-        return new SentenceTags(spans, roles);
+        return new SentenceTags(spans, roles, [.. tokens]);
     }
 
     /// <summary>
@@ -356,7 +375,11 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
                     token.Length,
                     token.Tag,
                     token.Confidence,
-                    token.IsKnownWord || token.IsConstrained));
+                    token.IsKnownWord || token.IsConstrained,
+                    token.Margin,
+                    token.Alternatives.Count > 0 ? token.Alternatives[0].Tag : null,
+                    token.Alternatives.Count > 0 ? token.Alternatives[0].Probability : null,
+                    token.IsConstrained));
             }
         }
 
@@ -392,6 +415,42 @@ internal sealed class PartOfSpeechResolver : IPartOfSpeechResolver
         };
     }
 
+    /// <summary>
+    ///     Builds the evidence record for one token and the role already resolved for it.
+    /// </summary>
+    private static RoleEvidence BuildEvidence(TaggedSpan token, PartOfSpeech? role)
+    {
+        string outcome;
+        if (role is not null)
+        {
+            outcome = "resolved";
+        }
+        else if (token.Confidence < MinimumConfidence)
+        {
+            outcome = "below-threshold";
+        }
+        else if (!token.IsKnownWord && token.Tag is Upos.Noun or Upos.Verb or Upos.Propn)
+        {
+            outcome = "unknown-word";
+        }
+        else
+        {
+            outcome = "unsupported-tag";
+        }
+
+        return new RoleEvidence(
+            role,
+            outcome,
+            token.Tag.ToString().ToLowerInvariant(),
+            token.Confidence,
+            token.Margin,
+            token.IsKnownWord,
+            token.IsConstrained,
+            token.RunnerUpTag?.ToString().ToLowerInvariant(),
+            token.RunnerUpProbability,
+            token.Confidence >= MinimumConfidence);
+    }
+
     /// <summary>The token spans of one sentence and the role resolved for each token.</summary>
-    private sealed record SentenceTags((int Start, int Length)[] Spans, PartOfSpeech?[] Roles);
+    private sealed record SentenceTags((int Start, int Length)[] Spans, PartOfSpeech?[] Roles, TaggedSpan[] Tokens);
 }

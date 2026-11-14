@@ -2,7 +2,7 @@ package Ste100Mark {
     private import SoftwareItemMetadata::*;
 
     part def DiagnosticReporter {
-        doc /* Formats aggregated lint diagnostics as text lines or a single JSON document. */
+        doc /* Formats aggregated lint diagnostics as text lines, a single JSON document, or a single detailed JSON document. */
 
         // Verification: verified through output-format scenarios
         // Requirements: output-format requirements

@@ -134,6 +134,29 @@ sections:
         tests:
           - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
 
+      - id: Ste100Mark-Cli-FormatJsonDetailed
+        title: >-
+          The Cli subsystem shall support the json-detailed value of the --format flag to select
+          the detailed JSON diagnostic output, and shall suppress the banner for it.
+        justification: |
+          Reviewers and tools that judge findings need the detailed report, and like the default
+          JSON it must be parseable without banner text mixed in.
+        tests:
+          - CliSubsystem_DetailedFormatFlow_ContextAndProgram_SuppressesBannerAndWritesDetailedJson
+          - Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument
+
+      - id: Ste100Mark-Cli-ContextLines
+        title: >-
+          The Cli subsystem shall support the --context-lines flag, with a whole number from 0
+          to 10 (default 2), only together with --format json-detailed, and shall report any
+          other use as an argument error.
+        justification: |
+          The number of context lines only has a meaning for the detailed format, so using it
+          anywhere else is most likely a mistake that must not be ignored silently.
+        tests:
+          - CliSubsystem_DetailedFormatFlow_ContextAndProgram_SuppressesBannerAndWritesDetailedJson
+          - Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions
+
       - id: Ste100Mark-Cli-Strict
         title: >-
           The Cli subsystem shall support --strict flag to make warn-severity findings cause a

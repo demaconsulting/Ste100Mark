@@ -19,7 +19,8 @@ string RuleCode,
 Severity Severity,
 string Message,
 string? Suggestion,
-IReadOnlyList<DictionaryCitation>? Citations = null)`.
+IReadOnlyList<DictionaryCitation>? Citations = null,
+DictionaryEvidence? Evidence = null)`.
 
 - `File`: `string` - file path reported to the user exactly as resolved by `Linter`.
 - `Line`: `int` - 1-based source line number where the finding begins.
@@ -37,6 +38,10 @@ IReadOnlyList<DictionaryCitation>? Citations = null)`.
   (which is unchanged) rather than a replacement, so a consumer can use structured term/
   part-of-speech data instead of parsing it back out of prose, without breaking existing
   text-mode/JSON consumers of `Suggestion`.
+- `Evidence`: `DictionaryEvidence?` - optional trailing field, defaulting to `null`, carrying the
+  raw evidence for a dictionary finding. Set by `DictionaryChecker` only when detail collection
+  is requested (the `json-detailed` format); `FindingDetail.Build` turns it into the reported
+  detail. It is never written by the text or default JSON output.
 
 **DictionaryCitation**: `internal sealed record DictionaryCitation(string Term, string Pos)` -
 one structured approved-term citation backing a `Diagnostic.Citations` list.

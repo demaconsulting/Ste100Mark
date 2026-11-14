@@ -41,6 +41,16 @@ zero-matched file selection back into a success exit code instead of the distinc
 **ListRules**: `bool` — `true` when `--list-rules` was present in the argument list; requests
 that `Program.Run` dispatch to the rule-catalog JSON output path instead of the main lint flow.
 
+**Format**: `OutputFormat` — selected output format from `--format`: `Text` (default), `Json` or
+`JsonDetailed`. The `OutputFormatExtensions.IsJson` helper is true for both JSON formats and is
+used by `Program` and `Linter` wherever a JSON format must keep stdout to one document.
+
+**ContextLines**: `int` — number of source lines shown before and after a finding in the
+`json-detailed` report; valid range 0–10, default 2 (`DefaultContextLines`, `MaxContextLines`),
+supplied via `--context-lines`. It is accepted only together with `--format json-detailed`; the
+check runs after all arguments are parsed, so the order of the two flags does not matter, and any
+other use throws `ArgumentException`.
+
 **NoFilesMatchedExitCode**: `int` (const, `2`) — The distinct exit code returned by `ExitCode`
 when the file selection matched zero files and `AllowEmpty` was not specified. Kept as a single
 named constant so `Program`'s help text and the derivation logic below share one source of

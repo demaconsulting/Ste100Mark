@@ -503,6 +503,38 @@ public class IntegrationTests
     }
 
     /// <summary>
+    ///     Test that the CLI flags split phrasal verbs, hyphenated prefix forms and compound irregular
+    ///     forms, and does not flag a participle used as a heading fragment.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms()
+    {
+        // Arrange: three verb entries and a document that uses the extra forms
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            const string config = "dictionary:\n  use-embedded: false\n  disallow:\n    carry out:\n      - pos: verb\n        alternatives: [start]\n    perform:\n      - pos: verb\n        alternatives: [do]\n    withstand:\n      - pos: verb\n        alternatives: [resist]\n";
+            const string document = "# Performed checks\n\nThe crew carried the old test out today.\n\nThe team will re-perform the check.\n\nThe valve withstood the load.\n";
+            File.WriteAllText(Path.Combine(workingDirectory, "doc.md"), document);
+            File.WriteAllText(Path.Combine(workingDirectory, ".ste100mark.yaml"), config);
+
+            // Act: run the linter
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "doc.md");
+
+            // Assert: each Part A form is reported and the heading fragment is not
+            Assert.NotEqual(0, exitCode);
+            Assert.Contains("carried the old test out", output);
+            Assert.Contains("re-perform", output);
+            Assert.Contains("withstood", output);
+            Assert.DoesNotContain("'Performed'", output);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
     ///     Test that linting a clean Markdown file exits zero.
     /// </summary>
     [Fact]
@@ -897,5 +929,295 @@ public class IntegrationTests
             Directory.Delete(shared, true);
         }
     }
-}
 
+    /// <summary>
+    ///     Test that the default text output, default JSON output and rule listing of a fixed
+    ///     generic scenario stay byte-identical to reference outputs captured before any later
+    ///     output-format work.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintDefaultOutputs_Unchanged()
+    {
+        // Arrange: a dictionary entry, a document with a heading, a table, a structural finding
+        // and word-form dictionary findings, and the literal reference outputs
+        const string expectedText = "doc.md:3: [ERROR] STE100-8.1 \u2014 Semicolons are not permitted in ASD-STE100 prose. (Suggestion: Split into two separate sentences.)\n" +
+                                    "doc.md:3: [ERROR] STE100-DICT \u2014 Avoid 'performed' (a form of 'perform'); use 'started' instead. (Suggestion: started)\n" +
+                                    "doc.md:7: [ERROR] STE100-DICT \u2014 Avoid 'performs' (a form of 'perform'); use 'starts' instead. (Suggestion: starts)\n" +
+                                    "Checked 1 file(s): 3 error(s), 0 warning(s).\n" +
+                                    "Ste100Mark found linting issues (3 error(s)).";
+        const string expectedJson = """
+            {
+              "filesChecked": 1,
+              "noFilesMatched": false,
+              "errorCount": 3,
+              "warningCount": 0,
+              "files": [
+                {
+                  "path": "doc.md",
+                  "status": "checked"
+                }
+              ],
+              "diagnostics": [
+                {
+                  "file": "doc.md",
+                  "line": 3,
+                  "column": null,
+                  "ruleCode": "STE100-8.1",
+                  "severity": "error",
+                  "message": "Semicolons are not permitted in ASD-STE100 prose.",
+                  "suggestion": "Split into two separate sentences.",
+                  "citations": null
+                },
+                {
+                  "file": "doc.md",
+                  "line": 3,
+                  "column": null,
+                  "ruleCode": "STE100-DICT",
+                  "severity": "error",
+                  "message": "Avoid \u0027performed\u0027 (a form of \u0027perform\u0027); use \u0027started\u0027 instead.",
+                  "suggestion": "started",
+                  "citations": [
+                    {
+                      "term": "start",
+                      "pos": "verb"
+                    }
+                  ]
+                },
+                {
+                  "file": "doc.md",
+                  "line": 7,
+                  "column": null,
+                  "ruleCode": "STE100-DICT",
+                  "severity": "error",
+                  "message": "Avoid \u0027performs\u0027 (a form of \u0027perform\u0027); use \u0027starts\u0027 instead.",
+                  "suggestion": "starts",
+                  "citations": [
+                    {
+                      "term": "start",
+                      "pos": "verb"
+                    }
+                  ]
+                }
+              ]
+            }
+            """;
+        const string expectedRules = """
+            [
+              {
+                "code": "STE100-4.1",
+                "title": "Sentence word-count limit (Rules 4.1, 8.4-8.7).",
+                "classification": "official",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-8.1",
+                "title": "No semicolons (Rule 8.1).",
+                "classification": "official",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-4.2",
+                "title": "No contractions (Rule 4.2).",
+                "classification": "official",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-DICT",
+                "title": "Dictionary/vocabulary enforcement against the effective (default or configured) dictionary.",
+                "classification": "mechanical",
+                "suggestionKind": "citationForm",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-ADV-PARA",
+                "title": "Paragraph sentence-count cap (advisory heuristic, not an official STE100 rule).",
+                "classification": "advisory",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-ADV-PASSIVE",
+                "title": "Passive-voice detection (advisory heuristic, not an official STE100 rule).",
+                "classification": "advisory",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-ADV-COMPLEXVERB",
+                "title": "Perfect/modal-perfect tense detection (advisory heuristic, not an official STE100 rule).",
+                "classification": "advisory",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              },
+              {
+                "code": "STE100-ADV-INGFORM",
+                "title": "-ing form detection (advisory heuristic, not an official STE100 rule).",
+                "classification": "advisory",
+                "suggestionKind": "advice",
+                "modes": [
+                  "procedure",
+                  "descriptive"
+                ]
+              }
+            ]
+            """;
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(workingDirectory, ".ste100mark.yaml"),
+                "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [start]\n");
+            File.WriteAllText(
+                Path.Combine(workingDirectory, "doc.md"),
+                "# Report Overview\n\nThe crew performed the task; the valve opened.\n\n| Item | Note |\n| --- | --- |\n| Valve | The crew performs the check. |\n");
+
+            // Act: run the default text, default JSON and rule listing outputs
+            Runner.RunInDirectory(out var textOutput, workingDirectory, "dotnet", _dllPath, "doc.md");
+            Runner.RunInDirectory(out var jsonOutput, workingDirectory, "dotnet", _dllPath, "doc.md", "--format", "json");
+            Runner.RunInDirectory(out var rulesOutput, workingDirectory, "dotnet", _dllPath, "--list-rules");
+
+            // Assert: each output equals its golden (banner lines and line endings normalized)
+            // The em dash separator may be encoded as a hyphen when output is redirected
+            var textLines = textOutput.Replace("\u2014", "-").Replace("\r\n", "\n").Split('\n')
+                .Where(line => line.Length > 0 &&
+                               !line.StartsWith("Ste100Mark version ", StringComparison.Ordinal) &&
+                               !line.StartsWith("Copyright (c)", StringComparison.Ordinal));
+            Assert.Equal(expectedText.Replace("\u2014", "-"), string.Join("\n", textLines));
+            Assert.Equal(expectedJson.Replace("\r\n", "\n"), jsonOutput.Replace("\r\n", "\n").TrimEnd());
+            Assert.Equal(expectedRules.Replace("\r\n", "\n"), rulesOutput.Replace("\r\n", "\n").TrimEnd());
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that the real tool writes a valid detailed JSON document for generic findings in a
+    ///     heading, a paragraph and a table cell, with the documented fields.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument()
+    {
+        // Arrange: a dictionary entry and a document with findings in several block kinds
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(workingDirectory, ".ste100mark.yaml"),
+                "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [carry out]\n");
+            File.WriteAllText(
+                Path.Combine(workingDirectory, "doc.md"),
+                "# Report Overview\n\nThe crew will perform the check. The valve opened.\n\n| Item | Note |\n| --- | --- |\n| Valve | The crew performs the check. |\n");
+
+            // Act: run the real tool with detailed output
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "doc.md", "--format", "json-detailed", "--context-lines", "1");
+
+            // Assert: a lint failure exit code, one JSON document with no banner, and detail fields
+            Assert.NotEqual(0, exitCode);
+            var json = output[output.IndexOf('{', StringComparison.Ordinal)..];
+            Assert.DoesNotContain("Ste100Mark version", output[..output.IndexOf('{', StringComparison.Ordinal)], StringComparison.Ordinal);
+            using var document = System.Text.Json.JsonDocument.Parse(json[..(json.LastIndexOf('}') + 1)]);
+            var root = document.RootElement;
+            Assert.Equal("ste100mark-detailed/1", root.GetProperty("schema").GetString());
+            Assert.Equal(1, root.GetProperty("contextLines").GetInt32());
+            var diagnostics = root.GetProperty("diagnostics").EnumerateArray().ToList();
+            Assert.Equal(2, diagnostics.Count);
+
+            var paragraph = diagnostics[0].GetProperty("detail");
+            Assert.Equal("paragraph", paragraph.GetProperty("contextKind").GetString());
+            Assert.Equal("The crew will perform the check.", paragraph.GetProperty("sentence").GetProperty("text").GetString());
+            Assert.Equal(15, paragraph.GetProperty("span").GetProperty("startColumn").GetInt32());
+            Assert.Equal("base", paragraph.GetProperty("match").GetProperty("formKind").GetString());
+            Assert.Equal("certain", paragraph.GetProperty("confidence").GetProperty("class").GetString());
+            Assert.Equal("carry out", paragraph.GetProperty("suggestions")[0].GetProperty("text").GetString());
+
+            var cell = diagnostics[1].GetProperty("detail");
+            Assert.Equal("table-cell", cell.GetProperty("contextKind").GetString());
+            Assert.Equal("third-person", cell.GetProperty("match").GetProperty("formKind").GetString());
+            Assert.Equal("carries out", cell.GetProperty("suggestions")[0].GetProperty("text").GetString());
+            var kinds = cell.GetProperty("suppression").GetProperty("options").EnumerateArray()
+                .Select(o => o.GetProperty("kind").GetString()).ToList();
+            Assert.Contains("allow", kinds);
+            Assert.Contains("allow-in-phrase", kinds);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that --context-lines is rejected without json-detailed and that the help lists both
+    ///     new options.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions()
+    {
+        // Act: run with the option on the default format, and request help
+        var errorExit = Runner.Run(out var errorOutput, "dotnet", _dllPath, "--context-lines", "3");
+        Runner.Run(out var helpOutput, "dotnet", _dllPath, "--help");
+
+        // Assert: an error naming the requirement, and the help text lists both options
+        Assert.NotEqual(0, errorExit);
+        Assert.Contains("json-detailed", errorOutput, StringComparison.Ordinal);
+        Assert.Contains("json-detailed", helpOutput, StringComparison.Ordinal);
+        Assert.Contains("--context-lines", helpOutput, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that adding the detailed format leaves the default text and JSON outputs of the
+    ///     same input unchanged: neither carries a schema or detail member.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWithJsonDetailed_DefaultTextAndJsonUnchanged()
+    {
+        // Arrange: a dictionary entry and a document with one finding
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(workingDirectory, ".ste100mark.yaml"),
+                "dictionary:\n  use-embedded: false\n  disallow:\n    perform:\n      - pos: verb\n        alternatives: [carry out]\n");
+            File.WriteAllText(Path.Combine(workingDirectory, "doc.md"), "# Title\n\nThe crew will perform the check.\n");
+
+            // Act: run the text and JSON formats
+            Runner.RunInDirectory(out var text, workingDirectory, "dotnet", _dllPath, "doc.md");
+            Runner.RunInDirectory(out var json, workingDirectory, "dotnet", _dllPath, "doc.md", "--format", "json");
+
+            // Assert: the plain formats have no detailed members
+            Assert.Contains("STE100-DICT", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"schema\"", json, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"detail\"", json, StringComparison.Ordinal);
+            Assert.DoesNotContain("\"contextLines\"", json, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+}

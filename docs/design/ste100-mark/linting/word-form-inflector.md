@@ -31,6 +31,16 @@ single-syllable consonant-vowel-consonant verb, or for a verb with a known stres
 (for example "-mit", "-pel", "-fer"), minus a short exception list (for example "limit",
 "offer"). Nouns take -s, -es, or y to -ies; a noun ending in -is takes -es.
 
+**Compound irregular verbs**: a verb that is a fixed prefix (with, under, over, out, mis, up,
+fore, re) plus a table verb takes the stem forms with the prefix ("withstand" gives "withstood").
+The remainder must be at least two letters and in the table; "relay" is an exception and uses
+the regular rules. The third-person form uses the regular rule.
+
+**Phrasal particles and hyphen prefixes**: `IsPhrasalVerb` is true for a verb term of exactly
+two words whose second word is in the particle list (up, down, out, off, on, in, over, away,
+back, through, around, apart, together, forward, aside, along, across, ahead).
+`HyphenPrefixes` lists the prefixes `DictionaryChecker` accepts before a verb spelling.
+
 #### Key Methods
 
 **Generate**: Returns every inflected spelling for a term and a part of speech.
