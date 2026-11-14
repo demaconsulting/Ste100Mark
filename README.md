@@ -54,49 +54,24 @@ Install the tool globally using the .NET CLI:
 dotnet tool install -g DemaConsulting.Ste100Mark
 ```
 
-## Usage
+## Quick Start
 
 ```bash
-# Lint Markdown files selected by positional globs
+# Lint Markdown files selected by globs
 ste100mark docs/**/*.md
 
-# Use the default .ste100mark.yaml in the current directory
+# Use the .ste100mark.yaml in the current directory, or pick a file and a JSON report
 ste100mark
-
-# Use an explicit configuration file and JSON output
 ste100mark docs/**/*.md --config .ste100mark.yaml --format json
 
-# Add evidence, confidence and suppression hints to each dictionary finding
-ste100mark docs/**/*.md --format json-detailed --context-lines 3
-# Promote warnings to a failing exit code
+# Fail the run on warnings too
 ste100mark docs/**/*.md --strict
 
-# Display version
-ste100mark --version
-
-# Display help
-ste100mark --help
-
-# Run self-validation
-ste100mark --validate
-
-# Display the machine-readable rule catalog
+# Show the machine-readable rule catalog
 ste100mark --list-rules
 ```
 
-## ASD-STE100 Linting
-
-The default tool path runs the Markdown linter:
-
-```bash
-ste100mark [globs...] [--config <file>] [--format text|json|json-detailed] [--strict]
-```
-
-When `[globs...]` is omitted, Ste100Mark uses the `include` and `exclude` patterns from the
-resolved configuration file. If no configuration file is present, the tool falls back to
-`**/*.md` in the current working directory.
-
-Example configuration:
+A minimal `.ste100mark.yaml`:
 
 ```yaml
 include:
@@ -104,117 +79,21 @@ include:
 exclude:
   - docs/**/generated/**
 default-mode: descriptive
-profiles:
-  - glob: docs/user_guide/procedures/**/*.md
-    mode: procedure
-  - glob: docs/requirements/**/*.md
-    dictionary:
-      allow: [shall]
-    rules:
-      passive-voice: off
 rules:
-  max-words-procedure: 20
   max-words-descriptive: 25
-  allow-semicolons: false
-  allow-contractions: false
-  max-sentences-paragraph: 6
-  passive-voice: warn
-  complex-verb: warn
-  ing-form: warn
 dictionary:
   file: your-licensed-asd-ste-dictionary.yaml
-  use-embedded: false
-  disallow:
-    utilize:
-      - pos: verb
-        alternatives: [use]
-  allow:
-    - ste100mark
-  ignore:
-    - api
 ```
 
-Mechanical rules reported by the linter are `STE100-4.1` (sentence length), `STE100-8.1`
-(semicolons), `STE100-4.2` (contractions), and `STE100-DICT` (dictionary enforcement).
-Advisory heuristics are `STE100-ADV-PARA` (paragraph length), `STE100-ADV-PASSIVE`
-(passive voice), `STE100-ADV-COMPLEXVERB` (perfect/modal-perfect tense), and
-`STE100-ADV-INGFORM` (`-ing` form).
+> **Dictionary notice:** The embedded dictionary is a small, illustrative example. It is **not** the
+> official ASD-STE100 Part 2 Dictionary. Organizations that need true compliance must supply their own
+> licensed dictionary through `dictionary.file`.
 
-### Discovering Rule Codes
+## Project Glossary
 
-Run `ste100mark --list-rules` to display the full, machine-readable rule catalog as a JSON
-array on stdout, without requiring any Markdown files to exist:
-
-```bash
-ste100mark --list-rules
-```
-
-Each entry has the shape:
-
-```json
-{
-  "code": "STE100-4.1",
-  "title": "Sentence word-count limit (Rules 4.1, 8.4-8.7).",
-  "classification": "official",
-  "suggestionKind": "advice",
-  "modes": ["procedure", "descriptive"]
-}
-```
-
-`classification` is one of `"official"` (an actual ASD-STE100 numbered rule), `"mechanical"`
-(a tool-defined, deterministic check that is not itself a numbered rule, for example
-`STE100-DICT`), or `"advisory"` (a heuristic that may under- or over-detect and is not itself
-a numbered rule).
-
-### Profiles
-
-A repository often has more than one kind of Markdown document, and each kind may need
-different linting behavior. For example, procedural step-by-step guides need the shorter
-Rule 4.1 sentence limit, while a requirements folder legitimately uses the word "shall" in
-every entry and would otherwise trip a project's dictionary. The `profiles` list lets a
-project vary the writing `mode`, rule tuning, and dictionary allowances by glob, without
-duplicating the whole configuration file per document type:
-
-```yaml
-profiles:
-  - glob: docs/user_guide/procedures/**/*.md
-    mode: procedure
-  - glob: docs/requirements/**/*.md
-    dictionary:
-      allow: [shall]
-    rules:
-      passive-voice: off
-```
-
-Each profile entry supports:
-
-- `glob` (required): the pattern identifying the files the profile applies to. It is matched
-  against each file's path relative to the directory where you run the tool (the current
-  working directory), not the configuration file's directory.
-- `mode` (optional): sets the writing mode (`procedure` or `descriptive`) for matching
-  files. When more than one profile matches a file, the **first** declared profile that
-  specifies a `mode` wins; profiles without a `mode` are skipped for this resolution step
-  and fall through to `default-mode` or a later matching profile.
-- `rules` (optional): a partial override of the top-level `rules` section (only the knobs
-  you list are changed; everything else keeps its global value). When a file matches
-  **multiple** profiles that set `rules`, every matching profile's delta is applied in
-  declaration order, so later profiles win on any single knob both profiles set.
-- `dictionary.allow` / `dictionary.ignore` (optional): additional terms to allow for
-  matching files only, unioned with the top-level `dictionary.allow`/`dictionary.ignore`
-  lists (not a full replacement). A profile cannot supply its own `file`/`disallow`/
-  `use-embedded` dictionary source - the merged term-to-sense dictionary is always the
-  same project-wide; profiles only add per-file allowances on top of it.
-
-> **Important dictionary notice:** The embedded default dictionary is a small,
-> originally-authored, illustrative and representative example. It is **not** the official
-> ASD-STE100 Part 2 Dictionary. Projects that require true ASD-STE100 Issue 9 compliance
-> must supply your organization's licensed ASD-STE100 dictionary through `dictionary.file`.
-> Ste100Mark does not provide full official ASD-STE100 dictionary content out of the box.
-
-### Project Glossary
-
-A project glossary approves product names and domain terms and gives each a part of speech. A
-deprecated-terms file reports retired terms with a replacement. Configure them under `dictionary`:
+A project glossary pins your product names and domain terms, with a part of speech for each, so the
+part-of-speech tagger stops producing false findings on them. Hard mode (the default) makes the tagger
+use your part of speech. Configure it under `dictionary`:
 
 ```yaml
 dictionary:
@@ -223,13 +102,8 @@ dictionary:
   glossary-mode: hard   # hard (default) or soft
 ```
 
-Paths are relative to the configuration file, or absolute, or UNC, and can use `${VAR}`. A missing
-file or a conflict between sources is an error. See the user guide for the entry format, the
-conflict rules, and the risks.
-
-**Definitions are required.** Every approved term must have a definition that is not empty,
-including a term with `visible: false`. A missing or empty definition is an error that names the
-term and the file. A small, complete glossary file looks like this:
+Every term in a glossary file needs a definition that is not empty. Use a plain string, or an object
+for more detail:
 
 ```yaml
 # docs/glossary.yaml
@@ -244,7 +118,7 @@ bleed valve:
   pos: noun
 ```
 
-A deprecated-terms file has no definitions. Each entry needs `use`, and `where` is optional:
+A deprecated-terms file reports a retired term with its replacement. It needs no definitions:
 
 ```yaml
 # docs/deprecated-terms.yaml
@@ -253,178 +127,19 @@ Acme Hub:
   where: Documents before version 2.
 ```
 
-### Project Dictionary Files
+A missing or empty definition is an error. The [User Guide][link-guide-glossary] explains path rules
+(relative, absolute, UNC, and `${VAR}`), conflict rules, and risks.
 
-A project dictionary file (referenced by `dictionary.file`) is a YAML document whose
-top-level keys are the disallowed terms. Each term maps to a **list of one or more
-part-of-speech-tagged senses**. Each sense has a `pos` (`noun`, `verb`, `adjective`,
-`adverb`, or `any` for a role-independent connector), an `alternatives` list of suggested
-replacement words or phrases for that sense, and an optional free-text `note` explaining the
-rationale. Ste100Mark merges this file with the embedded default dictionary (unless
-`dictionary.use-embedded: false` is set) and the inline `dictionary.disallow` entries.
+## Learn More
 
-Verb and noun senses also match their inflected spellings: a disallowed verb `produce` also
-flags "produces", "produced", and "producing", and a disallowed noun flags its plural. A match
-must still fit the sense's part of speech, and "-ed", "-ing", and irregular past or participle forms
-are flagged only when the word is confidently a verb (not in an adjective or uncertain use);
-adjective, adverb, and `any` senses are matched
-only as written, and in a multi-word term only the head verb of a phrasal verb inflects.
-An allowed spelling or an explicit dictionary key always wins over a generated form. The
-message names the flagged form and shows each alternative in the same form when it can; if an
-alternative cannot be inflected safely it is shown in its base form and the message says so.
-Set `dictionary.match-word-forms: false` to match only the exact spelling.
-Word-form matching also covers a verb and its particle separated by up to three words
-("carry the old test out"), hyphen prefixes such as "re-perform", and the irregular forms of
-compound verbs such as "withstood". A past or -ing form in a heading or table cell with no
-preceding auxiliary verb is not flagged.
+The [User Guide][link-guide] covers everything else:
 
-```yaml
-utilize:
-  - pos: verb
-    alternatives: [use]
-    note: Prefer the shorter, more common word.
-impact:
-  - pos: noun
-    alternatives: [effect]
-    note: Prefer the plain noun over the vague noun sense of "impact".
-  - pos: verb
-    alternatives: [affect]
-    note: Prefer the plain verb over the vague verb sense of "impact".
-prior to:
-  - pos: any
-    alternatives: [before]
-    note: Simpler time relation.
-```
-
-A term with exactly one sense (any `pos` value) is reported using that sense unless the
-tagger confidently resolves a role incompatible with the entry's part of speech (for example a
-verb-only entry used as a noun); it is reported when the role is compatible or the result is
-inconclusive. A confident determiner is resolver evidence that rules out role-specific senses,
-although it is not a dictionary sense role. When a term has more than one sense, Ste100Mark uses the
-`DemaConsulting.PartOfSpeech` part-of-speech tagger on
-the sentence that contains the term to decide which sense applies. When the tagger can
-confidently tell noun, verb, adjective, or adverb usage apart (confidence of at least 0.90), only the matching
-sense is reported, its alternatives are joined with natural "or"/Oxford-comma phrasing, and
-the diagnostic message notes the grammatical role, for example: `Avoid 'impact'; use
-'effect' instead (used as a noun).` Other unsupported tags remain inconclusive; when the tagger
-cannot decide, every sense is reported,
-grouped per part of speech and clearly labeled as ambiguous, for example: `Ambiguous part of
-speech for 'impact' — possible corrections: as a noun, use 'effect'; as a verb, use
-'affect'.` The tagger is statistical and can be wrong, for example for a sentence-initial
-imperative that reads like a noun phrase. The tagger is bundled with the tool and runs fully
-offline. A term that the tagger does not recognize gets no noun or verb decision, so it is
-reported as ambiguous.
-
-**Why the real ASD-STE100 dictionary is not included:** The official ASD-STE100 Part 2
-Dictionary is commercially-licensed, copyrighted content owned by ASD (Aerospace, Security
-and Defence Industries Association of Europe). Because this repository is public and
-published to NuGet, redistributing ASD's dictionary content would infringe ASD's copyright.
-The embedded default dictionary shipped with Ste100Mark is therefore only an
-originally-authored, illustrative and representative word list, intended to demonstrate the
-feature and provide a reasonable default — it is **not** a substitute for the real standard.
-Any organization that requires true ASD-STE100 compliance must obtain its own license from
-ASD and supply its own dictionary file, in the format shown above, via the `dictionary.file`
-configuration option.
-
-Use `--format json` when you need one machine-readable JSON document on stdout. Use
-`--strict` when you want warn-severity findings to fail the run without changing their
-reported severity.
-
-## Command-Line Options
-
-| Option | Description |
-| --- | --- |
-| `[globs...]` | Optional Markdown globs to lint. Defaults to configuration `include`/`exclude` patterns. |
-| `-v`, `--version` | Display version information |
-| `-?`, `-h`, `--help` | Display help message |
-| `--silent` | Suppress console output |
-| `--validate` | Run self-validation |
-| `--results <file>`, `--result <file>` | Write validation results to `.trx` (TRX) or `.xml` (JUnit XML) file |
-| `--depth <#>` | Set heading depth for markdown output (default: 1) |
-| `--log <file>` | Write output to log file |
-| `--config <file>` | Path to lint configuration file (default lookup: `.ste100mark.yaml`) |
-| `--format <text\|json\|json-detailed>` | Diagnostic output format for linting (default: `text`) |
-| `--context-lines <#>` | Context lines for `json-detailed` (0-10, default: 2; only with `json-detailed`) |
-| `--strict` | Promote warn-severity lint findings to a failing exit code |
-| `--allow-empty` | Treat a file selection that matches zero files as success (default: exit code 2) |
-| `--list-rules` | Display the rule catalog as a JSON array and exit |
-
-## Error Handling
-
-Unrecognized arguments cause the tool to print an error message to standard error and exit
-with a non-zero exit code. Configuration and dictionary file problems also produce a
-non-zero exit code. For example:
-
-```text
-Error: Unsupported argument '--unknown'
-```
-
-This behavior enables CI/CD pipelines to detect and surface misconfiguration failures
-automatically.
-
-Exit codes are: `0` for a clean pass (including a pass with only warn-severity findings when
-`--strict` is not active), `1` when an error-severity lint finding was reported, a warn-severity
-finding was reported with `--strict` active, or an argument/configuration error occurred, and
-`2` when the file selection (positional globs, or configured `include`/`exclude` patterns)
-matched zero files. The `2` exit code exists because
-`filesChecked: 0` alone is indistinguishable from a genuine clean pass to a caller that only
-inspects the exit code — a typo'd glob, a misconfigured include pattern, or a moved directory
-could otherwise silently "pass" a CI job that verified nothing. The JSON report also carries
-an explicit `noFilesMatched: true` field for this case. When an empty selection is
-legitimately expected (for example, a glob scoped to a directory that does not always exist),
-pass `--allow-empty` to accept it as a normal success:
-
-```bash
-ste100mark docs/optional/**/*.md --allow-empty
-```
-
-## Self Validation
-
-Running self-validation produces a report containing the following information:
-
-```text
-# DEMA Consulting Ste100Mark
-
-| Information         | Value                                              |
-| :------------------ | :------------------------------------------------- |
-| Tool Version        | <version>                                          |
-| Machine Name        | <machine-name>                                     |
-| OS Version          | <os-version>                                       |
-| DotNet Runtime      | <dotnet-runtime-version>                           |
-| Time Stamp          | <timestamp> UTC                                    |
-
-✓ Ste100Mark_VersionDisplay - Passed
-✓ Ste100Mark_HelpDisplay - Passed
-✓ Ste100Mark_LintCleanFileNoDiagnostics - Passed
-✓ Ste100Mark_LintViolationFileDetectsIssues - Passed
-✓ Ste100Mark_LintJsonOutputIsValidJson - Passed
-
-Total Tests: 5
-Passed: 5
-Failed: 0
-```
-
-Each test in the report proves:
-
-- **`Ste100Mark_VersionDisplay`** - `--version` outputs a valid version string.
-- **`Ste100Mark_HelpDisplay`** - `--help` outputs usage and options information.
-- **`Ste100Mark_LintCleanFileNoDiagnostics`** - linting a fully compliant Markdown file
-  produces no diagnostics and a zero exit code.
-- **`Ste100Mark_LintViolationFileDetectsIssues`** - linting a file with deliberate
-  violations detects each expected rule code and returns a non-zero exit code.
-- **`Ste100Mark_LintJsonOutputIsValidJson`** - `--format json` output parses as valid JSON.
-
-Use `--depth <#>` to control the heading level of the validation output (default: `1`).
-This is useful when embedding validation output into a larger markdown document:
-
-```bash
-# Embed validation at heading level 2
-ste100mark --validate --depth 2
-```
-
-See the [User Guide][link-guide] for more details on linting and self-validation.
-
-On validation failure the tool will exit with a non-zero exit code.
+- [Configuration File][link-guide-config] and [Profiles][link-guide-profiles]
+- [Project Dictionary Files][link-guide-dictionary] and [Word-Form Matching][link-guide-word-forms]
+- [Detailed JSON Output][link-guide-json]
+- [Error Handling][link-guide-errors] and exit codes
+- [Self-Validation][link-guide-validation]
+- [Command-Line Options][link-guide-options]
 
 ## Documentation
 
@@ -475,5 +190,14 @@ By contributing to this project, you agree that your contributions will be licen
 [link-quality]: https://sonarcloud.io/dashboard?id=demaconsulting_Ste100Mark
 [link-security]: https://sonarcloud.io/dashboard?id=demaconsulting_Ste100Mark
 [link-nuget]: https://www.nuget.org/packages/DemaConsulting.Ste100Mark
-[link-guide]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md
 [link-continuous-compliance]: https://github.com/demaconsulting/ContinuousCompliance
+[link-guide]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md
+[link-guide-config]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#configuration-file
+[link-guide-profiles]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#profiles
+[link-guide-dictionary]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#project-dictionary-files
+[link-guide-word-forms]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#word-form-matching
+[link-guide-glossary]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#project-glossary
+[link-guide-json]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#detailed-json-output
+[link-guide-errors]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#error-handling
+[link-guide-validation]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#self-validation
+[link-guide-options]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#command-line-options

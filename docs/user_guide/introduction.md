@@ -439,6 +439,7 @@ Zorbix:
 Test Mode:
   definition: A mode for acceptance tests.
   pos: noun
+bleed valve: A valve that lets air out of a closed system.
 ```
 
 - `definition` is required. In the object form it is a key; in the string form the string is the
