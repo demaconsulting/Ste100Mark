@@ -29,7 +29,7 @@ Ste100Mark provides:
 - 🔎 **ASD-STE100 Linting**: Checks Markdown sentences against configurable STE100 style rules
 - 🗂️ **Configurable File Scope**: Selects files using globs, includes, and overrides
 - 🧾 **Text and JSON Output**: Produces readable diagnostics or structured CI-friendly output
-- 🔬 **Detailed JSON Output**: Adds context, evidence, and fix hints to each finding
+- 🔬 **Detailed JSON Output**: Adds evidence and fix hints to dictionary findings
 - 🚦 **Strict Mode**: Promotes warnings to build-breaking failures on demand
 - 📖 **Embedded Example Dictionary**: Ships illustrative vocabulary for immediate evaluation
 - 🔤 **Word-Form Matching**: Catches "produced" and "produces" as well as "produce"
