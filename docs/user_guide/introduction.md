@@ -287,6 +287,15 @@ uncertain match is not flagged. The base form and the "-s" and plural forms are 
 Adjective, adverb, and general senses are matched only as
 written, and for a multi-word term only the head verb of a phrasal verb inflects.
 
+Four more cases are matched. A heading or table cell that holds a noun-phrase fragment, such as
+"Performed checks", is not flagged for a past or -ing form unless an auxiliary verb ("is",
+"has", "can", and similar) comes before it. A two-word verb with a particle, such as "carry
+out", also matches when up to three words separate the verb from the particle ("carry the old
+test out"). A verb also matches with one of the hyphen prefixes re, pre, cross, over, under,
+out, mis, or co ("re-perform"); the message says "a prefixed form of". The irregular forms of a
+verb built on an irregular base verb ("withstood" for "withstand") are also matched. Known
+limit: "take the data off the page" matches "take off".
+
 A spelling you allow (`dictionary.allow`, `dictionary.ignore`, an allowed phrase, or a
 glossary term or variant) or list as its own dictionary key is never flagged as a generated
 form. Allowing a base term also allows its forms. The message names the flagged form, for

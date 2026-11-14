@@ -269,6 +269,10 @@ An allowed spelling or an explicit dictionary key always wins over a generated f
 message names the flagged form and shows each alternative in the same form when it can; if an
 alternative cannot be inflected safely it is shown in its base form and the message says so.
 Set `dictionary.match-word-forms: false` to match only the exact spelling.
+Word-form matching also covers a verb and its particle separated by up to three words
+("carry the old test out"), hyphen prefixes such as "re-perform", and the irregular forms of
+compound verbs such as "withstood". A past or -ing form in a heading or table cell with no
+preceding auxiliary verb is not flagged.
 
 ```yaml
 utilize:

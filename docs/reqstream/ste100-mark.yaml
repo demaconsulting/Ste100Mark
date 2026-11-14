@@ -207,6 +207,10 @@ sections:
           - Ste100Mark-Linting-DictionaryWordForms-Precedence
           - Ste100Mark-Linting-DictionaryWordForms-Diagnostics
           - Ste100Mark-Linting-DictionaryWordForms-Switch
+          - Ste100Mark-Linting-DictionaryWordForms-FragmentGuard
+          - Ste100Mark-Linting-DictionaryWordForms-SplitPhrasal
+          - Ste100Mark-Linting-DictionaryWordForms-HyphenatedPrefix
+          - Ste100Mark-Linting-DictionaryWordForms-CompoundIrregular
           - Ste100Mark-Linting-InlineCodeSpans
           - Ste100Mark-Linting-DictionaryPos
           - Ste100Mark-Linting-DictionaryPos-Suppression

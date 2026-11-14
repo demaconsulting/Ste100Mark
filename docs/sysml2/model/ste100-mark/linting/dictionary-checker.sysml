@@ -8,7 +8,7 @@ package Ste100Mark {
         // Requirements: dictionary requirements
         metadata info : SoftwareInfo {
             sourceFiles = ("src/DemaConsulting.Ste100Mark/Linting/DictionaryChecker.cs");
-            testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Linting/DictionaryCheckerTests.cs");
+            testFiles = ("test/DemaConsulting.Ste100Mark.Tests/Linting/DictionaryCheckerTests.cs", "test/DemaConsulting.Ste100Mark.Tests/Linting/DictionaryCheckerWordFormTests.cs");
             designFiles = ("docs/design/ste100-mark/linting/dictionary-checker.md");
             verificationFiles = ("docs/verification/ste100-mark/linting.md");
             requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");

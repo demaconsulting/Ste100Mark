@@ -207,6 +207,38 @@ verified by `Load_MatchWordForms_DefaultsTrueAndBindsFalse` and
 `Load_WordFormSettings_DefaultOnAndAllowedSpellingsRetained`; the effect is verified by
 `Evaluate_MatchWordFormsOff_OnlyBaseTermMatches` and
 `Run_MatchWordFormsSwitch_ControlsInflectedMatches`.
+
+**Ste100Mark-Linting-DictionaryWordForms-FragmentGuard**: The guard is verified by
+`Evaluate_ParticipleInHeadingWithoutAuxiliary_NotFlagged`,
+`Evaluate_ParticipleInTableCellWithoutAuxiliary_NotFlagged`,
+`Evaluate_ParticipleInHeadingWithAuxiliary_Flagged`,
+`Evaluate_ParticipleInParagraphWithoutAuxiliary_StillFlagged`, and
+`Evaluate_BaseAndThirdPersonInHeading_StillFlagged`, and end-to-end by
+`Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms`.
+
+**Ste100Mark-Linting-DictionaryWordForms-SplitPhrasal**: Split matching is verified by
+`Evaluate_SplitPhrasalVerb_FlaggedWithFullSpan`,
+`Evaluate_SplitPhrasalVerbWithPhrasalAlternative_ShownInBaseForm`,
+`Evaluate_SplitPhrasalGapLimits_FourWordsNotFlagged`,
+`Evaluate_SplitPhrasalGapOfThreeWords_Flagged`,
+`Evaluate_SplitPhrasalWithSentencePunctuationInGap_NotFlagged`,
+`Evaluate_MultiWordNonPhrasalTerm_NotSplit`, `Evaluate_SplitPhrasalOverlap_ReportsHeadWordOnce`,
+and `IsPhrasalVerb_RequiresVerbTwoWordParticle`, and end-to-end by
+`Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms`.
+
+**Ste100Mark-Linting-DictionaryWordForms-HyphenatedPrefix**: Prefix matching is verified by
+`Evaluate_HyphenatedPrefixForms_Flagged`, `Evaluate_HyphenatedPrefix_ResolvesOnStem`,
+`Evaluate_HyphenatedParticipleWithInconclusiveRole_OnlyBaseFlagged`,
+`Evaluate_HyphenatedUnlistedPrefix_NotFlagged`, `Evaluate_HyphenatedAllowedSpelling_NotFlagged`,
+`Evaluate_HyphenatedPrefixOnNounEntryOrWithFormsOff_NotFlagged`, and the table-driven
+`Evaluate_GenericCorpus_MeetsPerFormExpectations`, and end-to-end by
+`Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms`.
+
+**Ste100Mark-Linting-DictionaryWordForms-CompoundIrregular**: Compound forms are verified by
+`Generate_CompoundIrregularVerb_UsesStemForms`, `Generate_CompoundIrregularExceptions_UseRegularRules`,
+`Inflect_CompoundIrregular_Inflects`, and `Evaluate_CompoundIrregularParticiple_FlaggedAsWithstood`,
+and end-to-end by `Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms.
+
 **Ste100Mark-Linting-DictionaryDisable**: The `dictionary.enabled: false` switch is verified
 end-to-end to suppress every `STE100-DICT` finding while leaving structural/mechanical checks
 (the semicolon rule) unaffected, and the default (`enabled` omitted) is verified to still run

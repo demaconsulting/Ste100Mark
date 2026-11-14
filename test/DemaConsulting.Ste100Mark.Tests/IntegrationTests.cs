@@ -503,6 +503,38 @@ public class IntegrationTests
     }
 
     /// <summary>
+    ///     Test that the CLI flags split phrasal verbs, hyphenated prefix forms and compound irregular
+    ///     forms, and does not flag a participle used as a heading fragment.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms()
+    {
+        // Arrange: three verb entries and a document that uses the extra forms
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            const string config = "dictionary:\n  use-embedded: false\n  disallow:\n    carry out:\n      - pos: verb\n        alternatives: [start]\n    perform:\n      - pos: verb\n        alternatives: [do]\n    withstand:\n      - pos: verb\n        alternatives: [resist]\n";
+            const string document = "# Performed checks\n\nThe crew carried the old test out today.\n\nThe team will re-perform the check.\n\nThe valve withstood the load.\n";
+            File.WriteAllText(Path.Combine(workingDirectory, "doc.md"), document);
+            File.WriteAllText(Path.Combine(workingDirectory, ".ste100mark.yaml"), config);
+
+            // Act: run the linter
+            var exitCode = Runner.RunInDirectory(out var output, workingDirectory, "dotnet", _dllPath, "doc.md");
+
+            // Assert: each Part A form is reported and the heading fragment is not
+            Assert.NotEqual(0, exitCode);
+            Assert.Contains("carried the old test out", output);
+            Assert.Contains("re-perform", output);
+            Assert.Contains("withstood", output);
+            Assert.DoesNotContain("'Performed'", output);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
     ///     Test that linting a clean Markdown file exits zero.
     /// </summary>
     [Fact]
@@ -900,14 +932,14 @@ public class IntegrationTests
 
     /// <summary>
     ///     Test that the default text output, default JSON output and rule listing of a fixed
-    ///     generic scenario stay byte-identical to goldens captured before any later
+    ///     generic scenario stay byte-identical to reference outputs captured before any later
     ///     output-format work.
     /// </summary>
     [Fact]
     public void Ste100Mark_LintDefaultOutputs_Unchanged()
     {
         // Arrange: a dictionary entry, a document with a heading, a table, a structural finding
-        // and word-form dictionary findings, and the literal goldens
+        // and word-form dictionary findings, and the literal reference outputs
         const string expectedText = "doc.md:3: [ERROR] STE100-8.1 \u2014 Semicolons are not permitted in ASD-STE100 prose. (Suggestion: Split into two separate sentences.)\n" +
                                     "doc.md:3: [ERROR] STE100-DICT \u2014 Avoid 'performed' (a form of 'perform'); use 'started' instead. (Suggestion: started)\n" +
                                     "doc.md:7: [ERROR] STE100-DICT \u2014 Avoid 'performs' (a form of 'perform'); use 'starts' instead. (Suggestion: starts)\n" +

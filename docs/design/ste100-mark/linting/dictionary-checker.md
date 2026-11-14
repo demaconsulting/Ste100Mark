@@ -114,6 +114,31 @@ appends "The alternative is shown in its base form; adjust it to fit the sentenc
 `Citations` always carry the base dictionary alternatives. Base-form messages are unchanged.
 When `MatchWordForms` is `false` only the base term is matched, as before.
 
+**Extra word-form coverage** (all only when `MatchWordForms` is `true`):
+
+- *Fragment guard*: a heading or table-cell segment is usually a noun-phrase fragment. After
+  the part-of-speech resolution, if every surviving origin is participial and no auxiliary
+  (a form of "be", "have", or "get", or a modal) appears earlier in the segment, the match is
+  not reported. Base and third-person forms, and paragraph and list text, are unaffected.
+  Trade-off: a participial verb in a heading with no auxiliary is not flagged.
+- *Split phrasal verbs*: for a two-word verb entry whose second word is in a fixed particle
+  list (`WordFormInflector.IsPhrasalVerb`), a second pattern matches a head-verb spelling,
+  one to three words, then the particle. A gap word cannot be a preposition, conjunction,
+  relative word, or auxiliary, and cannot contain punctuation. The span runs from the verb to
+  the particle and the part of speech is resolved on the head. A phrasal alternative is shown
+  in its base form. A split hit that overlaps an earlier reported span is dropped, and a
+  contiguous hit inside a split head is dropped so a word is reported once. Trade-off: "take
+  the data off the page" matches "take off".
+- *Hyphenated prefixes*: for a verb-sense, letters-only, single-word entry, the main pattern
+  accepts an optional prefix from `WordFormInflector.HyphenPrefixes` (re, pre, cross, over,
+  under, out, mis, co) before any spelling. The hit is skipped when the whole prefixed
+  spelling is an explicit entry, an allowed spelling, or an allowed term. The message says
+  "a prefixed form of". The prefix is not re-attached to alternatives.
+- *Prefix resolution*: the tagger returns one token for a hyphenated word and rarely knows
+  it, so a whole-token tag is usually inconclusive. The checker therefore removes the prefix
+  from the segment text and resolves the stem at its original position (spike finding:
+  stem resolution chosen over whole-token resolution). Past and participle forms stay
+  gated by a confident verb role.
 **Self-referential alternative filtering**: `FilterSelfAlternatives` removes the exact matched
 surface form (case-insensitively) from a sense's alternatives before any suggestion or citation
 is built, so a suggestion never tells the user to replace a word with itself (for example a
