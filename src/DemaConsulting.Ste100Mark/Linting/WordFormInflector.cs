@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Collections.Frozen;
+using DemaConsulting.PartOfSpeech;
 
 namespace DemaConsulting.Ste100Mark.Linting;
 
@@ -63,8 +64,9 @@ internal readonly record struct InflectedSpelling(string Spelling, WordForm Form
 /// </summary>
 /// <remarks>
 ///     <para>
-///     The unit is pure, deterministic and stateless: no regular expressions, no I/O and no
-///     shared mutable state, so it is thread-safe. It deliberately errs toward missing a form
+///     The unit is deterministic and holds no mutable state, so it is thread-safe: no regular
+///     expressions, no I/O, and the only external input is a read-only lexicon lookup
+///     (<see cref="Tagger.IsFormOf"/>) that confirms an inflected alternative is a real word. It deliberately errs toward missing a form
 ///     rather than inventing a wrong one. An unknown irregular verb is inflected as a regular
 ///     verb, which yields a spelling that real prose never contains (so it never matches), and a
 ///     spelling is only ever used to look for a disallowed word, never to rewrite the document.
@@ -264,7 +266,8 @@ internal static class WordFormInflector
     ///     initial capital), or <see langword="null"/> when it is unsafe to inflect: a multi-word
     ///     noun, a non-letter alternative, a form that does not apply to the part of speech,
     ///     forms that disagree (for example an irregular past and past participle), an ambiguous
-    ///     participle, or a noun that already ends in "s".
+    ///     participle, a noun that already ends in "s", or a generated spelling that the lexicon
+    ///     does not list as a form of the alternative in the sense's role (for example "durings").
     /// </returns>
     public static string? Inflect(string word, WordForm forms, PartOfSpeech pos)
     {
@@ -301,7 +304,7 @@ internal static class WordFormInflector
             result = candidate;
         }
 
-        if (result is null)
+        if (result is null || !IsLexiconForm(result, lower, pos))
         {
             return null;
         }
@@ -309,6 +312,20 @@ internal static class WordFormInflector
         var tail = words.Length > 1 ? " " + string.Join(' ', words.Skip(1)) : string.Empty;
         return ApplyCase(words[0], result) + tail;
     }
+
+    /// <summary>
+    ///     Confirms that a generated spelling is a real inflected form of the base word in the
+    ///     role of the flagged sense, so an alternative of another part of speech (a preposition,
+    ///     a participle, an adjective) is never turned into a made-up word such as "durings".
+    ///     The lookup is single-word and context-free; a phrasal alternative is checked by its
+    ///     head verb only.
+    /// </summary>
+    /// <param name="generated">The lower-case generated spelling of the head word.</param>
+    /// <param name="baseWord">The lower-case base word the spelling was generated from.</param>
+    /// <param name="pos">The part of speech of the flagged sense (noun or verb).</param>
+    /// <returns>True when the lexicon lists the spelling as a form of the base word in that role.</returns>
+    private static bool IsLexiconForm(string generated, string baseWord, PartOfSpeech pos)
+        => Tagger.Default.IsFormOf(generated, baseWord, pos == PartOfSpeech.Noun ? Upos.Noun : Upos.Verb);
 
     /// <summary>
     ///     Inflects one base word into exactly one form for the given part of speech.

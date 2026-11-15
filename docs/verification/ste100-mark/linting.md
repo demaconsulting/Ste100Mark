@@ -200,7 +200,11 @@ verified by `Evaluate_AllowedInflectedSpelling_WinsOverGeneratedForm`,
 **Ste100Mark-Linting-DictionaryWordForms-Diagnostics**: Message wording is verified by
 `Evaluate_BaseForm_MessageUnchanged`, `Evaluate_IrregularAlternative_InflectsForUnambiguousForm`,
 and `Evaluate_IrregularAlternative_FallsBackToBaseAndSaysSo` (which also checks that citations
-keep the base alternatives).
+keep the base alternatives). The lexicon check on inflected alternatives is verified directly by
+`Inflect_NounSenseWithPrepositionAlternative_ReturnsNull` ("durings"),
+`Inflect_ParticipleAndAdjectiveAlternatives_ReturnNull` ("specifieds", "ables"),
+`Inflect_RealNounAndVerbAlternatives_StillInflect` (ordinary alternatives still inflect), and
+end to end by `Evaluate_NounPluralWithPrepositionAlternative_FallsBackToBase`.
 
 **Ste100Mark-Linting-DictionaryWordForms-Switch**: The default and the `false` binding are
 verified by `Load_MatchWordForms_DefaultsTrueAndBindsFalse` and

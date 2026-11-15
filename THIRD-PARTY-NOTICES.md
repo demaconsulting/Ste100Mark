@@ -54,14 +54,20 @@ The spelling-to-UPOS lexicon in `data/lexicon/` is derived from the word forms o
 - **License:** Creative Commons Attribution 4.0 International (CC BY 4.0), <https://creativecommons.org/licenses/by/4.0/>
 - **Changes:** only the spellings of the entries and their inflected forms were used. They were combined with other
   sources and reduced to a table that maps a lower-case spelling to the UPOS tags it may carry. The lexicon is not the
-  original Open English WordNet data, and the glosses, examples and relations are not part of it. Open English WordNet
+  original Open English WordNet data, and the glosses, examples and relations are not part of it. The analyses table
+  (`data/lexicon/analyses.tsv`), which the same embedded resource carries, was derived from the same word forms
+  (Open English WordNet and its rule-generated inflections, the Moby Part-of-Speech reverse forms, the additions of the
+  WordSense project under the MIT License and the closed-class list under CC0 1.0) and adds no other source. For
+  most spellings it records the lower-case base word (lemma), the UPOS tag and a subset of the morphological features of
+  each form (Degree, Number, Person, Tense and VerbForm, written as `Name=Value` pairs joined by `|`); all other columns
+  of the word forms were left out, so the table is not the original data either. Open English WordNet
   and its contributors do not endorse this project.
 
 ### Princeton WordNet
 
 Open English WordNet is derived from Princeton WordNet under the WordNet License and developed further under CC BY 4.0.
 Its `LICENSE.md` says: "You may share and adapt this resource providing attribution is given to both Princeton WordNet
-and the Open English Wordnet team." The notice distributed with Open English WordNet is
+and the Open English Wordnet team." The notice that Open English WordNet distributes as `WNDB_License.txt` is
 reproduced here, as the license requires (Princeton University, <https://wordnet.princeton.edu>):
 
 ```text
@@ -135,8 +141,7 @@ first were dropped because their text is not clearly authored by the US governme
 
 The hard tranche of that set (`data/eval/shapes-dev/hard.tsv`) uses the same kind of text: 99 documents of the
 federal families Army, Navy, Bureau of Mines, Department of Agriculture, Forest Service and NASA, plus Bureau of Standards
-(NIST), Bureau of Reclamation, Federal Civil Defense Administration, Public Health Service and federal weather-service
-publications (17
+(NIST), Bureau of Reclamation, Federal Civil Defense Administration, Public Health Service and NOAA publications (17
 U.S.C. 105; 43 documents are also in the standard tranche). The license basis of every document is quoted in
 `data/eval/shapes-dev/hard-sources.tsv`. Numeric output of the WordSense Basic classifier (same owner, run unmodified)
 helped to choose which sentences to label; no WordSense text, label or data is copied.

@@ -239,16 +239,23 @@ sections:
       - id: Ste100Mark-Linting-DictionaryWordForms-Diagnostics
         title: >-
           The Linting subsystem shall report an inflected match using the flagged spelling,
-          inflect each alternative to that form when it can do so safely, otherwise show the
+          inflect each alternative to that form when it can do so safely (including when the
+          lexicon confirms the inflected spelling is a real form of the alternative in the
+          flagged sense's role), otherwise show the
           alternative in its base form and say so, and leave base-form messages and citations
           unchanged.
         justification: |
-          A suggestion in the wrong tense misleads the writer; an honest fallback is better
+          A suggestion in the wrong tense misleads the writer, and a made-up word such as a
+          plural of a preposition misleads more; an honest fallback is better
           than a wrong inflection.
         tests:
           - Evaluate_BaseForm_MessageUnchanged
           - Evaluate_IrregularAlternative_InflectsForUnambiguousForm
           - Evaluate_IrregularAlternative_FallsBackToBaseAndSaysSo
+          - Evaluate_NounPluralWithPrepositionAlternative_FallsBackToBase
+          - Inflect_NounSenseWithPrepositionAlternative_ReturnsNull
+          - Inflect_ParticipleAndAdjectiveAlternatives_ReturnNull
+          - Inflect_RealNounAndVerbAlternatives_StillInflect
 
       - id: Ste100Mark-Linting-DictionaryWordForms-Switch
         title: >-
