@@ -346,6 +346,25 @@ public class DictionaryCheckerWordFormTests
     }
 
     /// <summary>
+    ///     Test that an alternative which is not a noun in the lexicon stays in its base form
+    ///     instead of becoming a made-up plural.
+    /// </summary>
+    [Fact]
+    public void Evaluate_NounPluralWithPrepositionAlternative_FallsBackToBase()
+    {
+        // Arrange: a noun entry whose alternative is a preposition
+        var dictionary = Inline(Entry("length", PartOfSpeech.Noun, "during"));
+
+        // Act: evaluate the plural form
+        var diagnostic = Assert.Single(Run("The lengths are listed.", dictionary, PartOfSpeech.Noun));
+
+        // Assert: the base alternative with the fallback note, never "durings"
+        Assert.Contains("use 'during' instead", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("shown in its base form", diagnostic.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("durings", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Test that an irregular alternative inflects when the form is unambiguous.
     /// </summary>
     [Fact]

@@ -187,6 +187,44 @@ public class WordFormInflectorTests
     }
 
     /// <summary>
+    ///     Test that an alternative which is not a real noun is not pluralized into a made-up word.
+    /// </summary>
+    [Fact]
+    public void Inflect_NounSenseWithPrepositionAlternative_ReturnsNull()
+    {
+        // Arrange / Act: "during" is a preposition, so "durings" is not a word
+        var result = WordFormInflector.Inflect("during", WordForm.Plural, PartOfSpeech.Noun);
+
+        // Assert: unsafe, so the caller keeps the base alternative
+        Assert.Null(result);
+    }
+
+    /// <summary>
+    ///     Test that a participle or adjective alternative is not inflected as a verb or noun.
+    /// </summary>
+    [Fact]
+    public void Inflect_ParticipleAndAdjectiveAlternatives_ReturnNull()
+    {
+        // Arrange / Act / Assert: "specifieds" and "ables" are not forms of these words in
+        // the role of the flagged sense
+        Assert.Null(WordFormInflector.Inflect("specified", WordForm.ThirdPersonSingular, PartOfSpeech.Verb));
+        Assert.Null(WordFormInflector.Inflect("able", WordForm.Plural, PartOfSpeech.Noun));
+    }
+
+    /// <summary>
+    ///     Test that a real noun or verb alternative is still inflected after the lexicon check.
+    /// </summary>
+    [Fact]
+    public void Inflect_RealNounAndVerbAlternatives_StillInflect()
+    {
+        // Arrange / Act / Assert: ordinary verb and noun alternatives
+        Assert.Equal("makes", WordFormInflector.Inflect("make", WordForm.ThirdPersonSingular, PartOfSpeech.Verb));
+        Assert.Equal("tests", WordFormInflector.Inflect("test", WordForm.Plural, PartOfSpeech.Noun));
+        Assert.Equal("Making", WordFormInflector.Inflect("Make", WordForm.Gerund, PartOfSpeech.Verb));
+        Assert.Equal("sets up", WordFormInflector.Inflect("set up", WordForm.ThirdPersonSingular, PartOfSpeech.Verb));
+    }
+
+    /// <summary>
     ///     Test that IsParticipial classifies every flag combination.
     /// </summary>
     [Fact]

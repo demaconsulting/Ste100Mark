@@ -4,10 +4,12 @@
 
 #### Purpose
 
-`WordFormInflector` is a stateless, internal static helper that generates the inflected
+`WordFormInflector` is an internal static helper that generates the inflected
 spellings of a dictionary term and inflects a replacement word to a given form. It lets
 `DictionaryChecker` match "produced" when "produce" is disallowed, and show "made" in the
-message instead of "make".
+message instead of "make". It holds no mutable state; its only external input is a read-only
+lexicon lookup (`Tagger.Default.IsFormOf` from the `DemaConsulting.PartOfSpeech` package) that
+confirms an inflected alternative is a real word.
 
 #### Data Model
 
@@ -58,7 +60,13 @@ back, through, around, apart, together, forward, aside, along, across, ahead).
   `null` when it cannot be done safely: "be", a multi-word noun, a non-letter alternative, a
   form that does not apply to the part of speech, merged forms whose spellings disagree (for
   example an irregular past and past participle, such as "gave" and "given"), an ambiguous
-  participle, or a noun that already ends in a plural "s". A verb that is not in the
+  participle, or a noun that already ends in a plural "s", or a generated spelling that the
+  lexicon does not list as a form of the alternative in the sense's role. That last check
+  calls `Tagger.IsFormOf(generated, alternative, Upos.Noun or Upos.Verb)` (single word,
+  context-free, case-insensitive), so a preposition, participle, or adjective alternative is
+  never turned into a made-up word ("during" is not pluralized to "durings", "specified"
+  does not become "specifieds"). A phrasal-verb alternative is checked by its head verb only;
+  multi-word text is never passed to the tagger. A verb that is not in the
   irregular table is inflected by the regular rules (a conservative heuristic, so an unknown
   irregular verb may receive a regular spelling). A phrasal-verb alternative inflects its head
   word. The caller shows the base alternative and says so when the result is `null`.

@@ -300,7 +300,9 @@ A spelling you allow (`dictionary.allow`, `dictionary.ignore`, an allowed phrase
 glossary term or variant) or list as its own dictionary key is never flagged as a generated
 form. Allowing a base term also allows its forms. The message names the flagged form, for
 example "Avoid 'produced' (a form of 'produce'); use 'made' instead." Alternatives are
-inflected to match when this is safe. Otherwise the base alternative is shown and the message
+inflected to match when this is safe, which includes the lexicon listing the inflected
+spelling as a real form of the alternative (a preposition is never pluralized, for example).
+Otherwise the base alternative is shown and the message
 says so. To match only exact spellings, set:
 
 ```yaml

@@ -42,7 +42,9 @@ inconclusive at any confidence, because that tag is a guess. When the resolver i
 project `Glossary`, it tags with that glossary and counts a constrained token (`IsConstrained`)
 as known. The resolver supplies no `TokenConstraint` and does not use `TaggedToken.Margin`, for
 which the package recommends no
-limit. The
+limit. `WordFormInflector` also calls `Tagger.Default.IsFormOf(word, lemma, tag)`, a
+context-free, case-insensitive, single-word lexicon lookup, to confirm that an inflected
+replacement alternative is a real form of the alternative in the flagged sense's role. The
 library is beta software, so its package version is pinned exactly in the project file and
 upgrades are reviewed deliberately.
 

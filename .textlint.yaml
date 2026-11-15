@@ -19,6 +19,7 @@ files:
 
 # Project-specific technical terms and tool names
 words:
+  - ables
   - backticked
   - catenative
   - Catenative
@@ -31,6 +32,7 @@ words:
   - Dema
   - demaconsulting
   - deverbal
+  - durings
   - endeavour
   - Fellbaum
   - froobnicate
@@ -58,6 +60,7 @@ words:
   - slnx
   - snupkg
   - sonarscanner
+  - specifieds
   - Tatoeba
   - thirdparty
   - Treebank
@@ -69,6 +72,7 @@ words:
   - USGS
   - utilise
   - venv
+  - WNDB
   - yamldotnet
   - yamlfix
   - Zorbix
