@@ -115,11 +115,14 @@ internal sealed partial class LintGlossary
     ///     Gets every multi-word approved term and variant (including entries with
     ///     <c>visible: false</c>); each acts as an implicit allow-in-phrase, so a dictionary word
     ///     inside the approved term is not reported there. Single-word entries are excluded because
-    ///     <see cref="GetAllowedTerms"/> already exempts them exactly.
+    ///     <see cref="GetAllowedTerms"/> already exempts them exactly. Each entry is normalized so
+    ///     every whitespace run becomes one space and the ends are trimmed, which makes the phrase
+    ///     match any whitespace run between its words.
     /// </summary>
     public IReadOnlyCollection<string> GetAllowedPhrases() =>
         _terms.SelectMany(t => t.Variants.Prepend(t.Term))
             .Where(s => s.Any(char.IsWhiteSpace))
+            .Select(s => string.Join(' ', s.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)))
             .ToList();
 
     /// <summary>

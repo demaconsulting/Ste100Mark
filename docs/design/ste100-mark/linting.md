@@ -35,7 +35,8 @@ The source folder contains thirteen primary behavioral units plus two supporting
   carrying one or more part-of-speech-tagged senses.
 - `LintGlossary` - loader and validator of the project glossary (approved terms with a part of
   speech) and deprecated terms, which builds the tagger glossary and the allowed-term set.
-- `PhraseIndex` - token index over the multi-word glossary phrases that tells `DictionaryChecker`
+- `PhraseIndex` - token index over approved phrases (glossary and `allow-in-phrase`) that tells
+    `DictionaryChecker`
   whether a dictionary hit lies inside an approved phrase, without a regex per phrase.
 - `WordFormInflector` - generates inflected spellings of dictionary terms (verb forms and noun
   plurals) and inflects replacement words, used by `DictionaryChecker` for word-form matching.

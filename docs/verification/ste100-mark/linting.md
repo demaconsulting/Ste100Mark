@@ -523,7 +523,9 @@ any match. This scenario is tested by
 `Evaluate_TermInsideAllowedPhraseDifferentCasing_StillSuppressesDiagnostic`,
 `Evaluate_AllowedPhraseMatchesAcrossWhitespace_SuppressesDiagnostic`,
 `Evaluate_AllowedPhrasesUnrelatedPhrase_StillFlagsDisallowedTerm`, and
-`Evaluate_NoAllowedPhrasesSupplied_StillFlagsTermInsideWouldBePhrase`. Configuration resolution
+`Evaluate_NoAllowedPhrasesSupplied_StillFlagsTermInsideWouldBePhrase`. The matching rules of the
+index that implements this allowance are verified under
+**Ste100Mark-Linting-ExplicitPhraseAllowance** below. Configuration resolution
 of the global `dictionary.allow-in-phrase` list unioned with a matching profile's
 `dictionary.allow-in-phrase` delta is verified by
 `ResolveAllowedPhrases_NoMatchingProfile_ReturnsGlobalPhrasesOnly` and
@@ -559,12 +561,53 @@ scenario is tested by
 `Contains_PhraseWithPunctuation_Matches`,
 `Contains_PhraseAtTextEdges_Matches`,
 `Contains_BlankPhraseOrNoPhrases_ReturnsFalse`, and
-`Contains_RandomizedCorpus_MatchesCombinedRegexOracle`. The `LintGlossary` side is verified by
+`Contains_RandomizedCorpus_MatchesPerPhraseRegexOracle`. The `LintGlossary` side is verified by
 `GetAllowedPhrases_ReturnsMultiWordTermsAndVariantsIncludingHidden` and
 `GetAllowedPhrases_SingleWordTerms_Excluded`. A one-off measurement (not a committed test) with
 200 generated files of 200 lines each and generic synthetic glossaries of 100, 1,000, and 10,000
-terms showed that the index keeps total lint time nearly flat (about 1 s to 3 s) where the
+terms showed that the index keeps total lint time nearly flat (about 1.7 s to 3 s) where the
 combined regex grew from about 2.5 s to about 10 s, and the output was identical.
+
+**Ste100Mark-Linting-ExplicitPhraseAllowance**: Configured `dictionary.allow-in-phrase` entries
+use the same `PhraseIndex` as glossary phrases. The index is verified for single-word entries and
+their word boundaries, a literal tab or non-breaking space in a phrase (matching only itself), a
+space matching a non-breaking space in the text, a double space needing at least two whitespace
+characters, leading and trailing spaces needing whitespace at the edge, regular-expression
+metacharacters being literal, Unicode letters ignoring case, occurrences that overlap another
+occurrence of the same phrase all being honored, a span that starts with punctuation being
+resolved through its first token, a punctuation-only span (such as `&` inside `R&D`) being
+resolved through its neighboring tokens, and a punctuation-only phrase being ignored. The
+randomized differential test compares the index with the original per-phrase regex implementation,
+which is kept in the test code only as an oracle, over single-word, doubled-space, edge-space,
+tab, non-breaking-space, punctuation, and self-overlapping phrases and every span in the text; the
+only accepted differences are the all-occurrence behavior above and ordinal case comparison
+(exotic Unicode folds such as the Kelvin sign no longer match). Per-profile isolation and reuse
+of one index across files with the same sources are verified end to end by
+`Run_ProfileAllowInPhrase_IsolatedPerProfileAndSharedAcrossFiles` and
+`ResolveAllowedPhraseKey_DependsOnlyOnContributingProfiles`. This scenario is tested by
+`Evaluate_TermInsideAllowedPhrase_NotFlaggedButSameTermElsewhereStillFlagged`,
+`Evaluate_TermInsideAllowedPhraseDifferentCasing_StillSuppressesDiagnostic`,
+`Evaluate_AllowedPhraseMatchesAcrossWhitespace_SuppressesDiagnostic`,
+`Evaluate_SingleWordAllowedPhrase_SuppressesDiagnostic`,
+`Evaluate_PunctuationTermInsideAllowedPhrase_SuppressesOnlyThere`,
+`Run_ProfileAllowInPhrase_IsolatedPerProfileAndSharedAcrossFiles`,
+`ResolveAllowedPhraseKey_DependsOnlyOnContributingProfiles`,
+`Contains_SingleWordPhrase_MatchesWholeWordOnly`,
+`Contains_LiteralTabInPhrase_MatchesOnlyTab`,
+`Contains_LiteralNonBreakingSpaceInPhrase_MatchesOnlyThatCharacter`,
+`Contains_SpaceInPhrase_MatchesNonBreakingSpaceInText`,
+`Contains_DoubleSpaceInPhrase_RequiresTwoWhitespaceCharacters`,
+`Contains_LeadingAndTrailingSpace_RequireWhitespaceAtEdges`,
+`Contains_MetacharactersInPhrase_AreLiteral`,
+`Contains_UnicodeLetters_MatchIgnoringCase`,
+`Contains_SelfOverlappingOccurrences_AllHonored`,
+`Contains_SpanStartingWithPunctuation_UsesFirstTokenInsideSpan`,
+`Contains_PunctuationOnlySpan_UsesNeighboringTokens`, and
+`Contains_PunctuationOnlyPhrase_Ignored`. A one-off measurement (not a committed test) with 200
+generated files of 200 lines each and generic synthetic entries showed 1,000 entries linting in
+about 1.7 s and 10,000 entries in about 1.8 s (previously about 32 s and 480 s with one regex per
+entry, and about 2.9 s and 12 s with a combined regex), with byte-identical `json-detailed`
+output to the previous implementation on a corpus that produces about 1.6 MB of findings.
 
 **Ste100Mark-Linting-CliIntegration**: The lint-specific CLI surface is verified for positional
 globs, `--config`, `--format`, `--strict`, and default dispatch through `Program.Run`. This

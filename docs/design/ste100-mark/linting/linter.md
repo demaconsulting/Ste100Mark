@@ -50,7 +50,12 @@ reported as an error. When the glossary has tagging entries it creates a
 resolver. The allowed terms passed to `DictionaryChecker` are the union of the configured allowed
 terms and the glossary's allowed terms. The glossary's multi-word terms and variants
 (`LintGlossary.GetAllowedPhrases`) are indexed once per run in a `PhraseIndex` that is passed to
-`DictionaryChecker.Evaluate`, separate from each file's configured allowed phrases. A glossary or
+`DictionaryChecker.Evaluate`, separate from each file's configured allowed phrases. Those
+configured phrases are indexed once per distinct set of contributing sources (the global list plus
+each matching profile that carries `allow-in-phrase` entries, identified by
+`LintConfig.ResolveAllowedPhraseKey`) and the index is reused for every file with the same key;
+at most 64 sets are cached, so memory stays bounded and one file never sees another profile's
+phrases. A glossary or
 dictionary load failure is reported as an
 error and fails the run. When `dictionary.enabled` is false, the glossary is not loaded.
 
@@ -129,7 +134,8 @@ as unexpected failures.
 - **LintConfig** - loads configuration and resolves per-file mode, rules, and allowed terms.
 - **LintDictionary** - builds the effective dictionary, including deprecated terms.
 - **LintGlossary** - loads the project glossary and deprecated terms and builds the tagger glossary.
-- **PhraseIndex** - indexes the glossary's multi-word terms for the dictionary check.
+- **PhraseIndex** - indexes the glossary's multi-word terms and each distinct set of configured
+  `allow-in-phrase` entries for the dictionary check.
 - **PartOfSpeechResolver** - created per run with the tagger glossary when a glossary is configured.
 - **MarkdownProseExtractor** - extracts prose segments from each Markdown file.
 - **StructuralRules** and **DictionaryChecker** - produce diagnostics.

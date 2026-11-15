@@ -395,6 +395,32 @@ public class LintConfigTests
     }
 
     /// <summary>
+    ///     Test that ResolveAllowedPhraseKey identifies the contributing profiles, so files with the
+    ///     same sources share a key and files with different sources do not.
+    /// </summary>
+    [Fact]
+    public void ResolveAllowedPhraseKey_DependsOnlyOnContributingProfiles()
+    {
+        // Arrange
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig { AllowInPhrase = ["trail mix"] },
+            Profiles =
+            [
+                new Profile { Glob = "a/*.md", Dictionary = new DictionaryOverride { AllowInPhrase = ["duty cycle"] } },
+                new Profile { Glob = "b/*.md", Dictionary = new DictionaryOverride { Allow = ["shall"] } },
+                new Profile { Glob = "**/*.md", Dictionary = new DictionaryOverride { AllowInPhrase = ["power supply"] } }
+            ]
+        };
+
+        // Act / Assert
+        Assert.Equal("0,2", config.ResolveAllowedPhraseKey("a/one.md"));
+        Assert.Equal("0,2", config.ResolveAllowedPhraseKey("a/two.md"));
+        Assert.Equal("2", config.ResolveAllowedPhraseKey("b/one.md"));
+        Assert.Equal("2", config.ResolveAllowedPhraseKey("c/one.md"));
+    }
+
+    /// <summary>
     ///     Test that dictionary.match-word-forms defaults to true and binds false from YAML.
     /// </summary>
     [Fact]

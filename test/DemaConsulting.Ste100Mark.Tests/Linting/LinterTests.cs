@@ -1277,6 +1277,50 @@ public sealed class LinterTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that explicit allow-in-phrase entries from different profiles are isolated per file,
+    ///     and that files sharing the same set of sources all honor it.
+    /// </summary>
+    [Fact]
+    public void Run_ProfileAllowInPhrase_IsolatedPerProfileAndSharedAcrossFiles()
+    {
+        // Arrange: global phrase plus one phrase per profile; every file uses all three phrases
+        WriteFile(
+            ".ste100mark.yaml",
+            """
+            dictionary:
+              use-embedded: false
+              disallow:
+                test:
+                  - pos: any
+                    alternatives: [check]
+              allow-in-phrase:
+                - Acme Test
+            profiles:
+              - glob: "a/*.md"
+                dictionary:
+                  allow-in-phrase: [Zorbix Test]
+              - glob: "b/*.md"
+                dictionary:
+                  allow-in-phrase: [Product A Test]
+            """);
+        const string body = "# Title\n\nUse Acme Test, Zorbix Test and Product A Test now.\n";
+        WriteFile("a/one.md", body);
+        WriteFile("a/two.md", body);
+        WriteFile("b/one.md", body);
+        WriteFile("c/one.md", body);
+
+        // Act
+        var (_, output) = RunLinter("a/one.md", "a/two.md", "b/one.md", "c/one.md");
+
+        // Assert: each file reports exactly the occurrences its own phrase set does not cover
+        var lines = output.Split('\n');
+        Assert.Equal(1, lines.Count(l => l.Contains("a/one.md")));
+        Assert.Equal(1, lines.Count(l => l.Contains("a/two.md")));
+        Assert.Equal(1, lines.Count(l => l.Contains("b/one.md")));
+        Assert.Equal(2, lines.Count(l => l.Contains("c/one.md")));
+    }
+
+    /// <summary>
     ///     Test that glossary phrases have no effect when the dictionary check is disabled.
     /// </summary>
     [Fact]

@@ -77,7 +77,7 @@ public class DictionaryCheckerWordFormTests
             segments,
             dictionary,
             extraAllowed,
-            phrases,
+            phrases is null ? null : new PhraseIndex(phrases),
             new FixedPartOfSpeechResolver(role));
     }
 

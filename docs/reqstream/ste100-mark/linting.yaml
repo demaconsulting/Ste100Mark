@@ -545,7 +545,42 @@ sections:
           - Contains_PhraseWithPunctuation_Matches
           - Contains_PhraseAtTextEdges_Matches
           - Contains_BlankPhraseOrNoPhrases_ReturnsFalse
-          - Contains_RandomizedCorpus_MatchesCombinedRegexOracle
+          - Contains_RandomizedCorpus_MatchesPerPhraseRegexOracle
+
+      - id: Ste100Mark-Linting-ExplicitPhraseAllowance
+        title: >-
+          When the configuration lists dictionary.allow-in-phrase entries, the Linting subsystem
+          shall not report a dictionary hit that lies entirely inside an occurrence of one of
+          them, ignoring letter case and tolerating whitespace variation, including every
+          occurrence of a phrase that overlaps another occurrence of the same phrase, and shall
+          apply only the entries that the file's own profiles contribute.
+        justification: |
+          A project approves a specific phrase as the name of a thing without permitting the
+          disallowed word anywhere else. The check must stay fast with thousands of entries, so
+          it uses one token index per distinct set of sources instead of one regular expression
+          per entry. Honoring every occurrence keeps explicit entries consistent with glossary
+          phrases, and a per-profile set must never leak into a file that the profile does not
+          match.
+        tests:
+          - Evaluate_TermInsideAllowedPhrase_NotFlaggedButSameTermElsewhereStillFlagged
+          - Evaluate_TermInsideAllowedPhraseDifferentCasing_StillSuppressesDiagnostic
+          - Evaluate_AllowedPhraseMatchesAcrossWhitespace_SuppressesDiagnostic
+          - Evaluate_SingleWordAllowedPhrase_SuppressesDiagnostic
+          - Evaluate_PunctuationTermInsideAllowedPhrase_SuppressesOnlyThere
+          - Run_ProfileAllowInPhrase_IsolatedPerProfileAndSharedAcrossFiles
+          - ResolveAllowedPhraseKey_DependsOnlyOnContributingProfiles
+          - Contains_SingleWordPhrase_MatchesWholeWordOnly
+          - Contains_LiteralTabInPhrase_MatchesOnlyTab
+          - Contains_LiteralNonBreakingSpaceInPhrase_MatchesOnlyThatCharacter
+          - Contains_SpaceInPhrase_MatchesNonBreakingSpaceInText
+          - Contains_DoubleSpaceInPhrase_RequiresTwoWhitespaceCharacters
+          - Contains_LeadingAndTrailingSpace_RequireWhitespaceAtEdges
+          - Contains_MetacharactersInPhrase_AreLiteral
+          - Contains_UnicodeLetters_MatchIgnoringCase
+          - Contains_SelfOverlappingOccurrences_AllHonored
+          - Contains_SpanStartingWithPunctuation_UsesFirstTokenInsideSpan
+          - Contains_PunctuationOnlySpan_UsesNeighboringTokens
+          - Contains_PunctuationOnlyPhrase_Ignored
 
       - id: Ste100Mark-Linting-DeprecatedTerms
         title: >-
