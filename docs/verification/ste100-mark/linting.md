@@ -565,6 +565,7 @@ scenario is tested by
 200 generated files of 200 lines each and generic synthetic glossaries of 100, 1,000, and 10,000
 terms showed that the index keeps total lint time nearly flat (about 1 s to 3 s) where the
 combined regex grew from about 2.5 s to about 10 s, and the output was identical.
+
 **Ste100Mark-Linting-CliIntegration**: The lint-specific CLI surface is verified for positional
 globs, `--config`, `--format`, `--strict`, and default dispatch through `Program.Run`. This
 scenario is tested by `Context_Create_NoArguments_ReturnsLintingDefaults`,
