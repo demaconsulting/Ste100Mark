@@ -139,10 +139,10 @@ internal static class Linter
         var relativePaths = new List<string>(files.Count);
 
         // Multi-word approved glossary terms and variants are implicit allow-in-phrase entries;
-        // computed once per run and unioned with the per-file configured phrases below.
-        IReadOnlyCollection<string> glossaryPhrases = glossary is { Terms.Count: > 0 }
-            ? glossary.GetAllowedPhrases()
-            : [];
+        // indexed once per run (no per-term regex), separate from the per-file configured phrases.
+        var glossaryPhrases = glossary is { Terms.Count: > 0 }
+            ? new PhraseIndex(glossary.GetAllowedPhrases())
+            : null;
         foreach (var file in files)
         {
             var relativePath = Path.GetRelativePath(Directory.GetCurrentDirectory(), file).Replace('\\', '/');
@@ -159,18 +159,12 @@ internal static class Linter
 
             if (dictionary is not null)
             {
-                IReadOnlyCollection<string> allowedPhrases = config.ResolveAllowedPhrases(relativePath);
-                if (glossaryPhrases.Count > 0)
-                {
-                    allowedPhrases = allowedPhrases.Concat(glossaryPhrases)
-                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                }
-
+                var allowedPhrases = config.ResolveAllowedPhrases(relativePath);
                 var dictionaryAllowed = glossary is { Terms.Count: > 0 }
                     ? allowedTerms.Concat(glossary.GetAllowedTerms()).ToHashSet(StringComparer.OrdinalIgnoreCase)
                     : allowedTerms;
                 var dictionaryFindings = DictionaryChecker.Evaluate(
-                    relativePath, segments, dictionary, dictionaryAllowed, allowedPhrases, resolver, detailed);
+                    relativePath, segments, dictionary, dictionaryAllowed, allowedPhrases, resolver, detailed, glossaryPhrases);
                 diagnostics.AddRange(dictionaryFindings);
                 var sourceLines = detailed
                     ? content.ReplaceLineEndings("\n").Split('\n')

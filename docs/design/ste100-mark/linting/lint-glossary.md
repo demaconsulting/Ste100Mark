@@ -53,7 +53,7 @@ dictionary source. A term that `allow` or `ignore` removed is not a conflict.
 by whole-term or variant equality.
 
 **GetAllowedPhrases**: the multi-word approved terms and variants, including entries with
-`visible: false`. `Linter` merges them into the per-file allowed phrases, so each is an implicit
+`visible: false`. `Linter` builds a `PhraseIndex` from them once per run, so each is an implicit
 allow-in-phrase entry: a dictionary hit entirely inside it is not reported, while the same word
 elsewhere is. Single-word entries are left out because `GetAllowedTerms` already exempts them.
 

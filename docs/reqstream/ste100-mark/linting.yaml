@@ -534,8 +534,18 @@ sections:
           - Run_DeprecatedLongerTermContainingApprovedTerm_StillFlagged
           - Run_DeprecatedFileEntryInsideApprovedTerm_NotFlagged
           - Run_DictionaryDisabled_GlossaryPhrasesHaveNoEffect
-          - Evaluate_CombinedPhrasePattern_OverlappingPhrasesBothHonored
-          - Evaluate_ManyAllowedPhrases_SuppressesOnlyContainedHits
+          - Evaluate_GlossaryPhraseIndex_OverlappingPhrasesBothHonored
+          - Evaluate_ManyGlossaryPhrases_SuppressesOnlyContainedHits
+          - Contains_SpanInsidePhrase_ReturnsTrueOnlyInsidePhrase
+          - Contains_OverlappingPhrases_BothHonored
+          - Contains_WhitespaceRuns_Tolerated
+          - Contains_DifferentCase_Matches
+          - Contains_HyphenBeforePhrase_NotContained
+          - Contains_PhraseFollowedByWordCharacter_NotContained
+          - Contains_PhraseWithPunctuation_Matches
+          - Contains_PhraseAtTextEdges_Matches
+          - Contains_BlankPhraseOrNoPhrases_ReturnsFalse
+          - Contains_RandomizedCorpus_MatchesCombinedRegexOracle
 
       - id: Ste100Mark-Linting-DeprecatedTerms
         title: >-

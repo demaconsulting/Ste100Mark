@@ -1855,10 +1855,10 @@ public class DictionaryCheckerTests
 
     /// <summary>
     ///     Test that overlapping allowed phrases (starting at different positions) are both honored
-    ///     by the combined phrase pattern.
+    ///     by the glossary phrase index.
     /// </summary>
     [Fact]
-    public void Evaluate_CombinedPhrasePattern_OverlappingPhrasesBothHonored()
+    public void Evaluate_GlossaryPhraseIndex_OverlappingPhrasesBothHonored()
     {
         // Arrange: "test" sits inside "Test Mode"; "controller" sits inside "Mode Controller"
         var config = new LintConfig
@@ -1877,17 +1877,17 @@ public class DictionaryCheckerTests
 
         // Act
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, allowedPhrases: ["Test Mode", "Mode Controller"]);
+            "file.md", segments, dictionary, glossaryPhrases: new PhraseIndex(["Test Mode", "Mode Controller"]));
 
         // Assert
         Assert.Empty(diagnostics);
     }
 
     /// <summary>
-    ///     Test that a large allowed-phrase set suppresses only contained hits.
+    ///     Test that a large glossary phrase set suppresses only contained hits.
     /// </summary>
     [Fact]
-    public void Evaluate_ManyAllowedPhrases_SuppressesOnlyContainedHits()
+    public void Evaluate_ManyGlossaryPhrases_SuppressesOnlyContainedHits()
     {
         // Arrange
         var config = new LintConfig
@@ -1906,7 +1906,7 @@ public class DictionaryCheckerTests
             [new ProseSegment("Open Test Zorbix 512 now and run a test on Acme.", 1, SegmentRole.Paragraph)];
 
         // Act
-        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, allowedPhrases: phrases);
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, glossaryPhrases: new PhraseIndex(phrases));
 
         // Assert: only the standalone "test" is reported
         Assert.Single(diagnostics);

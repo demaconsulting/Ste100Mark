@@ -52,10 +52,8 @@ namespace DemaConsulting.Ste100Mark.Linting;
 ///     when that is safe; otherwise the base alternative is shown and the message says so.
 ///     Citations always keep the dictionary's base-form alternatives.
 ///
-///     All entry patterns (one alternation per entry) are compiled once per
-///     <see cref="Evaluate"/> call rather than once per segment. The allowed phrases are compiled
-///     into ONE combined, zero-width-lookahead pattern (cached per distinct phrase set) so a large
-///     phrase set costs a single scan per segment and overlapping phrases are all still located.
+///     All patterns (one alternation per entry plus one per allowed phrase) are compiled once per
+///     <see cref="Evaluate"/> call rather than once per segment.
 ///
 ///     A term is always evaluated through <see cref="IPartOfSpeechResolver.Resolve"/>, even when it
 ///     has only one sense: when the resolver confidently resolves a grammatical role (noun, verb,
@@ -103,6 +101,11 @@ internal static class DictionaryChecker
     ///     is suppressed, without suppressing the same term elsewhere in the segment. Pass
     ///     <see langword="null"/> or an empty collection when no phrase-scoped allowance applies.
     /// </param>
+    /// <param name="glossaryPhrases">
+    ///     Optional index of multi-word glossary terms; a term match entirely inside one of them is
+    ///     suppressed exactly like an <paramref name="allowedPhrases"/> hit, but without a regex scan
+    ///     per glossary term.
+    /// </param>
     /// <param name="resolver">
     ///     The part-of-speech resolver to use; <see langword="null"/> selects the process-wide default
     ///     <see cref="PartOfSpeechResolver"/> (supplied explicitly only by tests).
@@ -120,7 +123,8 @@ internal static class DictionaryChecker
         IReadOnlyCollection<string>? extraAllowedTerms = null,
         IReadOnlyCollection<string>? allowedPhrases = null,
         IPartOfSpeechResolver? resolver = null,
-        bool collectDetail = false)
+        bool collectDetail = false,
+        PhraseIndex? glossaryPhrases = null)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(segments);
@@ -142,7 +146,7 @@ internal static class DictionaryChecker
         // Build every pattern once per call (not once per segment): one alternation per entry
         // covering the base term and, when enabled, its generated word forms.
         var compiledEntries = CompileEntries(entries, dictionary, allowedTerms);
-        var phrasePattern = CompilePhrasePatterns(allowedPhrases);
+        var phrasePatterns = CompilePhrasePatterns(allowedPhrases);
 
         var diagnostics = new List<Diagnostic>();
         foreach (var segment in segments)
@@ -158,7 +162,7 @@ internal static class DictionaryChecker
             }
 
             var codeSpans = MarkdownProseExtractor.FindInlineCodeSpans(segment.Text);
-            var phraseSpans = FindAllowedPhraseSpans(segment.Text, phrasePattern);
+            var phraseSpans = FindAllowedPhraseSpans(segment.Text, phrasePatterns);
             var admonitionSpans = MarkdownProseExtractor.FindAdmonitionLabelSpans(segment.Text);
             var quotedSpans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(segment.Text);
 
@@ -183,7 +187,8 @@ internal static class DictionaryChecker
                         continue;
                     }
 
-                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(hit.Index, hit.Length, phraseSpans))
+                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(hit.Index, hit.Length, phraseSpans)
+                        || glossaryPhrases?.Contains(segment.Text, hit.Index, hit.Length) == true)
                     {
                         continue;
                     }
@@ -462,61 +467,16 @@ internal static class DictionaryChecker
     }
 
     /// <summary>
-    ///     Maximum number of cached combined phrase patterns before the cache is cleared.
+    ///     Compiles the allowed-phrase patterns once per call.
     /// </summary>
-    private const int PhraseCacheLimit = 64;
-
-    /// <summary>
-    ///     Cache of combined allowed-phrase patterns keyed by the distinct phrase set, so a large
-    ///     phrase set (for example a big project glossary) is compiled once, not once per file.
-    /// </summary>
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Regex> PhrasePatternCache = new();
-
-    /// <summary>
-    ///     Builds (or fetches from the cache) ONE combined pattern for every allowed phrase, or
-    ///     <see langword="null"/> when there are none. The match is a zero-width lookahead that
-    ///     captures the phrase in the <c>phrase</c> group, so phrases that overlap (starting at
-    ///     different positions) are all still found; at one start position the longest alternative
-    ///     wins, which is safe because a hit inside a shorter span at that start is also inside the
-    ///     longer one.
-    /// </summary>
-    private static Regex? CompilePhrasePatterns(IReadOnlyCollection<string>? allowedPhrases)
+    private static List<Regex> CompilePhrasePatterns(IReadOnlyCollection<string>? allowedPhrases)
     {
-        if (allowedPhrases is null || allowedPhrases.Count == 0)
-        {
-            return null;
-        }
-
-        var phrases = allowedPhrases
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Select(p => p.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderByDescending(p => p.Length)
-            .ThenBy(p => p, StringComparer.Ordinal)
+        return (allowedPhrases ?? [])
+            .Select(p => new Regex(
+                $@"(?<![\w-]){SpellingToPattern(p)}(?![\w-])",
+                RegexOptions.IgnoreCase,
+                TimeSpan.FromSeconds(1)))
             .ToList();
-        if (phrases.Count == 0)
-        {
-            return null;
-        }
-
-        var key = string.Join('\u0001', phrases.Select(p => p.ToLowerInvariant()).Order(StringComparer.Ordinal));
-        if (PhrasePatternCache.TryGetValue(key, out var cached))
-        {
-            return cached;
-        }
-
-        var alternation = string.Join('|', phrases.Select(SpellingToPattern));
-        var regex = new Regex(
-            $@"(?<![\w-])(?=(?<phrase>(?:{alternation})(?![\w-])))",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-            TimeSpan.FromSeconds(5));
-        if (PhrasePatternCache.Count >= PhraseCacheLimit)
-        {
-            PhrasePatternCache.Clear();
-        }
-
-        PhrasePatternCache[key] = regex;
-        return regex;
     }
 
     /// <summary>
@@ -528,18 +488,15 @@ internal static class DictionaryChecker
     /// </summary>
     private static List<(int Start, int Length)> FindAllowedPhraseSpans(
         string segmentText,
-        Regex? phrasePattern)
+        List<Regex> phrasePatterns)
     {
         var spans = new List<(int Start, int Length)>();
-        if (phrasePattern is null)
+        foreach (var pattern in phrasePatterns)
         {
-            return spans;
-        }
-
-        foreach (Match match in phrasePattern.Matches(segmentText))
-        {
-            var group = match.Groups["phrase"];
-            spans.Add((group.Index, group.Length));
+            foreach (Match match in pattern.Matches(segmentText))
+            {
+                spans.Add((match.Index, match.Length));
+            }
         }
 
         return spans;

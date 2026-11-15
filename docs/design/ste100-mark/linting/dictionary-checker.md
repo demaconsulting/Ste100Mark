@@ -59,9 +59,10 @@ Unlike `extraAllowedTerms`, this does not remove the term from consideration pro
 same disallowed word elsewhere in the same segment, outside any listed phrase, is still
 flagged. This lets a project declare a specific approved phrase (for example "trail mix" as the
 approved name of a thing) without silently permitting the disallowed word ("mix") on its own.
-`Linter` also adds every multi-word approved glossary term and variant to this collection, so
-each is an implicit allowance with the same containment-only semantics. The phrases are combined
-into one case-insensitive regex (see `FindAllowedPhraseSpans`).
+`Linter` also indexes every multi-word approved glossary term and variant once per run in a
+`PhraseIndex` and passes it as `glossaryPhrases`; each is an implicit allowance with the same
+containment-only semantics, tested for each hit with `PhraseIndex.Contains` instead of a regex
+scan per glossary term.
 
 **Inline code exclusion**: matches falling wholly inside an inline code span (per
 `MarkdownProseExtractor.FindInlineCodeSpans`/`OverlapsInlineCodeSpan`) are ignored before a
@@ -179,11 +180,9 @@ differ from the entry's headword (for example "run"), so both comparisons are ne
   when alternatives (after self-referential filtering) are present.
 
 **FindAllowedPhraseSpans**: Locates every occurrence of every configured `allowedPhrases` entry
-within a segment's text with one combined regex, returning the spans `Evaluate` tests each
-dictionary-term match against. The pattern is a zero-width lookahead that captures the phrase,
-so phrases that overlap are all found; alternatives are ordered longest first and the compiled
-regex is cached per distinct phrase set (bounded cache) so a large glossary is compiled once, not
-once per file.
+within a segment's text, using the same case-insensitive, whitespace-tolerant pattern shape as
+a multi-word `Disallow` term, returning the spans `Evaluate` tests each dictionary-term match
+against.
 
 **BuildDiagnostic**: Selects the applicable sense(s) for one match and builds its diagnostic,
 or returns `null` when a confident part-of-speech resolution rules out every sense (the term is not

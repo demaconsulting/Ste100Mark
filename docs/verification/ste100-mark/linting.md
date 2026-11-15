@@ -4,7 +4,7 @@
 
 The `Linting` subsystem is verified by a combination of unit tests and end-to-end integration
  tests. The unit tests exercise `MarkdownProseExtractor`, `SentenceAnalyzer`, `StructuralRules`,
-`LintConfig`, `LintDictionary`, `LintGlossary`, `WordFormInflector`, `PartOfSpeechResolver`, `PartOfSpeechGuesser`,
+`LintConfig`, `LintDictionary`, `LintGlossary`, `WordFormInflector`, `PartOfSpeechResolver`, `PartOfSpeechGuesser`, `PhraseIndex`,
 `DictionaryChecker`, `DiagnosticReporter`,
 and `Linter` directly with controlled inputs. Integration tests invoke the published tool
 assembly through `Runner.RunInDirectory`, confirming that command-line parsing, dispatch,
@@ -534,8 +534,11 @@ variant, including entries with `visible: false`, is verified as an implicit all
 entry: a dictionary word inside the term is not reported, the same word elsewhere is, matching is
 case-insensitive, a longer deprecated term that contains the approved term and a partial overlap
 are still reported, a deprecated-file entry inside an approved term is not reported there, and
-nothing changes when `dictionary.enabled` is false. The combined phrase pattern is verified to keep
-overlapping phrases and a large phrase set correct. This scenario is tested by
+nothing changes when `dictionary.enabled` is false. The glossary phrase index (`PhraseIndex`) is
+verified for overlapping phrases, whitespace runs, letter case, hyphen and word-character
+boundaries, punctuation tokens, text edges, and blank phrases, and a differential test compares it
+with the combined lookahead regex it replaced on a randomized corpus of phrases and texts. This
+scenario is tested by
 `Run_GlossaryTermContainsDisallowedWord_NotFlaggedInsideTerm`,
 `Run_GlossaryTermContainsDisallowedWord_StillFlaggedElsewhere`,
 `Run_GlossaryVariantContainsDisallowedWord_NotFlagged`,
@@ -545,14 +548,23 @@ overlapping phrases and a large phrase set correct. This scenario is tested by
 `Run_DeprecatedLongerTermContainingApprovedTerm_StillFlagged`,
 `Run_DeprecatedFileEntryInsideApprovedTerm_NotFlagged`,
 `Run_DictionaryDisabled_GlossaryPhrasesHaveNoEffect`,
-`Evaluate_CombinedPhrasePattern_OverlappingPhrasesBothHonored`, and
-`Evaluate_ManyAllowedPhrases_SuppressesOnlyContainedHits`. The `LintGlossary` side is verified by
+`Evaluate_GlossaryPhraseIndex_OverlappingPhrasesBothHonored`,
+`Evaluate_ManyGlossaryPhrases_SuppressesOnlyContainedHits`,
+`Contains_SpanInsidePhrase_ReturnsTrueOnlyInsidePhrase`,
+`Contains_OverlappingPhrases_BothHonored`,
+`Contains_WhitespaceRuns_Tolerated`,
+`Contains_DifferentCase_Matches`,
+`Contains_HyphenBeforePhrase_NotContained`,
+`Contains_PhraseFollowedByWordCharacter_NotContained`,
+`Contains_PhraseWithPunctuation_Matches`,
+`Contains_PhraseAtTextEdges_Matches`,
+`Contains_BlankPhraseOrNoPhrases_ReturnsFalse`, and
+`Contains_RandomizedCorpus_MatchesCombinedRegexOracle`. The `LintGlossary` side is verified by
 `GetAllowedPhrases_ReturnsMultiWordTermsAndVariantsIncludingHidden` and
 `GetAllowedPhrases_SingleWordTerms_Excluded`. A one-off measurement (not a committed test) with
-200 generated files of 200 lines each and generic synthetic glossaries showed that the combined
-pattern keeps total lint time close to the baseline from 100 to 10,000 terms, while one regex per
-phrase grew from about 13 s to about 349 s at 10,000 terms.
-
+200 generated files of 200 lines each and generic synthetic glossaries of 100, 1,000, and 10,000
+terms showed that the index keeps total lint time nearly flat (about 1 s to 3 s) where the
+combined regex grew from about 2.5 s to about 10 s, and the output was identical.
 **Ste100Mark-Linting-CliIntegration**: The lint-specific CLI surface is verified for positional
 globs, `--config`, `--format`, `--strict`, and default dispatch through `Program.Run`. This
 scenario is tested by `Context_Create_NoArguments_ReturnsLintingDefaults`,

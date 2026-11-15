@@ -90,8 +90,8 @@ sections:
           including entries with visible false, as an allowed phrase, and shall not report
           single-word entries.
         justification: |
-          The linter merges these phrases into the allow-in-phrase set. Single-word entries are
-          already exempt exactly, so leaving them out keeps the combined pattern small.
+          The linter indexes these phrases for the allow-in-phrase check. Single-word entries are
+          already exempt exactly, so leaving them out keeps the phrase index small.
         tests:
           - GetAllowedPhrases_ReturnsMultiWordTermsAndVariantsIncludingHidden
           - GetAllowedPhrases_SingleWordTerms_Excluded

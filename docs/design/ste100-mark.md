@@ -20,6 +20,7 @@ flowchart TD
         LintConfig
         LintDictionary
         LintGlossary
+        PhraseIndex
         MarkdownProseExtractor
         SentenceAnalyzer
         StructuralRules
@@ -44,6 +45,7 @@ flowchart TD
     Linter --> LintConfig
     Linter --> LintDictionary
     Linter --> LintGlossary
+    Linter --> PhraseIndex
     Linter --> MarkdownProseExtractor
     MarkdownProseExtractor --> StructuralRules
     MarkdownProseExtractor --> DictionaryChecker
@@ -51,6 +53,7 @@ flowchart TD
     StructuralRules --> Diagnostic
     DictionaryChecker --> Diagnostic
     DictionaryChecker --> PartOfSpeechResolver
+    DictionaryChecker --> PhraseIndex
     Linter --> DiagnosticReporter
 ```
 

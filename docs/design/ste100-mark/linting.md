@@ -35,6 +35,8 @@ The source folder contains thirteen primary behavioral units plus two supporting
   carrying one or more part-of-speech-tagged senses.
 - `LintGlossary` - loader and validator of the project glossary (approved terms with a part of
   speech) and deprecated terms, which builds the tagger glossary and the allowed-term set.
+- `PhraseIndex` - token index over the multi-word glossary phrases that tells `DictionaryChecker`
+  whether a dictionary hit lies inside an approved phrase, without a regex per phrase.
 - `WordFormInflector` - generates inflected spellings of dictionary terms (verb forms and noun
   plurals) and inflects replacement words, used by `DictionaryChecker` for word-form matching.
 - `PartOfSpeechResolver` - resolves whether a matched term is used as a noun, verb, adjective, or adverb at its
@@ -104,8 +106,9 @@ The source folder contains thirteen primary behavioral units plus two supporting
 The unit design details for the subsystem are documented in the companion unit files in
 this folder: *Diagnostic Design*, *DiagnosticReporter Design*, *DictionaryChecker Design*, *FindingDetail Design*,
 *LintConfig Design*, *LintDictionary Design*, *LintGlossary Design*, *Linter Design*, *MarkdownProseExtractor
-Design*, *PartOfSpeechGuesser Design*, *PartOfSpeechResolver Design*, *RuleCatalog Design*, *RuleCodes Design*,
-*SentenceAnalyzer Design*, *Severity Design*, *StructuralRules Design*, and *WordFormInflector Design*.
+Design*, *PartOfSpeechGuesser Design*, *PartOfSpeechResolver Design*, *PhraseIndex Design*, *RuleCatalog Design*,
+*RuleCodes Design*, *SentenceAnalyzer Design*, *Severity Design*, *StructuralRules Design*, and
+*WordFormInflector Design*.
 
 > **Dictionary notice:** The embedded default dictionary in
 > `src/DemaConsulting.Ste100Mark/Linting/DefaultDictionary.yaml` is a small,
@@ -134,6 +137,7 @@ flowchart TD
     LintConfig --> LintDictionary
     LintDictionary --> DictionaryChecker
     DictionaryChecker --> PartOfSpeechResolver
+    DictionaryChecker --> PhraseIndex
     DictionaryChecker --> WordFormInflector
     DictionaryChecker --> FindingDetail
     FindingDetail --> DiagnosticReporter
