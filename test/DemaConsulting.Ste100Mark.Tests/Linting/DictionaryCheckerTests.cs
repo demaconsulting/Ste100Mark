@@ -897,11 +897,70 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, allowedPhrases: ["trail mix"]);
+            "file.md", segments, dictionary, allowedPhrases: new PhraseIndex(["trail mix"]));
 
         // Assert: only the "fuel mix" occurrence is reported, not the "trail mix" occurrence
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("combination", diagnostic.Suggestion);
+    }
+
+    /// <summary>
+    ///     Test that a single-word <c>allow-in-phrase</c> entry suppresses that exact word.
+    /// </summary>
+    [Fact]
+    public void Evaluate_SingleWordAllowedPhrase_SuppressesDiagnostic()
+    {
+        // Arrange
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["mix"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Noun, Alternatives = ["combination"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Fill the tank with the mix.", 1, SegmentRole.Paragraph)];
+
+        // Act
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, allowedPhrases: new PhraseIndex(["mix"]));
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a disallowed punctuation term inside an approved phrase is suppressed.
+    /// </summary>
+    [Fact]
+    public void Evaluate_PunctuationTermInsideAllowedPhrase_SuppressesOnlyThere()
+    {
+        // Arrange: "&" is disallowed, but "R & D" is an approved name
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                UseEmbedded = false,
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["&"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["and"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("The R & D team and Acme & Zorbix agree.", 1, SegmentRole.Paragraph)];
+
+        // Act
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, allowedPhrases: new PhraseIndex(["R & D"]));
+
+        // Assert: only the "Acme & Zorbix" occurrence is reported
+        Assert.Single(diagnostics);
     }
 
     /// <summary>
@@ -928,7 +987,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, allowedPhrases: ["trail mix"]);
+            "file.md", segments, dictionary, allowedPhrases: new PhraseIndex(["trail mix"]));
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -958,7 +1017,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, allowedPhrases: ["trail mix"]);
+            "file.md", segments, dictionary, allowedPhrases: new PhraseIndex(["trail mix"]));
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -993,7 +1052,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, allowedPhrases: ["process error"]);
+            "file.md", segments, dictionary, allowedPhrases: new PhraseIndex(["process error"]));
 
         // Assert: verify expected behavior
         Assert.Empty(diagnostics);
@@ -1023,7 +1082,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, allowedPhrases: ["trail mix"]);
+            "file.md", segments, dictionary, allowedPhrases: new PhraseIndex(["trail mix"]));
 
         // Assert: verify expected behavior
         Assert.Single(diagnostics);
@@ -1449,7 +1508,7 @@ public class DictionaryCheckerTests
 
         // Act: execute the operation being tested
         var diagnostics = DictionaryChecker.Evaluate(
-            "file.md", segments, dictionary, allowedPhrases: ["power supply"]);
+            "file.md", segments, dictionary, allowedPhrases: new PhraseIndex(["power supply"]));
 
         // Assert: only the standalone "power" (not inside "power supply") is flagged
         Assert.Single(diagnostics);
@@ -1851,5 +1910,64 @@ public class DictionaryCheckerTests
         {
             Assert.Empty(diagnostics);
         }
+    }
+
+    /// <summary>
+    ///     Test that overlapping allowed phrases (starting at different positions) are both honored
+    ///     by the glossary phrase index.
+    /// </summary>
+    [Fact]
+    public void Evaluate_GlossaryPhraseIndex_OverlappingPhrasesBothHonored()
+    {
+        // Arrange: "test" sits inside "Test Mode"; "controller" sits inside "Mode Controller"
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["test"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["check"] }],
+                    ["controller"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["unit"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        IReadOnlyList<ProseSegment> segments = [new ProseSegment("Open the Test Mode Controller now.", 1, SegmentRole.Paragraph)];
+
+        // Act
+        var diagnostics = DictionaryChecker.Evaluate(
+            "file.md", segments, dictionary, glossaryPhrases: new PhraseIndex(["Test Mode", "Mode Controller"]));
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that a large glossary phrase set suppresses only contained hits.
+    /// </summary>
+    [Fact]
+    public void Evaluate_ManyGlossaryPhrases_SuppressesOnlyContainedHits()
+    {
+        // Arrange
+        var config = new LintConfig
+        {
+            Dictionary = new DictionaryConfig
+            {
+                Disallow = new Dictionary<string, List<DictionarySenseYaml>>
+                {
+                    ["test"] = [new DictionarySenseYaml { Pos = PartOfSpeech.Any, Alternatives = ["check"] }]
+                }
+            }
+        };
+        var dictionary = LintDictionary.Load(config, Directory.GetCurrentDirectory());
+        var phrases = Enumerable.Range(0, 1000).Select(i => $"Test Zorbix {i}").ToList();
+        IReadOnlyList<ProseSegment> segments =
+            [new ProseSegment("Open Test Zorbix 512 now and run a test on Acme.", 1, SegmentRole.Paragraph)];
+
+        // Act
+        var diagnostics = DictionaryChecker.Evaluate("file.md", segments, dictionary, glossaryPhrases: new PhraseIndex(phrases));
+
+        // Assert: only the standalone "test" is reported
+        Assert.Single(diagnostics);
     }
 }

@@ -84,6 +84,18 @@ sections:
           - ValidateAgainst_VariantIsDictionaryKey_Throws
           - ValidateAgainst_TermRemovedByAllow_NoConflict
 
+      - id: Ste100Mark-LintGlossary-AllowedPhrases
+        title: >-
+          The LintGlossary class shall report every multi-word approved term and variant,
+          including entries with visible false, as an allowed phrase, and shall not report
+          single-word entries.
+        justification: |
+          The linter indexes these phrases for the allow-in-phrase check. Single-word entries are
+          already exempt exactly, so leaving them out keeps the phrase index small.
+        tests:
+          - GetAllowedPhrases_ReturnsMultiWordTermsAndVariantsIncludingHidden
+          - GetAllowedPhrases_SingleWordTerms_Excluded
+
       - id: Ste100Mark-LintGlossary-Deprecated
         title: >-
           The LintGlossary class shall read deprecated terms with a required use value and an

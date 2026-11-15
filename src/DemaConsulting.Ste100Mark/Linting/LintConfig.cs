@@ -598,6 +598,35 @@ internal sealed class LintConfig
     }
 
     /// <summary>
+    ///     Identifies which <see cref="Profiles"/> entries contribute phrase-scoped allowances to a
+    ///     file, so callers can cache one resolved phrase set (and anything built from it) per
+    ///     distinct key instead of per file.
+    /// </summary>
+    /// <param name="relativeFilePath">
+    ///     File path, relative to the same base directory the profile globs are written against.
+    /// </param>
+    /// <returns>
+    ///     A key such as <c>"1,4"</c> (the zero-based indexes of the matching profiles that carry
+    ///     <see cref="DictionaryOverride.AllowInPhrase"/> entries; empty when only the global list
+    ///     applies). Two files with the same key have the same
+    ///     <see cref="ResolveAllowedPhrases"/> result.
+    /// </returns>
+    public string ResolveAllowedPhraseKey(string relativeFilePath)
+    {
+        var indexes = new List<int>();
+        for (var i = 0; i < Profiles.Count; i++)
+        {
+            var profile = Profiles[i];
+            if (profile.Dictionary?.AllowInPhrase is { Count: > 0 } && MatchesGlob(profile.Glob, relativeFilePath))
+            {
+                indexes.Add(i);
+            }
+        }
+
+        return string.Join(',', indexes);
+    }
+
+    /// <summary>
     ///     Resolves the phrase-scoped dictionary allowances that apply to a specific file, unioning
     ///     the global <see cref="DictionaryConfig.AllowInPhrase"/> list with every matching
     ///     <see cref="Profiles"/> entry's <see cref="Profile.Dictionary"/>

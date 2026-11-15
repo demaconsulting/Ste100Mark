@@ -137,6 +137,16 @@ internal static class Linter
         var details = new List<FindingDetail?>();
         var detailed = context.Format == OutputFormat.JsonDetailed;
         var relativePaths = new List<string>(files.Count);
+
+        // Multi-word approved glossary terms and variants are implicit allow-in-phrase entries;
+        // indexed once per run (no per-term regex), separate from the per-file configured phrases.
+        var glossaryPhrases = glossary is { Terms.Count: > 0 }
+            ? new PhraseIndex(glossary.GetAllowedPhrases())
+            : null;
+
+        // One index per distinct set of configured (allow-in-phrase) sources, shared by every file
+        // that resolves to the same set.
+        var phraseIndexes = new Dictionary<string, PhraseIndex?>();
         foreach (var file in files)
         {
             var relativePath = Path.GetRelativePath(Directory.GetCurrentDirectory(), file).Replace('\\', '/');
@@ -153,12 +163,12 @@ internal static class Linter
 
             if (dictionary is not null)
             {
-                var allowedPhrases = config.ResolveAllowedPhrases(relativePath);
+                var allowedPhrases = ResolvePhraseIndex(config, relativePath, phraseIndexes);
                 var dictionaryAllowed = glossary is { Terms.Count: > 0 }
                     ? allowedTerms.Concat(glossary.GetAllowedTerms()).ToHashSet(StringComparer.OrdinalIgnoreCase)
                     : allowedTerms;
                 var dictionaryFindings = DictionaryChecker.Evaluate(
-                    relativePath, segments, dictionary, dictionaryAllowed, allowedPhrases, resolver, detailed);
+                    relativePath, segments, dictionary, dictionaryAllowed, allowedPhrases, resolver, detailed, glossaryPhrases);
                 diagnostics.AddRange(dictionaryFindings);
                 var sourceLines = detailed
                     ? content.ReplaceLineEndings("\n").Split('\n')
@@ -223,6 +233,42 @@ internal static class Linter
                 : $"{errorCount} error(s)";
             context.WriteError($"Ste100Mark found linting issues ({reason}).");
         }
+    }
+
+    /// <summary>
+    ///     Maximum number of distinct explicit phrase sets whose index is kept for the run; further
+    ///     distinct sets are built per file without being cached, so memory stays bounded.
+    /// </summary>
+    private const int MaxCachedPhraseIndexes = 64;
+
+    /// <summary>
+    ///     Returns the index of the explicit allow-in-phrase entries that apply to a file, building
+    ///     it once per distinct contributing-source set (see
+    ///     <see cref="LintConfig.ResolveAllowedPhraseKey"/>) and reusing it for other files.
+    /// </summary>
+    /// <param name="config">The resolved lint configuration.</param>
+    /// <param name="relativePath">File path relative to the working directory.</param>
+    /// <param name="cache">Per-run cache of indexes keyed by the contributing-source set.</param>
+    /// <returns>The index, or <see langword="null"/> when no explicit phrases apply.</returns>
+    private static PhraseIndex? ResolvePhraseIndex(
+        LintConfig config,
+        string relativePath,
+        Dictionary<string, PhraseIndex?> cache)
+    {
+        var key = config.ResolveAllowedPhraseKey(relativePath);
+        if (cache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var phrases = config.ResolveAllowedPhrases(relativePath);
+        var index = phrases.Count > 0 ? new PhraseIndex(phrases) : null;
+        if (cache.Count < MaxCachedPhraseIndexes)
+        {
+            cache[key] = index;
+        }
+
+        return index;
     }
 
     /// <summary>

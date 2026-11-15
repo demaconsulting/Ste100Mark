@@ -168,10 +168,19 @@ path.
   unioned with the `Dictionary.AllowInPhrase` phrases of every matching profile,
   case-insensitively de-duplicated.
 - *Preconditions*: `relativeFilePath` is not null.
-- *Postconditions*: The returned set is passed to `DictionaryChecker.Evaluate` as
+- *Postconditions*: The returned set is indexed in a `PhraseIndex` that is passed to
+  `DictionaryChecker.Evaluate` as
   `allowedPhrases`, so a term match falling wholly inside one of these phrases is suppressed
   for this file only, without suppressing the same term elsewhere in the segment or altering
   the merged `LintDictionary` used for every other file.
+
+**ResolveAllowedPhraseKey**: Identifies which sources contribute explicit phrases to one file.
+
+- *Parameters*: `string relativeFilePath` - file path relative to the current working directory.
+- *Returns*: `string` - the comma-separated zero-based indexes of the matching profiles that
+  carry `AllowInPhrase` entries (empty when only the global list applies).
+- *Postconditions*: Two files with the same key have the same `ResolveAllowedPhrases` result,
+  so `Linter` builds one `PhraseIndex` per key instead of per file.
 
 Creates a fresh `Matcher` per profile glob check (via the private `MatchesGlob` helper) so
 each glob is evaluated independently.

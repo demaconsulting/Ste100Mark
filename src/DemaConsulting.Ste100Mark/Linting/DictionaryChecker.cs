@@ -96,10 +96,14 @@ internal static class DictionaryChecker
     ///     or an empty collection when no per-file allowance applies.
     /// </param>
     /// <param name="allowedPhrases">
-    ///     Phrases (see <see cref="DictionaryConfig.AllowInPhrase"/>, resolved per-file
+    ///     Index of the phrases (see <see cref="DictionaryConfig.AllowInPhrase"/>, resolved per-file
     ///     via <see cref="LintConfig.ResolveAllowedPhrases"/>) within which a disallowed term match
     ///     is suppressed, without suppressing the same term elsewhere in the segment. Pass
-    ///     <see langword="null"/> or an empty collection when no phrase-scoped allowance applies.
+    ///     <see langword="null"/> when no phrase-scoped allowance applies.
+    /// </param>
+    /// <param name="glossaryPhrases">
+    ///     Optional index of multi-word glossary terms; a term match entirely inside one of them is
+    ///     suppressed exactly like an <paramref name="allowedPhrases"/> hit.
     /// </param>
     /// <param name="resolver">
     ///     The part-of-speech resolver to use; <see langword="null"/> selects the process-wide default
@@ -116,9 +120,10 @@ internal static class DictionaryChecker
         IReadOnlyList<ProseSegment> segments,
         LintDictionary dictionary,
         IReadOnlyCollection<string>? extraAllowedTerms = null,
-        IReadOnlyCollection<string>? allowedPhrases = null,
+        PhraseIndex? allowedPhrases = null,
         IPartOfSpeechResolver? resolver = null,
-        bool collectDetail = false)
+        bool collectDetail = false,
+        PhraseIndex? glossaryPhrases = null)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(segments);
@@ -140,7 +145,6 @@ internal static class DictionaryChecker
         // Build every pattern once per call (not once per segment): one alternation per entry
         // covering the base term and, when enabled, its generated word forms.
         var compiledEntries = CompileEntries(entries, dictionary, allowedTerms);
-        var phrasePatterns = CompilePhrasePatterns(allowedPhrases);
 
         var diagnostics = new List<Diagnostic>();
         foreach (var segment in segments)
@@ -156,7 +160,6 @@ internal static class DictionaryChecker
             }
 
             var codeSpans = MarkdownProseExtractor.FindInlineCodeSpans(segment.Text);
-            var phraseSpans = FindAllowedPhraseSpans(segment.Text, phrasePatterns);
             var admonitionSpans = MarkdownProseExtractor.FindAdmonitionLabelSpans(segment.Text);
             var quotedSpans = MarkdownProseExtractor.FindQuotedOrEmphasisSpans(segment.Text);
 
@@ -181,7 +184,8 @@ internal static class DictionaryChecker
                         continue;
                     }
 
-                    if (MarkdownProseExtractor.OverlapsInlineCodeSpan(hit.Index, hit.Length, phraseSpans))
+                    if (allowedPhrases?.Contains(segment.Text, hit.Index, hit.Length) == true
+                        || glossaryPhrases?.Contains(segment.Text, hit.Index, hit.Length) == true)
                     {
                         continue;
                     }
@@ -457,42 +461,6 @@ internal static class DictionaryChecker
     private static string SpellingToPattern(string spelling)
     {
         return Regex.Escape(spelling).Replace(@"\ ", @"\s+", StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    ///     Compiles the allowed-phrase patterns once per call.
-    /// </summary>
-    private static List<Regex> CompilePhrasePatterns(IReadOnlyCollection<string>? allowedPhrases)
-    {
-        return (allowedPhrases ?? [])
-            .Select(p => new Regex(
-                $@"(?<![\w-]){SpellingToPattern(p)}(?![\w-])",
-                RegexOptions.IgnoreCase,
-                TimeSpan.FromSeconds(1)))
-            .ToList();
-    }
-
-    /// <summary>
-    ///     Locates every occurrence of every allowed phrase within
-    ///     <paramref name="segmentText"/>, using the same case-insensitive, whitespace-tolerant
-    ///     matching as a multi-word <see cref="DictionaryConfig.Disallow"/> term, so
-    ///     callers can test whether a dictionary-term match falls entirely inside an approved
-    ///     phrase (see <see cref="DictionaryConfig.AllowInPhrase"/>).
-    /// </summary>
-    private static List<(int Start, int Length)> FindAllowedPhraseSpans(
-        string segmentText,
-        List<Regex> phrasePatterns)
-    {
-        var spans = new List<(int Start, int Length)>();
-        foreach (var pattern in phrasePatterns)
-        {
-            foreach (Match match in pattern.Matches(segmentText))
-            {
-                spans.Add((match.Index, match.Length));
-            }
-        }
-
-        return spans;
     }
 
     /// <summary>

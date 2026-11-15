@@ -407,9 +407,15 @@ configuration option.
 
 A project glossary lists the terms that your project approves, such as product names and domain
 words, and the part of speech of each term. The format is shared with DictionaryMark, so one file
-can serve both tools. A glossary has two effects:
+can serve both tools. A glossary has three effects:
 
 - An approved term is not reported as a dictionary finding.
+- A multi-word approved term or variant is also an implicit `allow-in-phrase` entry (see
+  "Phrase-Scoped Allowances"). A dictionary word inside it, for example `Test` inside `Test Mode`,
+  is not reported there. The same word elsewhere is still reported. A longer disallowed term that
+  contains the approved term, or a disallowed term that only partly overlaps it, is still
+  reported. This applies to entries with `visible: false` and ignores letter case. It has no
+  effect when `dictionary.enabled` is false.
 - The part of speech of an approved term guides the tagger. This helps most when a term is a word
   that the tagger does not know, or when it changes how the words around it are read.
 
@@ -485,9 +491,9 @@ counts as a known word.
 - The tag of a term can change how the tagger reads the words next to it.
 - A shared glossary can change without your project changing. Pin a versioned folder when you
   need repeatable results.
-- A glossary term is allowed as a whole term or variant only. A dictionary word inside a
-  multi-word term is still checked on its own, so use `dictionary.allow` or `allow-in-phrase` for
-  it.
+- A dictionary word inside an approved multi-word term is not checked there, but the same word
+  alone is still checked. A longer disallowed term that contains the approved term is still
+  reported.
 
 ## Phrase-Scoped Allowances
 
@@ -511,7 +517,11 @@ dictionary:
 For example, if `mix` is a disallowed term, `allow-in-phrase: [trail mix]` suppresses the
 finding in "Fill the trail mix tank" (where "trail mix" is the name of a thing) while still
 flagging "check the fuel mix" elsewhere in the same document. Matching is case-insensitive and
-tolerant of extra whitespace, identical to a multi-word `dictionary.disallow` term. Like
+tolerant of extra whitespace: each space in the phrase matches one or more whitespace characters
+(consecutive spaces need at least that many), and a tab or non-breaking space written in the
+phrase matches only itself. A match is also suppressed when it lies inside an occurrence of the
+phrase that overlaps another occurrence of the same phrase. A phrase made only of punctuation
+cannot be matched. Like
 `dictionary.allow`/`dictionary.ignore`, `dictionary.allow-in-phrase` can also be layered per
 profile (see "Profiles" above) to scope a phrase allowance to matching files only.
 

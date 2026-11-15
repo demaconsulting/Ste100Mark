@@ -49,16 +49,18 @@ consideration before matching runs, letting a `Profile`'s `dictionary.allow`/`di
 delta permit a term (for example "shall" for a requirements-documents profile) without
 altering the merged `LintDictionary` used for every other file.
 
-**Phrase-scoped allowance**: an optional `allowedPhrases` collection (typically
-`LintConfig.ResolveAllowedPhrases`, populated from `dictionary.allow-in-phrase`) is converted
-into whole-phrase regex spans (`FindAllowedPhraseSpans`, using the same pattern shape as a
-multi-word `Disallow` term) per segment; a term match falling wholly inside one of these spans
-is excluded before a diagnostic is built, using the same "falls entirely inside" containment
-test (`MarkdownProseExtractor.OverlapsInlineCodeSpan`) as the inline-code-span exclusion below.
-Unlike `extraAllowedTerms`, this does not remove the term from consideration project-wide: the
-same disallowed word elsewhere in the same segment, outside any listed phrase, is still
-flagged. This lets a project declare a specific approved phrase (for example "trail mix" as the
-approved name of a thing) without silently permitting the disallowed word ("mix") on its own.
+**Phrase-scoped allowance**: an optional `allowedPhrases` `PhraseIndex` (built by `Linter` from
+`LintConfig.ResolveAllowedPhrases`, populated from `dictionary.allow-in-phrase`) is consulted for
+each term match with `PhraseIndex.Contains`; a match falling wholly inside an occurrence of an
+indexed phrase is excluded before a diagnostic is built, using the same "falls entirely inside"
+containment as the inline-code-span exclusion below. No regex is compiled per phrase and there is
+no per-phrase regex timeout. Unlike `extraAllowedTerms`, this does not remove the term from
+consideration project-wide: the same disallowed word elsewhere in the same segment, outside any
+listed phrase, is still flagged. This lets a project declare a specific approved phrase (for
+example "trail mix" as the approved name of a thing) without silently permitting the disallowed
+word ("mix") on its own. `Linter` also indexes every multi-word approved glossary term and
+variant once per run in a second `PhraseIndex` and passes it as `glossaryPhrases`; each is an
+implicit allowance with the same semantics.
 
 **Inline code exclusion**: matches falling wholly inside an inline code span (per
 `MarkdownProseExtractor.FindInlineCodeSpans`/`OverlapsInlineCodeSpan`) are ignored before a
@@ -160,9 +162,10 @@ differ from the entry's headword (for example "run"), so both comparisons are ne
   adds the glossary's approved terms to the allowed terms);
   `IReadOnlyCollection<string>? extraAllowedTerms` - optional additional per-file allowed
   terms (typically `LintConfig.ResolveAllowedTerms`), defaulting to `null` (no per-file
-  allowance); `IReadOnlyCollection<string>? allowedPhrases` - optional phrase-scoped
-  allowances (typically `LintConfig.ResolveAllowedPhrases`), defaulting to `null` (no
-  phrase-scoped allowance); `bool collectDetail` - when `true`, every diagnostic also carries a
+  allowance); `PhraseIndex? allowedPhrases` - optional phrase-scoped
+  allowances (an index over `LintConfig.ResolveAllowedPhrases`), defaulting to `null` (no
+  phrase-scoped allowance); `PhraseIndex? glossaryPhrases` - optional index of multi-word
+  glossary terms; `bool collectDetail` - when `true`, every diagnostic also carries a
   `DictionaryEvidence` (see below), defaulting to `false`.
 - *Returns*: `IReadOnlyList<Diagnostic>` - one diagnostic per matched occurrence, excluding
   matches suppressed by a confident-but-non-matching part-of-speech resolution, by `extraAllowedTerms`, or by
@@ -174,11 +177,6 @@ differ from the entry's headword (for example "run"), so both comparisons are ne
   span, an allowed-phrase occurrence, an admonition-label span, or a quoted/emphasis span;
   every diagnostic uses severity `Error`, rule code `STE100-DICT`, and a suggestion string
   when alternatives (after self-referential filtering) are present.
-
-**FindAllowedPhraseSpans**: Locates every occurrence of every configured `allowedPhrases` entry
-within a segment's text, using the same case-insensitive, whitespace-tolerant pattern shape as
-a multi-word `Disallow` term, returning the spans `Evaluate` tests each dictionary-term match
-against.
 
 **BuildDiagnostic**: Selects the applicable sense(s) for one match and builds its diagnostic,
 or returns `null` when a confident part-of-speech resolution rules out every sense (the term is not

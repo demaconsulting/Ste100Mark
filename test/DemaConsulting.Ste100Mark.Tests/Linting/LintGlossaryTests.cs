@@ -506,6 +506,37 @@ public sealed class LintGlossaryTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that allowed phrases include multi-word terms and variants, hidden entries included.
+    /// </summary>
+    [Fact]
+    public void GetAllowedPhrases_ReturnsMultiWordTermsAndVariantsIncludingHidden()
+    {
+        // Act
+        var glossary = Load(
+            "  glossary:\n    Test Mode:\n      definition: A made-up mode.\n      variants: [Acme Mode]\n" +
+            "    Hidden Zorbix:\n      definition: A made-up term.\n      visible: false\n");
+
+        // Assert
+        var phrases = glossary.GetAllowedPhrases();
+        Assert.Contains("Test Mode", phrases);
+        Assert.Contains("Acme Mode", phrases);
+        Assert.Contains("Hidden Zorbix", phrases);
+    }
+
+    /// <summary>
+    ///     Test that single-word terms are not allowed phrases.
+    /// </summary>
+    [Fact]
+    public void GetAllowedPhrases_SingleWordTerms_Excluded()
+    {
+        // Act
+        var glossary = Load("  glossary:\n    Zorbix:\n      definition: A made-up term.\n      variants: [Zorbixes]\n");
+
+        // Assert
+        Assert.Empty(glossary.GetAllowedPhrases());
+    }
+
+    /// <summary>
     ///     Test that a deprecated file maps use and where.
     /// </summary>
     [Fact]
