@@ -2,13 +2,12 @@ SPDX-License-Identifier: MIT AND CC-BY-4.0 AND CC-BY-3.0-US
 
 # License of the DemaConsulting.Ste100Mark Package
 
-The NuGet package `DemaConsulting.Ste100Mark` contains the code of the tool and bundles the `DemaConsulting.PartOfSpeech`
-assembly, which embeds two files of data. The tool code is licensed under the MIT License. The bundled dependency data
-comes from third parties and is licensed under the terms below. The first line of this file is the SPDX license
-expression that covers the whole package; it is a hint for license scanners, and this file is the license. nuget.org
-accepts only license expressions that the Open Source
-Initiative or the Free Software Foundation approve, and `CC-BY-3.0-US` is neither, so the package names this file
-instead of an expression.
+The NuGet package `DemaConsulting.Ste100Mark` contains the code of the tool and bundles the
+`DemaConsulting.PartOfSpeech` assembly, which embeds two files of data. The tool code is licensed under the MIT License.
+The bundled dependency data comes from third parties and is licensed under the terms below. The first line of this file
+is the SPDX license expression that covers the whole package; it is a hint for license scanners, and this file is the
+license. nuget.org accepts only license expressions that the Open Source Initiative or the Free Software Foundation
+approve, and `CC-BY-3.0-US` is neither, so the package names this file instead of an expression.
 
 ## Code: MIT License
 
@@ -58,7 +57,8 @@ The weights are the trained model of the tagger. They were learned from six corp
 part of the package:
 
 - the open corpus (CC0 1.0), with Universal POS tags that language models wrote;
-- the written texts of MASC, whose Penn Treebank part-of-speech tags were converted to Universal POS tags (CC BY 3.0 US);
+- the written texts of MASC, whose Penn Treebank part-of-speech tags were converted to Universal POS tags (CC BY 3.0
+  US);
 - a silver corpus of Tatoeba (CC0 1.0) and Project Gutenberg (public domain in the United States) sentences, tagged by a
   language model (CC0 1.0);
 - an imperative source of sentences from US federal government documents (public domain under 17 U.S.C. 105), tagged by

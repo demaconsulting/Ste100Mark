@@ -87,8 +87,8 @@ The source folder contains thirteen primary behavioral units plus two supporting
   merged dictionary and `PartOfSpeechResolver` sense selection (via `Resolve`).
   `TableHeader` segments are skipped entirely (column-header labels are not prose), and a
   match that falls entirely inside an admonition-label or quoted/emphasis span (see
-  `MarkdownProseExtractor` above) is also skipped, alongside the pre-existing inline-code-
-  span and allowed-phrase exclusions. The flagged word's own text is always filtered
+  `MarkdownProseExtractor` above) is also skipped, alongside the pre-existing
+  inline-code-span and allowed-phrase exclusions. The flagged word's own text is always filtered
   (case-insensitively) out of its reported suggestion/citations, so a diagnostic never
   recommends the exact word it just flagged as one of its own alternatives.
 - `DiagnosticReporter` - formatter for text, JSON and detailed JSON diagnostic output.
