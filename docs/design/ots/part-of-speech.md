@@ -24,29 +24,23 @@ library and, before that, a regex-based heuristic.
 
 ### Integration Pattern
 
-The package is consumed as a NuGet package reference in the main application project, so it is a
-NuGet dependency of the Ste100Mark tool package. Because the package is a .NET tool, the
-dependency assembly is bundled with the tool under `tools/<tfm>/any/` in the NuGet package. The
-`DemaConsulting.PartOfSpeech` assembly embeds its model: the lexicon and tagger
-weights. `PartOfSpeechResolver`
-splits the prose segment into sentences with the repository's own sentence rule, then calls
-`Tagger.Default.Tag` once for the sentence that contains the match. The token offsets index the
-string that was passed in, so they are relative to the sentence text; the resolver flattens the
-tokens of every returned sentence. Only a `Noun`, `Verb`, `Adjective`, or `Adverb` tag at or above the resolver's minimum
-confidence (0.90, the strict threshold documented by the package) is mapped to the repository's own
-`PartOfSpeech`; a confident determiner maps to the resolver-only `PartOfSpeech.Determiner` result,
-which rules out role-specific dictionary senses but is not a dictionary role. Other unsupported
-answers are inconclusive. Following the package's rule-checker guidance, a noun, verb, or
-proper-noun tag on a word that the lexicon does not know (`IsKnownWord` is false) is also
-inconclusive at any confidence, because that tag is a guess. When the resolver is built with a
-project `Glossary`, it tags with that glossary and counts a constrained token (`IsConstrained`)
-as known. The resolver supplies no `TokenConstraint` and does not use `TaggedToken.Margin`, for
-which the package recommends no
-limit. `WordFormInflector` also calls `Tagger.Default.IsFormOf(word, lemma, tag)`, a
-context-free, case-insensitive, single-word lexicon lookup, to confirm that an inflected
-replacement alternative is a real form of the alternative in the flagged sense's role. The
-library is beta software, so its package version is pinned exactly in the project file and
-upgrades are reviewed deliberately.
+The package is consumed as a NuGet package reference in the main application project, so it is a NuGet dependency of the
+Ste100Mark tool package. Because the package is a .NET tool, the dependency assembly is bundled with the tool under
+`tools/<tfm>/any/` in the NuGet package. The `DemaConsulting.PartOfSpeech` assembly embeds its model: the lexicon and
+tagger weights. `PartOfSpeechResolver` splits the prose segment into sentences with the repository's own sentence rule,
+then calls `Tagger.Default.Tag` once for the sentence that contains the match. The token offsets index the string that
+was passed in, so they are relative to the sentence text; the resolver flattens the tokens of every returned sentence.
+Only a `Noun`, `Verb`, `Adjective`, or `Adverb` tag at or above the resolver's minimum confidence (0.90, the strict
+threshold documented by the package) is mapped to the repository's own `PartOfSpeech`; a confident determiner maps to
+the resolver-only `PartOfSpeech.Determiner` result, which rules out role-specific dictionary senses but is not a
+dictionary role. Other unsupported answers are inconclusive. Following the package's rule-checker guidance, a noun,
+verb, or proper-noun tag on a word that the lexicon does not know (`IsKnownWord` is false) is also inconclusive at any
+confidence, because that tag is a guess. When the resolver is built with a project `Glossary`, it tags with that
+glossary and counts a constrained token (`IsConstrained`) as known. The resolver supplies no `TokenConstraint` and does
+not use `TaggedToken.Margin`, for which the package recommends no limit. `WordFormInflector` also calls
+`Tagger.Default.IsFormOf(word, lemma, tag)`, a context-free, case-insensitive, single-word lexicon lookup, to confirm
+that an inflected replacement alternative is a real form of the alternative in the flagged sense's role. The library is
+beta software, so its package version is pinned exactly in the project file and upgrades are reviewed deliberately.
 
 ### Licensing
 

@@ -3,12 +3,12 @@
 ### Verification Approach
 
 The `Linting` subsystem is verified by a combination of unit tests and end-to-end integration
- tests. The unit tests exercise `MarkdownProseExtractor`, `SentenceAnalyzer`, `StructuralRules`,
-`LintConfig`, `LintDictionary`, `LintGlossary`, `WordFormInflector`, `PartOfSpeechResolver`, `PartOfSpeechGuesser`, `PhraseIndex`,
-`DictionaryChecker`, `DiagnosticReporter`,
-and `Linter` directly with controlled inputs. Integration tests invoke the published tool
-assembly through `Runner.RunInDirectory`, confirming that command-line parsing, dispatch,
-reporting, and exit-code behavior all work together.
+tests. The unit tests exercise `MarkdownProseExtractor`, `SentenceAnalyzer`, `StructuralRules`,
+`LintConfig`, `LintDictionary`, `LintGlossary`, `WordFormInflector`, `PartOfSpeechResolver`,
+`PartOfSpeechGuesser`, `PhraseIndex`, `DictionaryChecker`, `DiagnosticReporter`, and `Linter`
+directly with controlled inputs. Integration tests invoke the published tool assembly through
+`Runner.RunInDirectory`, confirming that command-line parsing, dispatch, reporting, and
+exit-code behavior all work together.
 
 ### Test Environment
 

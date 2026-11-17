@@ -33,7 +33,7 @@ data consumed externally by `Program`'s `--list-rules` dispatch path.
 entries, one per rule code emitted by `StructuralRules` or `DictionaryChecker`:
 
 | Code | Classification | SuggestionKind | Modes |
-| ------ | ---------------- | ---------------- | ------- |
+| --- | --- | --- | --- |
 | `STE100-4.1` | `official` | `advice` | procedure, descriptive |
 | `STE100-8.1` | `official` | `advice` | procedure, descriptive |
 | `STE100-4.2` | `official` | `advice` | procedure, descriptive |

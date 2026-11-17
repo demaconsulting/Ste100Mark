@@ -263,7 +263,8 @@ one-second timeout and no local exception handling.
 - **MarkdownProseExtractor** - supplies segment text, line numbers, and the `TableHeader`
   segment role, plus the `FindInlineCodeSpans`/`OverlapsInlineCodeSpan`,
   `FindAdmonitionLabelSpans`, and `FindQuotedOrEmphasisSpans` helpers used to exclude matches.
-- **LintConfig** - supplies the per-file `extraAllowedTerms`/`allowedPhrases` via `ResolveAllowedTerms`/`ResolveAllowedPhrases`.
+- **LintConfig** - supplies the per-file `extraAllowedTerms`/`allowedPhrases` via
+  `ResolveAllowedTerms`/`ResolveAllowedPhrases`.
 - **Diagnostic** and **Severity** - encode the reported finding.
 - **FindingDetail** - defines the `DictionaryEvidence` record that the checker fills.
 - **.NET BCL** - regex construction and matching.

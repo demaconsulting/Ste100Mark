@@ -72,7 +72,7 @@ segment that holds the span (using the shared sentence splitter); a longer sente
 row wins.
 
 | Row | Class | Reason | Condition |
-| ----- | ------- | -------- | ----------- |
+| --- | --- | --- | --- |
 | 1 | doubtful | `role-inconclusive` | No role, and the outcome is neither below-threshold nor unknown-word |
 | 2 | doubtful | `multiple-senses` | More than one sense is reported |
 | 3 | doubtful | `tagger-below-threshold` | The outcome is below-threshold or unknown-word |
