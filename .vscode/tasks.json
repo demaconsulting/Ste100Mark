@@ -75,8 +75,11 @@
     },
     {
       "label": "lint markdown",
-      "command": "dotnet lintmark",
+      "command": "dotnet",
       "type": "shell",
+      "args": [
+        "lintmark"
+      ],
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",
