@@ -1,4 +1,4 @@
-# Ste100Mark
+# ![Ste100Mark: An ASD-STE100 prose linter for Markdown documents][hero]
 
 [![GitHub forks][badge-forks]][link-forks]
 [![GitHub stars][badge-stars]][link-stars]
@@ -8,12 +8,6 @@
 [![Quality Gate][badge-quality]][link-quality]
 [![Security][badge-security]][link-security]
 [![NuGet][badge-nuget]][link-nuget]
-
-![Ste100Mark banner: the Ste100Mark name with the tagline 'Every sentence, simple. Every rule, checked.' and
-the command ste100mark docs/**/*.md. Markdown files, the .ste100mark.yaml configuration, the dictionary word list
-with approved alternatives, and the project glossary flow on curved arrows into the ste100mark .NET tool, and arrows
-lead out to findings reported at file:line with ASD-STE100 rule codes, a JSON report, an exit code of 0 or 1 that a CI
-pipeline can use as a writing-quality gate, and suggested approved words such as start for commence][hero]
 
 Ste100Mark is a .NET CLI tool for linting Markdown prose against ASD-STE100-style rules,
 while also demonstrating DEMA Consulting practices for command-line tooling,
