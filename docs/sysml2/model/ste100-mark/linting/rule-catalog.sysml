@@ -1,5 +1,6 @@
-package Ste100Mark {
+package Ste100Mark_RuleCatalog {
     private import SoftwareItemMetadata::*;
+    private import Ste100Mark_RuleCodes::*;
 
     part def RuleCatalog {
         doc /* Static, hand-authored source of truth for every rule code the Linting subsystem can emit, exposed as machine-readable metadata (title, official/mechanical/advisory classification, suggestion kind, applicable mode(s)) and serialized as JSON for the --list-rules CLI dispatch path. */
@@ -14,4 +15,7 @@ package Ste100Mark {
             requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");
         }
     }
+
+    // The catalog publishes one entry per rule code constant.
+    dependency RuleCatalog to RuleCodes;
 }

@@ -1,4 +1,22 @@
-package Ste100Mark {
+package Ste100Mark_LintingSubsystem {
+    public import Ste100Mark_Severity::*;
+    public import Ste100Mark_Diagnostic::*;
+    public import Ste100Mark_LintConfig::*;
+    public import Ste100Mark_LintDictionary::*;
+    public import Ste100Mark_LintGlossary::*;
+    public import Ste100Mark_PhraseIndex::*;
+    public import Ste100Mark_WordFormInflector::*;
+    public import Ste100Mark_PartOfSpeechResolver::*;
+    public import Ste100Mark_PartOfSpeechGuesser::*;
+    public import Ste100Mark_MarkdownProseExtractor::*;
+    public import Ste100Mark_SentenceAnalyzer::*;
+    public import Ste100Mark_StructuralRules::*;
+    public import Ste100Mark_DictionaryChecker::*;
+    public import Ste100Mark_FindingDetail::*;
+    public import Ste100Mark_DiagnosticReporter::*;
+    public import Ste100Mark_RuleCodes::*;
+    public import Ste100Mark_RuleCatalog::*;
+    public import Ste100Mark_Linter::*;
     private import SoftwareItemMetadata::*;
 
     part def LintingSubsystem {

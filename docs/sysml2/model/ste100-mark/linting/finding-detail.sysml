@@ -1,5 +1,9 @@
-package Ste100Mark {
+package Ste100Mark_FindingDetail {
     private import SoftwareItemMetadata::*;
+    private import Ste100Mark_Diagnostic::*;
+    private import Ste100Mark_MarkdownProseExtractor::*;
+    private import Ste100Mark_PartOfSpeechResolver::*;
+    private import Ste100Mark_SentenceAnalyzer::*;
 
     part def FindingDetail {
         doc /* Builds the detail object of a dictionary finding for the detailed JSON format: location, sentence, context lines, match and tagger evidence, confidence class, and suppression hints. */
@@ -13,4 +17,11 @@ package Ste100Mark {
             requirementFiles = ("docs/reqstream/ste100-mark/linting/finding-detail.yaml");
         }
     }
+
+    // Detail is built from a Diagnostic and its prose segment, splits sentences with
+    // SentenceAnalyzer, and uses the tagger confidence threshold of PartOfSpeechResolver.
+    dependency FindingDetail to Diagnostic;
+    dependency FindingDetail to MarkdownProseExtractor;
+    dependency FindingDetail to PartOfSpeechResolver;
+    dependency FindingDetail to SentenceAnalyzer;
 }

@@ -1,5 +1,6 @@
-package Ste100Mark {
+package Ste100Mark_WordFormInflector {
     private import SoftwareItemMetadata::*;
+    private import OtsDependencies::*;
 
     part def WordFormInflector {
         doc /* Generates the inflected spellings of a dictionary term and inflects replacement words to a given form. */
@@ -13,4 +14,7 @@ package Ste100Mark {
             requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");
         }
     }
+
+    // The inflector confirms generated word forms against the OTS tagger lexicon.
+    dependency WordFormInflector to PartOfSpeech;
 }

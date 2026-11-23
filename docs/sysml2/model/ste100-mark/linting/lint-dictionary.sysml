@@ -1,5 +1,7 @@
-package Ste100Mark {
+package Ste100Mark_LintDictionary {
     private import SoftwareItemMetadata::*;
+    private import OtsDependencies::*;
+    private import Ste100Mark_LintConfig::*;
 
     part def LintDictionary {
         doc /* Effective merged dictionary built from embedded, project, and inline vocabulary sources. */
@@ -14,4 +16,9 @@ package Ste100Mark {
             requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");
         }
     }
+
+    // LintDictionary merges the dictionary configuration from LintConfig with the
+    // YAML dictionary files it deserializes.
+    dependency LintDictionary to LintConfig;
+    dependency LintDictionary to YamlDotNet;
 }

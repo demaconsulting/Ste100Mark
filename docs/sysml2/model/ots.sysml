@@ -1,4 +1,4 @@
-package Ste100Mark {
+package OtsDependencies {
     private import SoftwareItemMetadata::*;
 
     part def YamlDotNet {

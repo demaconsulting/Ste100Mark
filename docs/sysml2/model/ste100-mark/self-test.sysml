@@ -1,4 +1,5 @@
-package Ste100Mark {
+package Ste100Mark_SelfTestSubsystem {
+    public import Ste100Mark_Validation::*;
     private import SoftwareItemMetadata::*;
 
     part def SelfTestSubsystem {

@@ -1,5 +1,8 @@
-package Ste100Mark {
+package Ste100Mark_LintGlossary {
     private import SoftwareItemMetadata::*;
+    private import OtsDependencies::*;
+    private import Ste100Mark_LintConfig::*;
+    private import Ste100Mark_LintDictionary::*;
 
     part def LintGlossary {
         doc /* Loads, merges, and validates the project glossary and deprecated terms, and builds the part-of-speech tagger glossary. */
@@ -13,4 +16,13 @@ package Ste100Mark {
             requirementFiles = ("docs/reqstream/ste100-mark/linting/lint-glossary.yaml");
         }
     }
+
+    // LintGlossary reads glossary settings from LintConfig, checks conflicts against the
+    // effective LintDictionary, parses YAML, builds the tagger glossary, and resolves glob
+    // patterns through Linter.ResolvePatterns. Linter imports LintGlossary, so Linter is qualified.
+    dependency LintGlossary to LintConfig;
+    dependency LintGlossary to LintDictionary;
+    dependency LintGlossary to YamlDotNet;
+    dependency LintGlossary to PartOfSpeech;
+    dependency LintGlossary to Ste100Mark_Linter::Linter;
 }
