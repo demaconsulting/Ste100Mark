@@ -1,5 +1,7 @@
 package Ste100Mark_LintConfig {
     private import SoftwareItemMetadata::*;
+    private import OtsDependencies::*;
+    private import Ste100Mark_Severity::*;
 
     part def LintConfig {
         doc /* YAML-backed lint configuration model; resolves per-file mode, rules, and dictionary allowances via profiles. */
@@ -14,4 +16,10 @@ package Ste100Mark_LintConfig {
             requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");
         }
     }
+
+    // LintConfig binds YAML into configuration, resolves profile globs, and configures
+    // advisory rule severity.
+    dependency LintConfig to YamlDotNet;
+    dependency LintConfig to FileSystemGlobbing;
+    dependency LintConfig to Severity;
 }

@@ -1,5 +1,7 @@
 package Ste100Mark_Validation {
     private import SoftwareItemMetadata::*;
+    private import Ste100Mark_Context::*;
+    private import Ste100Mark_PathHelpers::*;
 
     part def Validation {
         doc /* Orchestrates the self-validation test suite and reports pass/fail results. */
@@ -12,4 +14,10 @@ package Ste100Mark_Validation {
             requirementFiles = ("docs/reqstream/ste100-mark/self-test/validation.yaml");
         }
     }
+
+    // Validation writes results through Context, builds log paths with PathHelpers, and
+    // runs Program in each self-test. Program imports Validation, so Program is qualified.
+    dependency Validation to Context;
+    dependency Validation to PathHelpers;
+    dependency Validation to Ste100Mark_Program::Program;
 }

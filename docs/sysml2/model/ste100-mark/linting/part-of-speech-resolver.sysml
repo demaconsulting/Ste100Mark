@@ -1,5 +1,7 @@
 package Ste100Mark_PartOfSpeechResolver {
     private import SoftwareItemMetadata::*;
+    private import OtsDependencies::*;
+    private import Ste100Mark_SentenceAnalyzer::*;
 
     part def PartOfSpeechResolver {
         doc /* Resolves noun/verb/adjective/adverb usage and preserves confident determiner evidence for a dictionary term match by classifying its sentence with the PartOfSpeech tagger. */
@@ -13,4 +15,9 @@ package Ste100Mark_PartOfSpeechResolver {
             requirementFiles = ("docs/reqstream/ste100-mark/linting/part-of-speech-resolver.yaml");
         }
     }
+
+    // The resolver tags sentences with the OTS tagger and reuses the sentence split pattern
+    // of SentenceAnalyzer to find sentence boundaries.
+    dependency PartOfSpeechResolver to PartOfSpeech;
+    dependency PartOfSpeechResolver to SentenceAnalyzer;
 }

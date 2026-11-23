@@ -1,5 +1,9 @@
 package Ste100Mark_DiagnosticReporter {
     private import SoftwareItemMetadata::*;
+    private import Ste100Mark_Context::*;
+    private import Ste100Mark_Diagnostic::*;
+    private import Ste100Mark_FindingDetail::*;
+    private import Ste100Mark_Severity::*;
 
     part def DiagnosticReporter {
         doc /* Formats aggregated lint diagnostics as text lines, a single JSON document, or a single detailed JSON document. */
@@ -14,4 +18,11 @@ package Ste100Mark_DiagnosticReporter {
             requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");
         }
     }
+
+    // The reporter writes through Context and formats Diagnostic payloads, severity counts,
+    // and the FindingDetail objects of the detailed format.
+    dependency DiagnosticReporter to Context;
+    dependency DiagnosticReporter to Diagnostic;
+    dependency DiagnosticReporter to FindingDetail;
+    dependency DiagnosticReporter to Severity;
 }

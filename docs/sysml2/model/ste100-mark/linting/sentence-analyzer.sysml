@@ -1,5 +1,6 @@
 package Ste100Mark_SentenceAnalyzer {
     private import SoftwareItemMetadata::*;
+    private import Ste100Mark_MarkdownProseExtractor::*;
 
     part def SentenceAnalyzer {
         doc /* Splits prose into sentences and counts words using the implemented STE100 counting rules. */
@@ -14,4 +15,7 @@ package Ste100Mark_SentenceAnalyzer {
             requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");
         }
     }
+
+    // Word counting masks inline code with the shared regex of MarkdownProseExtractor.
+    dependency SentenceAnalyzer to MarkdownProseExtractor;
 }

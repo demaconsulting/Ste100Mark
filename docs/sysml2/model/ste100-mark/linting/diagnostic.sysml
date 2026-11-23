@@ -1,5 +1,6 @@
 package Ste100Mark_Diagnostic {
     private import SoftwareItemMetadata::*;
+    private import Ste100Mark_Severity::*;
 
     part def Diagnostic {
         doc /* Immutable lint finding record carrying location, rule, severity, and message data. */
@@ -13,4 +14,7 @@ package Ste100Mark_Diagnostic {
             requirementFiles = ("docs/reqstream/ste100-mark/linting.yaml");
         }
     }
+
+    // Diagnostic stores the effective severity of each finding.
+    dependency Diagnostic to Severity;
 }

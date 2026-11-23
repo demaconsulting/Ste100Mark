@@ -1,5 +1,9 @@
 package Ste100Mark_Program {
     private import SoftwareItemMetadata::*;
+    private import Ste100Mark_Context::*;
+    private import Ste100Mark_Linter::*;
+    private import Ste100Mark_RuleCatalog::*;
+    private import Ste100Mark_Validation::*;
 
     part def Program {
         doc /* Entry point and execution orchestrator. */
@@ -12,4 +16,11 @@ package Ste100Mark_Program {
             requirementFiles = ("docs/reqstream/ste100-mark/program.yaml");
         }
     }
+
+    // Program reads parsed flags and writes output through Context, prints the rule catalog,
+    // runs self-validation, and dispatches the default path to the Linter.
+    dependency Program to Context;
+    dependency Program to Linter;
+    dependency Program to RuleCatalog;
+    dependency Program to Validation;
 }
