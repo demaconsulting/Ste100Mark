@@ -193,13 +193,3 @@ multi-library repository, or headless tests without GUI automation). Two rules k
 This repository follows the [Continuous Compliance](https://github.com/demaconsulting/ContinuousCompliance)
 approach. Tools: **ReqStream** (requirements traceability), **ReviewMark** (file review enforcement),
 **BuildMark** (tool versions), **VersionMark** (version tracking).
-
-# Repository-Specific Standards Exceptions
-
-## SysML2 package structure (legacy layout, migration pending)
-
-The SysML2 model under `docs/sysml2/` still uses the legacy layout: the `Ste100Mark` package is reopened
-across 29 files, including `model/ots.sysml` (instead of `OtsDependencies`) and `views/design-views.sysml`
-(instead of `Ste100MarkDesignViews`). The `sysml2-modeling.md` Package Structure rules and the
-`sysml2tools-query` qualified-name examples apply once the model is migrated in a dedicated PR. Until then,
-agents use the existing package names and must not partially restructure the model.

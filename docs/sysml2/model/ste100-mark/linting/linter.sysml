@@ -1,4 +1,4 @@
-package Ste100Mark {
+package Ste100Mark_Linter {
     private import SoftwareItemMetadata::*;
 
     part def Linter {

@@ -1,4 +1,4 @@
-package Ste100Mark {
+package Ste100Mark_StructuralRules {
     private import SoftwareItemMetadata::*;
 
     part def StructuralRules {

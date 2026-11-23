@@ -1,4 +1,5 @@
-package Ste100Mark {
+package Ste100Mark_UtilitiesSubsystem {
+    public import Ste100Mark_PathHelpers::*;
     private import SoftwareItemMetadata::*;
 
     part def UtilitiesSubsystem {

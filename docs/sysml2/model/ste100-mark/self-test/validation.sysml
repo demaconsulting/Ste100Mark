@@ -1,4 +1,4 @@
-package Ste100Mark {
+package Ste100Mark_Validation {
     private import SoftwareItemMetadata::*;
 
     part def Validation {

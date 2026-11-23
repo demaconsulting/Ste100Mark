@@ -1,4 +1,10 @@
 package Ste100Mark {
+    public import Ste100Mark_Program::*;
+    public import Ste100Mark_CliSubsystem::*;
+    public import Ste100Mark_LintingSubsystem::*;
+    public import Ste100Mark_SelfTestSubsystem::*;
+    public import Ste100Mark_UtilitiesSubsystem::*;
+    private import OtsDependencies::*;
     private import SoftwareItemMetadata::*;
 
     doc
