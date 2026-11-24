@@ -77,7 +77,8 @@ yet cover something.
 - **`lint.ps1`** - Runs the lint checks (`-All` is the CI merge gate). Requires a scope; see
   `pwsh ./lint.ps1 -Help`.
 - **`scripts/ProjectScripts.psm1`** - PowerShell module with the scoping logic the three scripts share.
-  Shared verbatim across repositories: never edit it here (see *Project Scripts*).
+  Delivered by the Agents release zip and shared verbatim across repositories: never edit it here
+  (see *Project Scripts*).
 
 # Standards Application (ALL Agents Must Follow)
 
@@ -159,8 +160,8 @@ Full `build.ps1 -All` and `lint.ps1 -All` runs can take many minutes on large re
 them once, not after every edit. The scripts require a scope: with no arguments they print usage
 and exit 1.
 
-- **While iterating**, use `-Changed` (or `lint.ps1`/`fix.ps1 -Check`) so only the affected work
-  runs; add `-DryRun` to see the selection without running anything
+- **While iterating**, use `-Changed` (or `lint.ps1`/`fix.ps1 -Check`, or `build.ps1 -Project`) so only the
+  affected work runs; add `-DryRun` to see the selection without running anything
 - **Before handing back**, run the full gates your agent requires once (`build.ps1 -All`,
   `lint.ps1 -All`); re-run them only if you change files after they pass
 - **Documentation-only changes** need no build
@@ -169,11 +170,15 @@ and exit 1.
 
 # Scoped Validation (ALL Agents Must Follow)
 
-Ste100Mark has one library and one test project, so `build.ps1 -Changed` is all or nothing: a change to
-either project, a file linked into one, or a build-wide file (solution, project, props/targets,
-`global.json`, `.editorconfig`, `nuget.config`, tool manifest, `build.ps1`, `scripts/ProjectScripts.psm1`)
-runs the full build and tests; documentation-only changes build nothing. Run `pwsh ./fix.ps1 -Changed` and
-`pwsh ./lint.ps1 -Changed` for them, then `pwsh ./lint.ps1 -All` before the pull request.
+Ste100Mark has one library and one test project. `build.ps1 -Changed` and `build.ps1 -Project` select the test
+project a change affects through the project reference graph: a change to the library or the tests, or to a file
+linked into one of them as a build input, selects the test project. Pack-only items (`README.md`, `Icon.png`,
+`PACKAGE-LICENSE.md`, and `THIRD-PARTY-NOTICES.md` are `None` items with `Pack="true"` and no output copy) are not
+build inputs, so changing them selects nothing. A build-wide file (solution, project, props/targets, `global.json`,
+`.editorconfig`, `nuget.config`, tool manifest, `build.ps1`, `scripts/ProjectScripts.psm1`) runs the full build and
+tests; documentation-only changes build nothing. The tests read no repository files at run time, so `$RuntimeReads`
+in `build.ps1` is empty; keep it in step if a test starts reading one. Run `pwsh ./fix.ps1 -Changed` and
+`pwsh ./lint.ps1 -Changed` for the changes, then `pwsh ./lint.ps1 -All` before the pull request.
 
 # Scope Discipline (ALL Agents Must Follow)
 
@@ -208,9 +213,9 @@ multi-library repository, or headless tests without GUI automation). Two rules k
   environment-dependent test tiers may be opt-in switches of `build.ps1`.
 - Never remove or weaken a check to make lint or tests pass.
 
-The shared scoping logic lives in `scripts/ProjectScripts.psm1`, delivered by the Agents release zip
-(source of truth: `src/scripts/ProjectScripts.psm1` in the Agents repository) and byte-identical to that copy:
-never edit it in a repository. Repository-specific behavior belongs in the scripts' `[PROJECT-SPECIFIC]`
+The shared scoping logic lives in `scripts/ProjectScripts.psm1`, delivered by the Agents release zip (extracted into
+the repository root; source of truth: `src/scripts/ProjectScripts.psm1` in the Agents repository) and byte-identical
+to that copy: never edit it in a repository. Repository-specific behavior belongs in the scripts' `[PROJECT-SPECIFIC]`
 blocks. See `project-scripts.md`.
 
 # Continuous Compliance Overview
