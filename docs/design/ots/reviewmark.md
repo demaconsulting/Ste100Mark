@@ -22,7 +22,7 @@ ReviewMark is consumed as a dotnet tool restored from the tool manifest. It is u
 contexts:
 
 - `--plan` / `--report` generate the review plan and report documents that Pandoc compiles
-- `--lint` validates `.reviewmark.yaml` and is run in `lint.ps1`
+- `--lint` validates `.reviewmark.yaml` and is run in `lint.ps1 -All`
 - `--elaborate` expands review-set file lists for use by the formal-review agent
 - `--enforce` enforces review currency and is run in the CI build, making stale evidence a
   build-breaking condition

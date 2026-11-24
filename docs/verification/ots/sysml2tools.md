@@ -22,10 +22,10 @@ assertions on its actual pipeline output:
   (`SysML2Tools_LintSelfTest`, `SysML2Tools_RenderSvgSelfTest`). This proves the tool's `lint` and
   `render` commands work correctly in isolation, but does not prove they were actually invoked
   successfully against this project's real model.
-- **Lint pipeline evidence**: `lint.ps1` runs `dotnet sysml2tools lint --strict-unresolved 'docs/sysml2/**/*.sysml'`
-  against the actual Ste100Mark model and fails the build on any syntax or reference error.
-  A build failure here is direct evidence that lint did not pass against the real model; a
-  successful build is direct evidence that it did.
+- **Lint pipeline evidence**: `lint.ps1 -All` runs
+  `dotnet sysml2tools lint --strict-unresolved 'docs/sysml2/**/*.sysml'` against the actual Ste100Mark model and fails
+  the build on any syntax or reference error. A build failure here is direct evidence that lint did not pass against the
+  real model; a successful build is direct evidence that it did.
 - **Render pipeline evidence**: The build-docs job runs `dotnet sysml2tools render` to produce one
   SVG file per declared view under `docs/design/generated/`, immediately before Pandoc compiles
   `docs/design/*.md` (which embed those SVG files by filename) and WeasyPrint renders the result to
