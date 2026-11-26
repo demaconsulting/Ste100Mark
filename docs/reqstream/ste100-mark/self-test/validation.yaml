@@ -6,77 +6,81 @@
 # It supports writing results to TRX (MSTest) or JUnit XML format.
 
 sections:
-  - title: Validation Unit Requirements
-    requirements:
-      - id: Ste100Mark-Validation-Run
-        title: The Validation class shall run self-validation tests and print a summary.
-        justification: |
-          Provides a built-in mechanism to verify the tool is functioning correctly
-          in the deployment environment. A summary is printed for human review.
-        tests:
-          - Validation_Run_WithSilentContext_PrintsSummary
-          - Validation_Run_WithSilentContext_ExitCodeIsZero
+  - title: Ste100Mark Requirements
+    sections:
+      - title: SelfTest Subsystem Requirements
+        sections:
+          - title: Validation Unit Requirements
+            requirements:
+              - id: Ste100Mark-Validation-Run
+                title: The Validation class shall run self-validation tests and print a summary.
+                justification: |
+                  Provides a built-in mechanism to verify the tool is functioning correctly
+                  in the deployment environment. A summary is printed for human review.
+                tests:
+                  - Validation_Run_WithSilentContext_PrintsSummary
+                  - Validation_Run_WithSilentContext_ExitCodeIsZero
 
-      - id: Ste100Mark-Validation-TrxResults
-        title: >-
-          The Validation class shall write test results to a `.trx` file in TRX
-          format when the results file path ends with `.trx`.
-        justification: |
-          TRX format is compatible with MSTest and ReqStream requirements traceability tools,
-          enabling integration with CI/CD systems that process MSTest output.
-        tests:
-          - Validation_Run_WithTrxResultsFile_WritesTrxFile
+              - id: Ste100Mark-Validation-TrxResults
+                title: >-
+                  The Validation class shall write test results to a `.trx` file in TRX
+                  format when the results file path ends with `.trx`.
+                justification: |
+                  TRX format is compatible with MSTest and ReqStream requirements traceability tools,
+                  enabling integration with CI/CD systems that process MSTest output.
+                tests:
+                  - Validation_Run_WithTrxResultsFile_WritesTrxFile
 
-      - id: Ste100Mark-Validation-XmlResults
-        title: >-
-          The Validation class shall write test results to a `.xml` file in
-          JUnit XML format when the results file path ends with `.xml`.
-        justification: |
-          JUnit XML format is compatible with many CI tools (Jenkins, GitHub Actions, GitLab CI),
-          enabling broad integration with CI/CD pipelines that process JUnit output.
-        tests:
-          - Validation_Run_WithXmlResultsFile_WritesXmlFile
+              - id: Ste100Mark-Validation-XmlResults
+                title: >-
+                  The Validation class shall write test results to a `.xml` file in
+                  JUnit XML format when the results file path ends with `.xml`.
+                justification: |
+                  JUnit XML format is compatible with many CI tools (Jenkins, GitHub Actions, GitLab CI),
+                  enabling broad integration with CI/CD pipelines that process JUnit output.
+                tests:
+                  - Validation_Run_WithXmlResultsFile_WritesXmlFile
 
-      - id: Ste100Mark-Validation-InvalidExtension
-        title: >-
-          The Validation class shall report an error and set exit code 1 when the
-          results file path has an unsupported extension.
-        justification: |
-          Provides a clear failure signal when an unrecognized results file extension is
-          supplied, preventing silent evidence loss and enabling CI/CD pipelines to
-          surface output configuration errors automatically.
-        tests:
-          - Validation_Run_WithUnsupportedResultsFormat_DoesNotWriteFile
+              - id: Ste100Mark-Validation-InvalidExtension
+                title: >-
+                  The Validation class shall report an error and set exit code 1 when the
+                  results file path has an unsupported extension.
+                justification: |
+                  Provides a clear failure signal when an unrecognized results file extension is
+                  supplied, preventing silent evidence loss and enabling CI/CD pipelines to
+                  surface output configuration errors automatically.
+                tests:
+                  - Validation_Run_WithUnsupportedResultsFormat_DoesNotWriteFile
 
-      - id: Ste100Mark-Validation-LintCleanFileSelfCheck
-        title: >-
-          The Validation class shall self-check the tool's Markdown lint workflow by invoking it
-          against a compliant Markdown file and confirming that the lint run completes without
-          diagnostics.
-        justification: |
-          A self-check against a compliant file provides observable evidence that the deployed
-          tool can execute its primary lint workflow successfully when no violations are present.
-        tests:
-          - Validation_Run_WithSilentContext_PassesLintCleanFileSelfCheck
+              - id: Ste100Mark-Validation-LintCleanFileSelfCheck
+                title: >-
+                  The Validation class shall self-check the tool's Markdown lint workflow by invoking it
+                  against a compliant Markdown file and confirming that the lint run completes without
+                  diagnostics.
+                justification: |
+                  A self-check against a compliant file provides observable evidence that the deployed
+                  tool can execute its primary lint workflow successfully when no violations are present.
+                tests:
+                  - Validation_Run_WithSilentContext_PassesLintCleanFileSelfCheck
 
-      - id: Ste100Mark-Validation-LintViolationFileSelfCheck
-        title: >-
-          The Validation class shall self-check the tool's Markdown lint workflow by invoking it
-          against a Markdown file with known violations and confirming that the lint run fails
-          with the expected diagnostics.
-        justification: |
-          A self-check against a file with deliberate violations provides observable evidence
-          that the deployed tool reports lint failures and exposes the expected rule codes for
-          operator review.
-        tests:
-          - Validation_Run_WithSilentContext_PassesLintViolationFileSelfCheck
+              - id: Ste100Mark-Validation-LintViolationFileSelfCheck
+                title: >-
+                  The Validation class shall self-check the tool's Markdown lint workflow by invoking it
+                  against a Markdown file with known violations and confirming that the lint run fails
+                  with the expected diagnostics.
+                justification: |
+                  A self-check against a file with deliberate violations provides observable evidence
+                  that the deployed tool reports lint failures and exposes the expected rule codes for
+                  operator review.
+                tests:
+                  - Validation_Run_WithSilentContext_PassesLintViolationFileSelfCheck
 
-      - id: Ste100Mark-Validation-LintJsonOutputSelfCheck
-        title: >-
-          The Validation class shall self-check the tool's Markdown lint workflow by invoking it
-          with JSON output requested and confirming that the emitted diagnostics are valid JSON.
-        justification: |
-          A self-check of JSON output provides observable evidence that the deployed tool can
-          emit machine-readable lint diagnostics for automation workflows.
-        tests:
-          - Validation_Run_WithSilentContext_PassesLintJsonOutputSelfCheck
+              - id: Ste100Mark-Validation-LintJsonOutputSelfCheck
+                title: >-
+                  The Validation class shall self-check the tool's Markdown lint workflow by invoking it
+                  with JSON output requested and confirming that the emitted diagnostics are valid JSON.
+                justification: |
+                  A self-check of JSON output provides observable evidence that the deployed tool can
+                  emit machine-readable lint diagnostics for automation workflows.
+                tests:
+                  - Validation_Run_WithSilentContext_PassesLintJsonOutputSelfCheck

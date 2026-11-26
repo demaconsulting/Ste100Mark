@@ -6,199 +6,203 @@
 # the tool's internal logic.
 
 sections:
-  - title: Context Unit Requirements
-    requirements:
-      - id: Ste100Mark-Context-ArgumentParsing
-        title: The Context class shall parse command-line arguments into structured properties.
-        justification: |
-          Provides a standardized approach to command-line argument parsing and output
-          handling across all DEMA Consulting DotNet Tools.
-        tests:
-          - Context_Create_NoArguments_ReturnsDefaultContext
-          - Context_Create_VersionFlag_SetsVersionTrue
-          - Context_Create_ShortVersionFlag_SetsVersionTrue
-          - Context_Create_HelpFlag_SetsHelpTrue
-          - Context_Create_ShortHelpFlag_H_SetsHelpTrue
-          - Context_Create_ShortHelpFlag_Question_SetsHelpTrue
-          - Context_Create_SilentFlag_SetsSilentTrue
-          - Context_Create_ValidateFlag_SetsValidateTrue
-          - Context_Create_ResultsFlag_SetsResultsFile
-          - Context_Create_LogFlag_OpensLogFile
-          - Context_Create_ResultAliasFlag_SetsResultsFile
-          - Context_Create_DepthFlag_SetsHeadingDepth
-          - Context_Create_NoDepthFlag_ReturnsDefaultHeadingDepth
-          - Context_Create_NoArguments_ReturnsLintingDefaults
-          - Context_Create_ListRulesFlag_SetsListRulesTrue
+  - title: Ste100Mark Requirements
+    sections:
+      - title: Cli Subsystem Requirements
+        sections:
+          - title: Context Unit Requirements
+            requirements:
+              - id: Ste100Mark-Context-ArgumentParsing
+                title: The Context class shall parse command-line arguments into structured properties.
+                justification: |
+                  Provides a standardized approach to command-line argument parsing and output
+                  handling across all DEMA Consulting DotNet Tools.
+                tests:
+                  - Context_Create_NoArguments_ReturnsDefaultContext
+                  - Context_Create_VersionFlag_SetsVersionTrue
+                  - Context_Create_ShortVersionFlag_SetsVersionTrue
+                  - Context_Create_HelpFlag_SetsHelpTrue
+                  - Context_Create_ShortHelpFlag_H_SetsHelpTrue
+                  - Context_Create_ShortHelpFlag_Question_SetsHelpTrue
+                  - Context_Create_SilentFlag_SetsSilentTrue
+                  - Context_Create_ValidateFlag_SetsValidateTrue
+                  - Context_Create_ResultsFlag_SetsResultsFile
+                  - Context_Create_LogFlag_OpensLogFile
+                  - Context_Create_ResultAliasFlag_SetsResultsFile
+                  - Context_Create_DepthFlag_SetsHeadingDepth
+                  - Context_Create_NoDepthFlag_ReturnsDefaultHeadingDepth
+                  - Context_Create_NoArguments_ReturnsLintingDefaults
+                  - Context_Create_ListRulesFlag_SetsListRulesTrue
 
-      - id: Ste100Mark-Context-ConfigArgumentParsing
-        title: The Context class shall parse the --config option and expose the supplied lint configuration file path.
-        justification: |
-          Callers must be able to select a specific lint configuration file for a single
-          invocation without relying on the default configuration discovery behavior.
-        tests:
-          - Context_Create_NoArguments_ReturnsLintingDefaults
-          - Context_Create_ConfigFlag_SetsConfigFile
+              - id: Ste100Mark-Context-ConfigArgumentParsing
+                title: The Context class shall parse the --config option and expose the supplied lint configuration file path.
+                justification: |
+                  Callers must be able to select a specific lint configuration file for a single
+                  invocation without relying on the default configuration discovery behavior.
+                tests:
+                  - Context_Create_NoArguments_ReturnsLintingDefaults
+                  - Context_Create_ConfigFlag_SetsConfigFile
 
-      - id: Ste100Mark-Context-FormatArgumentParsing
-        title: The Context class shall parse the --format option and expose the selected diagnostic output format.
-        justification: |
-          Callers must be able to request the supported diagnostic output format that
-          downstream tools and users expect for the current invocation.
-        tests:
-          - Context_Create_NoArguments_ReturnsLintingDefaults
-          - Context_Create_FormatFlagJson_SetsJsonFormat
-          - Context_Create_FormatFlagText_SetsTextFormat
-          - Context_Create_FormatFlagJsonDetailed_SetsDetailedFormatAndDefaultContext
+              - id: Ste100Mark-Context-FormatArgumentParsing
+                title: The Context class shall parse the --format option and expose the selected diagnostic output format.
+                justification: |
+                  Callers must be able to request the supported diagnostic output format that
+                  downstream tools and users expect for the current invocation.
+                tests:
+                  - Context_Create_NoArguments_ReturnsLintingDefaults
+                  - Context_Create_FormatFlagJson_SetsJsonFormat
+                  - Context_Create_FormatFlagText_SetsTextFormat
+                  - Context_Create_FormatFlagJsonDetailed_SetsDetailedFormatAndDefaultContext
 
-      - id: Ste100Mark-Context-ContextLinesArgumentParsing
-        title: >-
-          The Context class shall parse the --context-lines option as a whole number from 0 to
-          10 (default 2), accept it in any order relative to --format, and reject a value that is
-          out of range, not a number or missing, and any use without --format json-detailed.
-        justification: |
-          The option sizes the detailed report, so an invalid value or a use with another format
-          must fail at argument parsing rather than being ignored.
-        tests:
-          - Context_Create_FormatFlagJsonDetailed_SetsDetailedFormatAndDefaultContext
-          - Context_Create_ContextLines_ValidValue_IsStored
-          - Context_Create_ContextLines_InvalidValue_ThrowsArgumentException
-          - Context_Create_ContextLines_WithoutDetailedFormat_ThrowsArgumentException
+              - id: Ste100Mark-Context-ContextLinesArgumentParsing
+                title: >-
+                  The Context class shall parse the --context-lines option as a whole number from 0 to
+                  10 (default 2), accept it in any order relative to --format, and reject a value that is
+                  out of range, not a number or missing, and any use without --format json-detailed.
+                justification: |
+                  The option sizes the detailed report, so an invalid value or a use with another format
+                  must fail at argument parsing rather than being ignored.
+                tests:
+                  - Context_Create_FormatFlagJsonDetailed_SetsDetailedFormatAndDefaultContext
+                  - Context_Create_ContextLines_ValidValue_IsStored
+                  - Context_Create_ContextLines_InvalidValue_ThrowsArgumentException
+                  - Context_Create_ContextLines_WithoutDetailedFormat_ThrowsArgumentException
 
-      - id: Ste100Mark-Context-StrictArgumentParsing
-        title: >-
-          The Context class shall parse the --strict option and expose whether strict severity
-          promotion is enabled.
-        justification: |
-          Callers must be able to request strict exit-code handling for warning-severity
-          findings on a per-invocation basis.
-        tests:
-          - Context_Create_NoArguments_ReturnsLintingDefaults
-          - Context_Create_StrictFlag_SetsStrictTrue
+              - id: Ste100Mark-Context-StrictArgumentParsing
+                title: >-
+                  The Context class shall parse the --strict option and expose whether strict severity
+                  promotion is enabled.
+                justification: |
+                  Callers must be able to request strict exit-code handling for warning-severity
+                  findings on a per-invocation basis.
+                tests:
+                  - Context_Create_NoArguments_ReturnsLintingDefaults
+                  - Context_Create_StrictFlag_SetsStrictTrue
 
-      - id: Ste100Mark-Context-AllowEmptyArgumentParsing
-        title: >-
-          The Context class shall parse the --allow-empty option and expose whether a
-          zero-matched file selection should be accepted as a successful run.
-        justification: |
-          Callers must be able to opt a specific invocation out of the zero-files-matched
-          failure on a per-invocation basis, for scenarios where an empty selection is
-          legitimately expected.
-        tests:
-          - Context_Create_NoArguments_ReturnsLintingDefaults
-          - Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue
+              - id: Ste100Mark-Context-AllowEmptyArgumentParsing
+                title: >-
+                  The Context class shall parse the --allow-empty option and expose whether a
+                  zero-matched file selection should be accepted as a successful run.
+                justification: |
+                  Callers must be able to opt a specific invocation out of the zero-files-matched
+                  failure on a per-invocation basis, for scenarios where an empty selection is
+                  legitimately expected.
+                tests:
+                  - Context_Create_NoArguments_ReturnsLintingDefaults
+                  - Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue
 
-      - id: Ste100Mark-Context-ListRulesArgumentParsing
-        title: >-
-          The Context class shall parse the --list-rules option and expose whether the
-          rule-catalog dispatch path was requested.
-        justification: |
-          Callers must be able to request the rule-catalog JSON output path on a per-invocation
-          basis, so that `Program.Run` can dispatch to it before the main lint path without
-          requiring any Markdown file selection to exist.
-        tests:
-          - Context_Create_NoArguments_ReturnsLintingDefaults
-          - Context_Create_ListRulesFlag_SetsListRulesTrue
+              - id: Ste100Mark-Context-ListRulesArgumentParsing
+                title: >-
+                  The Context class shall parse the --list-rules option and expose whether the
+                  rule-catalog dispatch path was requested.
+                justification: |
+                  Callers must be able to request the rule-catalog JSON output path on a per-invocation
+                  basis, so that `Program.Run` can dispatch to it before the main lint path without
+                  requiring any Markdown file selection to exist.
+                tests:
+                  - Context_Create_NoArguments_ReturnsLintingDefaults
+                  - Context_Create_ListRulesFlag_SetsListRulesTrue
 
-      - id: Ste100Mark-Context-GlobArgumentParsing
-        title: The Context class shall collect positional non-flag arguments as glob patterns in the order supplied.
-        justification: |
-          Callers must be able to scope linting to explicit path patterns supplied on the
-          command line without those arguments being misinterpreted as unsupported flags.
-        tests:
-          - Context_Create_NoArguments_ReturnsLintingDefaults
-          - Context_Create_PositionalArgument_CollectedAsGlob
-          - Context_Create_MultiplePositionalArguments_CollectedInOrder
+              - id: Ste100Mark-Context-GlobArgumentParsing
+                title: The Context class shall collect positional non-flag arguments as glob patterns in the order supplied.
+                justification: |
+                  Callers must be able to scope linting to explicit path patterns supplied on the
+                  command line without those arguments being misinterpreted as unsupported flags.
+                tests:
+                  - Context_Create_NoArguments_ReturnsLintingDefaults
+                  - Context_Create_PositionalArgument_CollectedAsGlob
+                  - Context_Create_MultiplePositionalArguments_CollectedInOrder
 
-      - id: Ste100Mark-Context-Dispose
-        title: The Context class shall allow Dispose to be called multiple times without throwing.
-        justification: |
-          Callers must be able to dispose the invocation context safely from repeated or
-          layered cleanup paths without introducing disposal-time failures.
-        tests:
-          - Context_Dispose_CalledMultipleTimes_DoesNotThrow
+              - id: Ste100Mark-Context-Dispose
+                title: The Context class shall allow Dispose to be called multiple times without throwing.
+                justification: |
+                  Callers must be able to dispose the invocation context safely from repeated or
+                  layered cleanup paths without introducing disposal-time failures.
+                tests:
+                  - Context_Dispose_CalledMultipleTimes_DoesNotThrow
 
-      - id: Ste100Mark-Context-InvalidArgs
-        title: The Context class shall reject unknown or malformed command-line arguments with a descriptive error.
-        justification: |
-          Providing clear feedback for invalid arguments helps users quickly correct
-          mistakes and prevents silent misconfiguration.
-        tests:
-          - Context_Create_UnknownArgument_ThrowsArgumentException
-          - Context_Create_LogFlag_WithoutValue_ThrowsArgumentException
-          - Context_Create_ResultsFlag_WithoutValue_ThrowsArgumentException
-          - Context_Create_ResultAliasFlag_WithoutValue_ThrowsArgumentException
-          - Context_Create_DepthFlag_WithoutValue_ThrowsArgumentException
-          - Context_Create_DepthFlag_NonIntegerValue_ThrowsArgumentException
-          - Context_Create_DepthFlag_ZeroValue_ThrowsArgumentException
-          - Context_Create_DepthFlag_ExceedsMaxValue_ThrowsArgumentException
-          - Context_Create_ConfigFlag_WithoutValue_ThrowsArgumentException
-          - Context_Create_FormatFlag_UnsupportedValue_ThrowsArgumentException
-          - Context_Create_FormatFlag_WithoutValue_ThrowsArgumentException
+              - id: Ste100Mark-Context-InvalidArgs
+                title: The Context class shall reject unknown or malformed command-line arguments with a descriptive error.
+                justification: |
+                  Providing clear feedback for invalid arguments helps users quickly correct
+                  mistakes and prevents silent misconfiguration.
+                tests:
+                  - Context_Create_UnknownArgument_ThrowsArgumentException
+                  - Context_Create_LogFlag_WithoutValue_ThrowsArgumentException
+                  - Context_Create_ResultsFlag_WithoutValue_ThrowsArgumentException
+                  - Context_Create_ResultAliasFlag_WithoutValue_ThrowsArgumentException
+                  - Context_Create_DepthFlag_WithoutValue_ThrowsArgumentException
+                  - Context_Create_DepthFlag_NonIntegerValue_ThrowsArgumentException
+                  - Context_Create_DepthFlag_ZeroValue_ThrowsArgumentException
+                  - Context_Create_DepthFlag_ExceedsMaxValue_ThrowsArgumentException
+                  - Context_Create_ConfigFlag_WithoutValue_ThrowsArgumentException
+                  - Context_Create_FormatFlag_UnsupportedValue_ThrowsArgumentException
+                  - Context_Create_FormatFlag_WithoutValue_ThrowsArgumentException
 
-      - id: Ste100Mark-Context-ConsoleOutput
-        title: The Context class shall write output to the console unless the silent flag is set.
-        justification: |
-          Provides visible output to users running the tool interactively, while allowing
-          automated environments to suppress console output via the silent flag.
-        tests:
-          - Context_WriteLine_NotSilent_WritesToConsole
-          - Context_WriteError_NotSilent_WritesToConsole
+              - id: Ste100Mark-Context-ConsoleOutput
+                title: The Context class shall write output to the console unless the silent flag is set.
+                justification: |
+                  Provides visible output to users running the tool interactively, while allowing
+                  automated environments to suppress console output via the silent flag.
+                tests:
+                  - Context_WriteLine_NotSilent_WritesToConsole
+                  - Context_WriteError_NotSilent_WritesToConsole
 
-      - id: Ste100Mark-Context-LogOutput
-        title: The Context class shall additionally write output to a log file when the log flag is set.
-        justification: |
-          Provides persistent logging for debugging and audit trails, enabling post-run
-          inspection of tool output without requiring console capture.
-        tests:
-          - Context_Create_LogFlag_OpensLogFile
-          - Context_WriteError_WritesToLogFile
+              - id: Ste100Mark-Context-LogOutput
+                title: The Context class shall additionally write output to a log file when the log flag is set.
+                justification: |
+                  Provides persistent logging for debugging and audit trails, enabling post-run
+                  inspection of tool output without requiring console capture.
+                tests:
+                  - Context_Create_LogFlag_OpensLogFile
+                  - Context_WriteError_WritesToLogFile
 
-      - id: Ste100Mark-Context-Silent
-        title: The Context class shall suppress console output when the silent flag is set.
-        justification: |
-          Enables automated scripts and CI/CD pipelines to run the tool without
-          cluttering output logs.
-        tests:
-          - Context_Create_SilentFlag_SetsSilentTrue
-          - Context_WriteLine_Silent_DoesNotWriteToConsole
-          - Context_WriteError_Silent_DoesNotWriteToConsole
+              - id: Ste100Mark-Context-Silent
+                title: The Context class shall suppress console output when the silent flag is set.
+                justification: |
+                  Enables automated scripts and CI/CD pipelines to run the tool without
+                  cluttering output logs.
+                tests:
+                  - Context_Create_SilentFlag_SetsSilentTrue
+                  - Context_WriteLine_Silent_DoesNotWriteToConsole
+                  - Context_WriteError_Silent_DoesNotWriteToConsole
 
-      - id: Ste100Mark-Context-ErrorOutput
-        title: The Context class shall write error messages to stderr.
-        justification: |
-          Error messages must be written to stderr so they remain visible to the user
-          without polluting stdout, which consumers may pipe or redirect for data capture.
-        tests:
-          - Context_WriteError_NotSilent_WritesToConsole
+              - id: Ste100Mark-Context-ErrorOutput
+                title: The Context class shall write error messages to stderr.
+                justification: |
+                  Error messages must be written to stderr so they remain visible to the user
+                  without polluting stdout, which consumers may pipe or redirect for data capture.
+                tests:
+                  - Context_WriteError_NotSilent_WritesToConsole
 
-      - id: Ste100Mark-Context-ExitCode
-        title: The Context class shall track errors and expose a non-zero exit code when errors have occurred.
-        justification: |
-          Callers (scripts, CI/CD pipelines) must be able to detect failure conditions
-          programmatically via the process exit code.
-        tests:
-          - Context_WriteError_SetsErrorExitCode
+              - id: Ste100Mark-Context-ExitCode
+                title: The Context class shall track errors and expose a non-zero exit code when errors have occurred.
+                justification: |
+                  Callers (scripts, CI/CD pipelines) must be able to detect failure conditions
+                  programmatically via the process exit code.
+                tests:
+                  - Context_WriteError_SetsErrorExitCode
 
-      - id: Ste100Mark-Context-NoFilesMatchedExitCode
-        title: >-
-          The Context class shall expose a distinct exit code (2) when the file selection
-          matched zero files and this was not accepted via --allow-empty, taking precedence
-          below any reported error (exit code 1).
-        justification: |
-          `filesChecked: 0` alone cannot distinguish a misconfigured glob/include pattern from
-          a genuine clean pass over zero files. A dedicated, non-reused exit code lets
-          automation that only inspects the exit code detect this condition, while a reported
-          error must never be silently masked by the zero-files exit code.
-        tests:
-          - Context_WriteNoFilesMatchedError_SetsNoFilesMatchedExitCode
-          - Context_MarkNoFilesMatched_SetsExitCodeWithoutConsoleOutput
-          - Context_WriteErrorThenMarkNoFilesMatched_ExitCodeRemainsOne
+              - id: Ste100Mark-Context-NoFilesMatchedExitCode
+                title: >-
+                  The Context class shall expose a distinct exit code (2) when the file selection
+                  matched zero files and this was not accepted via --allow-empty, taking precedence
+                  below any reported error (exit code 1).
+                justification: |
+                  `filesChecked: 0` alone cannot distinguish a misconfigured glob/include pattern from
+                  a genuine clean pass over zero files. A dedicated, non-reused exit code lets
+                  automation that only inspects the exit code detect this condition, while a reported
+                  error must never be silently masked by the zero-files exit code.
+                tests:
+                  - Context_WriteNoFilesMatchedError_SetsNoFilesMatchedExitCode
+                  - Context_MarkNoFilesMatched_SetsExitCodeWithoutConsoleOutput
+                  - Context_WriteErrorThenMarkNoFilesMatched_ExitCodeRemainsOne
 
-      - id: Ste100Mark-Context-LogFailure
-        title: The Context class shall report an error when the specified log file cannot be opened.
-        justification: |
-          Failure to open a log file must be surfaced immediately so that users know their
-          log output will not be captured, preventing silent data loss in audit or
-          compliance workflows.
-        tests:
-          - Context_Create_LogFlag_InvalidPath_ThrowsInvalidOperationException
+              - id: Ste100Mark-Context-LogFailure
+                title: The Context class shall report an error when the specified log file cannot be opened.
+                justification: |
+                  Failure to open a log file must be surfaced immediately so that users know their
+                  log output will not be captured, preventing silent data loss in audit or
+                  compliance workflows.
+                tests:
+                  - Context_Create_LogFlag_InvalidPath_ThrowsInvalidOperationException

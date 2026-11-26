@@ -7,223 +7,225 @@
 # - Subsystem requirements describe the externally visible command-line interface behavior
 
 sections:
-  - title: Cli Subsystem Requirements
-    requirements:
-      - id: Ste100Mark-Cli-ArgumentParsing
-        title: The Cli subsystem shall accept command-line arguments and expose the parsed flag state to callers.
-        justification: |
-          Provides a standardized approach to command-line argument parsing across all
-          DEMA Consulting DotNet Tools. The Context class encapsulates all parsed flags
-          so that the rest of the tool has a single, consistent entry point for reading
-          CLI arguments.
-        tests:
-          - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits
-          - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits
-          - CliSubsystem_ValidateFlow_ContextAndProgram_RunsValidationAndExits
-          - CliSubsystem_SilentFlow_ContextAndProgram_SuppressesOutput
-          - CliSubsystem_ResultsFlow_ContextAndProgram_WritesResultsFile
-          - CliSubsystem_DepthFlow_ContextAndProgram_AdjustsHeadingDepth
-          - CliSubsystem_LogFlow_ContextAndProgram_WritesLogFile
-          - CliSubsystem_ConfigFlow_ContextAndProgram_AcceptsExplicitConfigPath
-          - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
-          - CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag
-          - CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag
-          - CliSubsystem_ListRulesFlow_ContextAndProgram_ParsesListRulesFlag
+  - title: Ste100Mark Requirements
+    sections:
+      - title: Cli Subsystem Requirements
+        requirements:
+          - id: Ste100Mark-Cli-ArgumentParsing
+            title: The Cli subsystem shall accept command-line arguments and expose the parsed flag state to callers.
+            justification: |
+              Provides a standardized approach to command-line argument parsing across all
+              DEMA Consulting DotNet Tools. The Context class encapsulates all parsed flags
+              so that the rest of the tool has a single, consistent entry point for reading
+              CLI arguments.
+            tests:
+              - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits
+              - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits
+              - CliSubsystem_ValidateFlow_ContextAndProgram_RunsValidationAndExits
+              - CliSubsystem_SilentFlow_ContextAndProgram_SuppressesOutput
+              - CliSubsystem_ResultsFlow_ContextAndProgram_WritesResultsFile
+              - CliSubsystem_DepthFlow_ContextAndProgram_AdjustsHeadingDepth
+              - CliSubsystem_LogFlow_ContextAndProgram_WritesLogFile
+              - CliSubsystem_ConfigFlow_ContextAndProgram_AcceptsExplicitConfigPath
+              - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
+              - CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag
+              - CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag
+              - CliSubsystem_ListRulesFlow_ContextAndProgram_ParsesListRulesFlag
 
-      - id: Ste100Mark-Cli-OutputChannels
-        title: >-
-          The Cli subsystem shall expose output channels (standard output and
-          error) so that callers can produce output without direct console
-          access.
-        justification: |
-          Decoupling output production from direct Console access enables testability
-          and flexible output routing (console, log file, or both) without requiring
-          callers to manage I/O directly.
-        tests:
-          - CliSubsystem_SilentFlow_ContextAndProgram_SuppressesOutput
-          - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
+          - id: Ste100Mark-Cli-OutputChannels
+            title: >-
+              The Cli subsystem shall expose output channels (standard output and
+              error) so that callers can produce output without direct console
+              access.
+            justification: |
+              Decoupling output production from direct Console access enables testability
+              and flexible output routing (console, log file, or both) without requiring
+              callers to manage I/O directly.
+            tests:
+              - CliSubsystem_SilentFlow_ContextAndProgram_SuppressesOutput
+              - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
 
-      - id: Ste100Mark-Cli-Version
-        title: >-
-          The Cli subsystem shall support -v and --version flags to display the tool version and
-          then exit successfully.
-        justification: |
-          Users need to quickly identify the version of the tool they are using for
-          troubleshooting and compatibility verification.
-        tests:
-          - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits
-          - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits_WithShortVFlag
+          - id: Ste100Mark-Cli-Version
+            title: >-
+              The Cli subsystem shall support -v and --version flags to display the tool version and
+              then exit successfully.
+            justification: |
+              Users need to quickly identify the version of the tool they are using for
+              troubleshooting and compatibility verification.
+            tests:
+              - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits
+              - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits_WithShortVFlag
 
-      - id: Ste100Mark-Cli-Help
-        title: >-
-          The Cli subsystem shall support -?, -h, and --help flags to display usage information
-          and then exit successfully.
-        justification: |
-          Users need access to command-line usage documentation without requiring
-          external resources.
-        tests:
-          - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits
-          - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits_WithShortQuestionFlag
-          - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits_WithShortHFlag
+          - id: Ste100Mark-Cli-Help
+            title: >-
+              The Cli subsystem shall support -?, -h, and --help flags to display usage information
+              and then exit successfully.
+            justification: |
+              Users need access to command-line usage documentation without requiring
+              external resources.
+            tests:
+              - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits
+              - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits_WithShortQuestionFlag
+              - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits_WithShortHFlag
 
-      - id: Ste100Mark-Cli-Silent
-        title: The Cli subsystem shall support --silent flag to suppress console output.
-        justification: |
-          Enables automated scripts and CI/CD pipelines to run the tool without
-          cluttering output logs.
-        tests:
-          - CliSubsystem_SilentFlow_ContextAndProgram_SuppressesOutput
+          - id: Ste100Mark-Cli-Silent
+            title: The Cli subsystem shall support --silent flag to suppress console output.
+            justification: |
+              Enables automated scripts and CI/CD pipelines to run the tool without
+              cluttering output logs.
+            tests:
+              - CliSubsystem_SilentFlow_ContextAndProgram_SuppressesOutput
 
-      - id: Ste100Mark-Cli-Validate
-        title: The Cli subsystem shall support --validate flag to run self-validation and then exit successfully.
-        justification: |
-          Provides a built-in mechanism to verify the tool is functioning correctly
-          in the deployment environment.
-        tests:
-          - CliSubsystem_ValidateFlow_ContextAndProgram_RunsValidationAndExits
+          - id: Ste100Mark-Cli-Validate
+            title: The Cli subsystem shall support --validate flag to run self-validation and then exit successfully.
+            justification: |
+              Provides a built-in mechanism to verify the tool is functioning correctly
+              in the deployment environment.
+            tests:
+              - CliSubsystem_ValidateFlow_ContextAndProgram_RunsValidationAndExits
 
-      - id: Ste100Mark-Cli-Results
-        title: The Cli subsystem shall support --results flag to specify a test results output file.
-        justification: |
-          Enables integration with CI/CD systems that expect standard test result formats.
-        tests:
-          - CliSubsystem_ResultsFlow_ContextAndProgram_WritesResultsFile
+          - id: Ste100Mark-Cli-Results
+            title: The Cli subsystem shall support --results flag to specify a test results output file.
+            justification: |
+              Enables integration with CI/CD systems that expect standard test result formats.
+            tests:
+              - CliSubsystem_ResultsFlow_ContextAndProgram_WritesResultsFile
 
-      - id: Ste100Mark-Cli-ResultAlias
-        title: The Cli subsystem shall accept `--result` as a legacy alias for `--results` when parsing arguments.
-        justification: |
-          Backward compatibility with scripts that use the earlier `--result` spelling
-          prevents breakage when upgrading to newer tool versions.
-        tests:
-          - CliSubsystem_ResultAliasFlow_ContextAndProgram_WritesResultsFile
+          - id: Ste100Mark-Cli-ResultAlias
+            title: The Cli subsystem shall accept `--result` as a legacy alias for `--results` when parsing arguments.
+            justification: |
+              Backward compatibility with scripts that use the earlier `--result` spelling
+              prevents breakage when upgrading to newer tool versions.
+            tests:
+              - CliSubsystem_ResultAliasFlow_ContextAndProgram_WritesResultsFile
 
-      - id: Ste100Mark-Cli-Depth
-        title: The Cli subsystem shall support --depth flag to control the heading depth of markdown output.
-        justification: |
-          Enables validation output to be embedded within larger markdown documents at
-          the appropriate heading level, supporting documentation workflows that combine
-          multiple reports.
-        tests:
-          - CliSubsystem_DepthFlow_ContextAndProgram_AdjustsHeadingDepth
+          - id: Ste100Mark-Cli-Depth
+            title: The Cli subsystem shall support --depth flag to control the heading depth of markdown output.
+            justification: |
+              Enables validation output to be embedded within larger markdown documents at
+              the appropriate heading level, supporting documentation workflows that combine
+              multiple reports.
+            tests:
+              - CliSubsystem_DepthFlow_ContextAndProgram_AdjustsHeadingDepth
 
-      - id: Ste100Mark-Cli-Log
-        title: The Cli subsystem shall support --log flag to write output to a log file.
-        justification: |
-          Provides persistent logging for debugging and audit trails.
-        tests:
-          - CliSubsystem_LogFlow_ContextAndProgram_WritesLogFile
+          - id: Ste100Mark-Cli-Log
+            title: The Cli subsystem shall support --log flag to write output to a log file.
+            justification: |
+              Provides persistent logging for debugging and audit trails.
+            tests:
+              - CliSubsystem_LogFlow_ContextAndProgram_WritesLogFile
 
-      - id: Ste100Mark-Cli-Config
-        title: >-
-          The Cli subsystem shall support --config flag to pass an explicit lint configuration
-          file path to the lint flow.
-        justification: |
-          Users need a way to lint against a configuration file other than the default
-          .ste100mark.yaml in the current working directory.
-        tests:
-          - CliSubsystem_ConfigFlow_ContextAndProgram_AcceptsExplicitConfigPath
-          - Run_MissingExplicitConfigFile_ReportsErrorWithoutThrowing
+          - id: Ste100Mark-Cli-Config
+            title: >-
+              The Cli subsystem shall support --config flag to pass an explicit lint configuration
+              file path to the lint flow.
+            justification: |
+              Users need a way to lint against a configuration file other than the default
+              .ste100mark.yaml in the current working directory.
+            tests:
+              - CliSubsystem_ConfigFlow_ContextAndProgram_AcceptsExplicitConfigPath
+              - Run_MissingExplicitConfigFile_ReportsErrorWithoutThrowing
 
-      - id: Ste100Mark-Cli-Format
-        title: >-
-          The Cli subsystem shall support --format flag with `text` and `json` values to select
-          diagnostic output format.
-        justification: |
-          Human operators need readable console diagnostics, while CI integrations need
-          machine-readable output that can be parsed without banner text mixed in.
-        tests:
-          - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
+          - id: Ste100Mark-Cli-Format
+            title: >-
+              The Cli subsystem shall support --format flag with `text` and `json` values to select
+              diagnostic output format.
+            justification: |
+              Human operators need readable console diagnostics, while CI integrations need
+              machine-readable output that can be parsed without banner text mixed in.
+            tests:
+              - CliSubsystem_FormatFlow_ContextAndProgram_SelectsJsonOutputAndSuppressesBanner
 
-      - id: Ste100Mark-Cli-FormatJsonDetailed
-        title: >-
-          The Cli subsystem shall support the json-detailed value of the --format flag to select
-          the detailed JSON diagnostic output, and shall suppress the banner for it.
-        justification: |
-          Reviewers and tools that judge findings need the detailed report, and like the default
-          JSON it must be parseable without banner text mixed in.
-        tests:
-          - CliSubsystem_DetailedFormatFlow_ContextAndProgram_SuppressesBannerAndWritesDetailedJson
-          - Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument
+          - id: Ste100Mark-Cli-FormatJsonDetailed
+            title: >-
+              The Cli subsystem shall support the json-detailed value of the --format flag to select
+              the detailed JSON diagnostic output, and shall suppress the banner for it.
+            justification: |
+              Reviewers and tools that judge findings need the detailed report, and like the default
+              JSON it must be parseable without banner text mixed in.
+            tests:
+              - CliSubsystem_DetailedFormatFlow_ContextAndProgram_SuppressesBannerAndWritesDetailedJson
+              - Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument
 
-      - id: Ste100Mark-Cli-ContextLines
-        title: >-
-          The Cli subsystem shall support the --context-lines flag, with a whole number from 0
-          to 10 (default 2), only together with --format json-detailed, and shall report any
-          other use as an argument error.
-        justification: |
-          The number of context lines only has a meaning for the detailed format, so using it
-          anywhere else is most likely a mistake that must not be ignored silently.
-        tests:
-          - CliSubsystem_DetailedFormatFlow_ContextAndProgram_SuppressesBannerAndWritesDetailedJson
-          - Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions
+          - id: Ste100Mark-Cli-ContextLines
+            title: >-
+              The Cli subsystem shall support the --context-lines flag, with a whole number from 0
+              to 10 (default 2), only together with --format json-detailed, and shall report any
+              other use as an argument error.
+            justification: |
+              The number of context lines only has a meaning for the detailed format, so using it
+              anywhere else is most likely a mistake that must not be ignored silently.
+            tests:
+              - CliSubsystem_DetailedFormatFlow_ContextAndProgram_SuppressesBannerAndWritesDetailedJson
+              - Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions
 
-      - id: Ste100Mark-Cli-Strict
-        title: >-
-          The Cli subsystem shall support --strict flag to make warn-severity findings cause a
-          failure exit code without changing their reported severity.
-        justification: |
-          Teams need to enforce stricter CI gates for advisory findings while preserving
-          the underlying diagnostic severity reported to users and tooling.
-        tests:
-          - CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag
-          - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
-          - Run_WarnOnlyFinding_WithoutStrict_ProducesSuccessExitCode
+          - id: Ste100Mark-Cli-Strict
+            title: >-
+              The Cli subsystem shall support --strict flag to make warn-severity findings cause a
+              failure exit code without changing their reported severity.
+            justification: |
+              Teams need to enforce stricter CI gates for advisory findings while preserving
+              the underlying diagnostic severity reported to users and tooling.
+            tests:
+              - CliSubsystem_StrictFlow_ContextAndProgram_ParsesStrictFlag
+              - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
+              - Run_WarnOnlyFinding_WithoutStrict_ProducesSuccessExitCode
 
-      - id: Ste100Mark-Cli-AllowEmpty
-        title: >-
-          The Cli subsystem shall support --allow-empty flag to accept a zero-matched file
-          selection as a successful run.
-        justification: |
-          A file selection matching zero files is otherwise indistinguishable from a genuine
-          clean pass to a caller inspecting only the exit code. Teams with legitimately empty
-          selections (for example, a glob scoped to an optional directory) need a way to opt a
-          specific invocation out of the resulting failure without changing the default,
-          safer-by-default behavior for everyone else.
-        tests:
-          - CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag
-          - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode
-          - Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode
+          - id: Ste100Mark-Cli-AllowEmpty
+            title: >-
+              The Cli subsystem shall support --allow-empty flag to accept a zero-matched file
+              selection as a successful run.
+            justification: |
+              A file selection matching zero files is otherwise indistinguishable from a genuine
+              clean pass to a caller inspecting only the exit code. Teams with legitimately empty
+              selections (for example, a glob scoped to an optional directory) need a way to opt a
+              specific invocation out of the resulting failure without changing the default,
+              safer-by-default behavior for everyone else.
+            tests:
+              - CliSubsystem_AllowEmptyFlow_ContextAndProgram_ParsesAllowEmptyFlag
+              - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode
+              - Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode
 
-      - id: Ste100Mark-Cli-ListRules
-        title: >-
-          The Cli subsystem shall support --list-rules flag to display the machine-readable rule
-          catalog and exit successfully without requiring any file selection.
-        justification: |
-          Callers building tooling or documentation around the linter's rule codes need a
-          reliable, machine-readable way to discover every rule code the tool can emit,
-          without needing a Markdown file to lint.
-        tests:
-          - CliSubsystem_ListRulesFlow_ContextAndProgram_ParsesListRulesFlag
-          - Ste100Mark_ListRulesFlag_Provided_OutputsRuleCatalogJson
+          - id: Ste100Mark-Cli-ListRules
+            title: >-
+              The Cli subsystem shall support --list-rules flag to display the machine-readable rule
+              catalog and exit successfully without requiring any file selection.
+            justification: |
+              Callers building tooling or documentation around the linter's rule codes need a
+              reliable, machine-readable way to discover every rule code the tool can emit,
+              without needing a Markdown file to lint.
+            tests:
+              - CliSubsystem_ListRulesFlow_ContextAndProgram_ParsesListRulesFlag
+              - Ste100Mark_ListRulesFlag_Provided_OutputsRuleCatalogJson
 
-      - id: Ste100Mark-Cli-ErrorOutput
-        title: The Cli subsystem shall write error messages to stderr.
-        justification: |
-          Error messages must be written to stderr so they remain visible to the user
-          without polluting stdout, which consumers may pipe or redirect for data capture.
-        tests:
-          - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
-          - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
+          - id: Ste100Mark-Cli-ErrorOutput
+            title: The Cli subsystem shall write error messages to stderr.
+            justification: |
+              Error messages must be written to stderr so they remain visible to the user
+              without polluting stdout, which consumers may pipe or redirect for data capture.
+            tests:
+              - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
+              - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
 
-      - id: Ste100Mark-Cli-InvalidArgs
-        title: The Cli subsystem shall reject unknown or malformed command-line arguments with a descriptive error.
-        justification: |
-          Providing clear feedback for invalid arguments helps users quickly correct
-          mistakes and prevents silent misconfiguration.
-        tests:
-          - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
+          - id: Ste100Mark-Cli-InvalidArgs
+            title: The Cli subsystem shall reject unknown or malformed command-line arguments with a descriptive error.
+            justification: |
+              Providing clear feedback for invalid arguments helps users quickly correct
+              mistakes and prevents silent misconfiguration.
+            tests:
+              - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
 
-      - id: Ste100Mark-Cli-ExitCode
-        title: The Cli subsystem shall return exit code 0 on success and a non-zero exit code on failure.
-        justification: |
-          Callers (scripts, CI/CD pipelines) must be able to detect success and failure
-          conditions programmatically via the process exit code.
-        tests:
-          - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits
-          - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits
-          - CliSubsystem_ValidateFlow_ContextAndProgram_RunsValidationAndExits
-          - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
-          - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
-          - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
-          - Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode
-          - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode
+          - id: Ste100Mark-Cli-ExitCode
+            title: The Cli subsystem shall return exit code 0 on success and a non-zero exit code on failure.
+            justification: |
+              Callers (scripts, CI/CD pipelines) must be able to detect success and failure
+              conditions programmatically via the process exit code.
+            tests:
+              - CliSubsystem_VersionFlow_ContextAndProgram_DisplaysVersionAndExits
+              - CliSubsystem_HelpFlow_ContextAndProgram_DisplaysHelpAndExits
+              - CliSubsystem_ValidateFlow_ContextAndProgram_RunsValidationAndExits
+              - CliSubsystem_InvalidArgs_ContextAndProgram_RejectsUnknownArgumentsAndExitsNonZero
+              - CliSubsystem_ErrorOutput_ContextAndProgram_WritesErrorToStderr
+              - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
+              - Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode
+              - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode

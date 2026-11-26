@@ -8,7 +8,7 @@
 #   published dotnet DLL end-to-end
 
 sections:
-  - title: System-Level Requirements
+  - title: Ste100Mark Requirements
     requirements:
       - id: Ste100Mark-System-Version
         title: The tool shall display version information when the version flag is provided.

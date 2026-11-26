@@ -16,7 +16,7 @@
 #   dotnet11.x@TestName   - proves the self-validation test ran with .NET 11.x runtime
 
 sections:
-  - title: Platform Support
+  - title: Ste100Mark Requirements
     requirements:
       - id: Ste100Mark-Platform-Windows
         title: The tool shall execute successfully on Windows platforms.
