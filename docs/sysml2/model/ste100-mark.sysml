@@ -31,5 +31,6 @@ package Ste100Mark {
         part yamlDotNet : YamlDotNet;
         part partOfSpeech : PartOfSpeech;
         part fileSystemGlobbing : FileSystemGlobbing;
+        part helpCards : HelpCards;
     }
 }

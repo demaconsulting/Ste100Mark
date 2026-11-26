@@ -19,6 +19,8 @@ N/A - standard test environment.
 - `Program.Version` returns a non-empty, non-null string.
 - `--list-rules` displays the rule catalog as a single parseable JSON document with no banner
   text, and exits with code 0.
+- `Program.Main` answers the `help` command before the options are parsed, and the usage
+  information ends with the pointer to the help command.
 
 ### Test Scenarios
 
@@ -37,9 +39,14 @@ scenario is tested by `Program_Run_WithListRulesFlag_DisplaysRuleCatalogOnly`.
 **Program_Run_WithHelpFlag_DisplaysUsageInformation**: `Program.Run` is called with a context
 from `["--help"]`; because version dispatch did not trigger, the banner is printed before help
 text, and the output contains "Usage:", "Options:", `--version`, `--help`, `--config`,
-`--format`, `--strict`, `--allow-empty`, `--list-rules`, and `globs`. Exit code is 0. This
-scenario is tested by
+`--format`, `--strict`, `--allow-empty`, `--list-rules`, `globs`, and the `help [topic]` usage
+line, and ends with the pointer to the help command. Exit code is 0. This scenario is tested by
 `Program_Run_WithHelpFlag_DisplaysUsageInformation`.
+
+**Program_Main_WithHelpVerb_PrintsHelpIndex**: `Program.Main` is invoked with `["help"]`, which
+is not an option; the captured console output contains the help topic index and no banner, and
+the exit code is 0, confirming the help command is answered before the options are parsed. This
+scenario is tested by `Program_Main_WithHelpVerb_PrintsHelpIndex`.
 
 **Program_Run_WithValidateFlag_RunsValidation**: `Program.Run` is called with a context from
 `["--validate"]`; because version and help dispatch did not trigger, the banner is printed and the

@@ -36,6 +36,25 @@ sections:
             tests:
               - Program_Run_WithValidateFlag_RunsValidation
 
+          - id: Ste100Mark-Program-HelpCommand
+            title: >-
+              The Program class shall answer the `help` command before the command-line options are
+              parsed and return its exit code.
+            justification: |
+              The `help` command is not an option, so the option parser would treat it as a glob.
+              Offering the arguments to the help command first lets `ste100mark help` work while
+              every other run continues to the option parser unchanged.
+            tests:
+              - Program_Main_WithHelpVerb_PrintsHelpIndex
+
+          - id: Ste100Mark-Program-HelpFooter
+            title: The Program class shall end its usage information with a pointer to the help command.
+            justification: |
+              The short usage text stays short and still tells a reader where the help topics
+              with worked examples are.
+            tests:
+              - Program_Run_WithHelpFlag_DisplaysUsageInformation
+
           - id: Ste100Mark-Program-ExitCode-Success
             title: The Program class shall leave the exit code at 0 when a requested command completes successfully.
             justification: |

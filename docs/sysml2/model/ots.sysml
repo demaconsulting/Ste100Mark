@@ -30,4 +30,14 @@ package OtsDependencies {
             requirementFiles = ("docs/reqstream/ots/file-system-globbing.yaml");
         }
     }
+
+    part def HelpCards {
+        doc /* Built-in help library (DemaConsulting.HelpCards) used to serve the help command from embedded help cards. */
+
+        metadata info : SoftwareInfo {
+            designFiles = ("docs/design/ots/help-cards.md");
+            verificationFiles = ("docs/verification/ots/help-cards.md");
+            requirementFiles = ("docs/reqstream/ots/help-cards.yaml");
+        }
+    }
 }

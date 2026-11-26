@@ -1,6 +1,7 @@
 package Ste100Mark_Program {
     private import SoftwareItemMetadata::*;
     private import Ste100Mark_Context::*;
+    private import Ste100Mark_HelpCommand::*;
     private import Ste100Mark_Linter::*;
     private import Ste100Mark_RuleCatalog::*;
     private import Ste100Mark_Validation::*;
@@ -17,8 +18,10 @@ package Ste100Mark_Program {
         }
     }
 
-    // Program reads parsed flags and writes output through Context, prints the rule catalog,
-    // runs self-validation, and dispatches the default path to the Linter.
+    // Program answers the help command through HelpCommand, reads parsed flags and writes output
+    // through Context, prints the rule catalog, runs self-validation, and dispatches the default
+    // path to the Linter.
+    dependency Program to HelpCommand;
     dependency Program to Context;
     dependency Program to Linter;
     dependency Program to RuleCatalog;

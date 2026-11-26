@@ -11,6 +11,8 @@ file-system side-effects, parsed context state, and exit codes. `Validation` (pa
 `SelfTest` subsystem) executes its real logic in scenarios that exercise the `--validate` path; no
 mocking is applied at any level.
 
+The help command is verified through `HelpCommand.Create`, which writes to in-memory writers.
+
 ### Test Environment
 
 N/A - standard test environment.
@@ -23,6 +25,7 @@ N/A - standard test environment.
   active.
 - Exit codes are 0 for successful flows and non-zero for rejected arguments, reported errors, and
   strict-mode lint failures.
+- The `help` command prints a requested topic from the built-in help cards.
 
 ### Test Scenarios
 
@@ -147,3 +150,7 @@ scenario verifies `Ste100Mark-Cli-ArgumentParsing` and `Ste100Mark-Cli-ListRules
 `--list-rules` and no other arguments in an empty working directory containing no Markdown
 files; exit code is 0 and stdout parses as a JSON array containing every expected rule code.
 This scenario verifies `Ste100Mark-Cli-ListRules`.
+
+**CliSubsystem_HelpCommand_TopicRequested_PrintsTopic**: Arguments `["help", "command-line"]` are
+offered to `HelpCommand.TryRun`, which answers with the command-line topic and exit code 0. This
+scenario is tested by `CliSubsystem_HelpCommand_TopicRequested_PrintsTopic`.

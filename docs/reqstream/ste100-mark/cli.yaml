@@ -3,7 +3,8 @@
 #
 # PURPOSE:
 # - Define requirements for the Ste100Mark Cli subsystem
-# - The Cli subsystem spans Context.cs (command-line argument parsing and I/O)
+# - The Cli subsystem spans Context.cs (command-line argument parsing and I/O) and
+#   HelpCommand.cs (the built-in help command)
 # - Subsystem requirements describe the externally visible command-line interface behavior
 
 sections:
@@ -229,3 +230,14 @@ sections:
               - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
               - Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode
               - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode
+
+          - id: Ste100Mark-Cli-HelpTopics
+            title: The Cli subsystem shall answer the `help` command from built-in help cards.
+            justification: |
+              Users and AI agents need help topics with worked examples from the installed tool.
+            children:
+              - Ste100Mark-HelpCommand-HelpVerb
+              - Ste100Mark-HelpCommand-ValidCards
+              - Ste100Mark-HelpCommand-LineWidth
+            tests:
+              - CliSubsystem_HelpCommand_TopicRequested_PrintsTopic

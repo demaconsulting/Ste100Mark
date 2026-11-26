@@ -13,6 +13,7 @@ flowchart TD
     Program
     subgraph Cli
         Context
+        HelpCommand
     end
     subgraph Linting
         Severity
@@ -36,6 +37,7 @@ flowchart TD
     subgraph Utilities
         PathHelpers
     end
+    Program --> HelpCommand
     Program --> Context
     Program --> Linter
     Program --> Validation
@@ -61,8 +63,9 @@ The diagram shows the principal units and their main relationships; the `Linting
 design lists every unit. `PartOfSpeechResolver` is the unit through which `DictionaryChecker`
 uses the PartOfSpeech OTS tagger to decide whether a matched term is used as a noun or a verb.
 
-`Program` is the entry point. It creates a `Context` from the `Cli` subsystem,
-dispatches to `RuleCatalog.ToJson` when `--list-rules` is passed, dispatches to
+`Program` is the entry point. It first offers the arguments to `HelpCommand`, which answers the
+`help` command from the built-in help cards; otherwise it creates a `Context` from the `Cli`
+subsystem, dispatches to `RuleCatalog.ToJson` when `--list-rules` is passed, dispatches to
 `Validation.Run` when `--validate` is passed, dispatches to `Linter.Run`
 otherwise, and returns the exit code from `Context`. `Validation` is therefore a distinct
 Program dispatch mode, not a recursive call path back into `Program`; within its own workflow
@@ -79,7 +82,8 @@ diagnostics and summaries through `DiagnosticReporter` into that context's outpu
 
 - *Type*: CLI.
 - *Role*: Consumer (the host environment invokes the system with command-line arguments).
-- *Contract*: Accepts positional Markdown glob arguments `[globs...]` plus
+- *Contract*: Accepts the `help` command as the first argument (see Help Command below), or
+  positional Markdown glob arguments `[globs...]` plus
   `-v`/`--version`, `-?`/`-h`/`--help`, `--silent`, `--validate`, `--results <file>`,
   `--result <file>` (legacy alias for `--results`), `--depth <n>`, `--log <file>`,
   `--config <file>`, `--format <text|json>`, `--strict`, `--allow-empty`, and
@@ -89,8 +93,22 @@ diagnostics and summaries through `DiagnosticReporter` into that context's outpu
   warn-severity findings when `--strict` is active, and exit code 2 when the resolved file
   selection matched zero files and `--allow-empty` was not specified (unless a genuine error
   was also reported, which always takes precedence over the empty-selection code).
-- *Constraints*: Unknown flags are rejected. Positional globs replace the configured
-  `include`/`exclude` file-selection patterns for that invocation.
+- *Constraints*: Unknown flags are rejected. Argument errors are found before `--silent` and
+  `--log` take effect, so they are always printed and never logged. Positional globs replace the
+  configured `include`/`exclude` file-selection patterns for that invocation.
+
+**Help Command**: Built-in help, answered from help cards embedded in the tool assembly.
+
+- *Type*: CLI.
+- *Role*: Provider.
+- *Contract*: `ste100mark help` prints the topic index and `ste100mark help <topic>` prints a
+  topic card with its examples; HelpCards adds `--example`, `--search`, and `--json`. Returns exit
+  code 0 for success, 2 for a wrong help argument or an unknown topic, and 70 for a defective card
+  catalog. Exit code 2 therefore has two meanings: in a lint run it means that the file selection
+  matched zero files. The two cannot occur in the same invocation.
+- *Constraints*: `help` must be the first argument. It is answered before the options are parsed,
+  so `--silent` and `--log` do not apply and no banner is printed. A file named `help` is linted
+  by writing it as `./help` or by not giving it first.
 
 **Standard Output**: Normal program output written to `Console.Out`.
 
@@ -171,6 +189,8 @@ diagnostics and summaries through `DiagnosticReporter` into that context's outpu
   confident determiner evidence. See *PartOfSpeech*.
 - **Microsoft.Extensions.FileSystemGlobbing**: provides glob evaluation for file selection and
   mode overrides. See *Microsoft.Extensions.FileSystemGlobbing*.
+- **DemaConsulting.HelpCards**: loads, validates, and serves the built-in help cards for the
+  `help` command. See *HelpCards*.
 
 ## Risk Control Measures
 
@@ -180,23 +200,28 @@ N/A - not a safety-classified software item.
 
 1. The host environment starts the tool process and passes command-line arguments to
    `Program.Main`.
-2. `Program.Main` calls `Context.Create(args)`, which parses the arguments and opens the log
+2. `Program.Main` offers the arguments to `HelpCommand.TryRun`. When the first argument is
+   `help`, the help command builds the card catalog, writes its answer to the console, and
+   `Program.Main` returns its exit code. Any other first argument returns at once without
+   building the catalog.
+3. `Program.Main` calls `Context.Create(args)`, which parses the arguments and opens the log
    file if `--log` was specified. An `ArgumentException` or `InvalidOperationException` at
    this point is caught, written to stderr, and causes exit code 1.
-3. `Program.Run(context)` inspects the parsed flags and dispatches to one handler:
+4. `Program.Run(context)` inspects the parsed flags and dispatches to one handler:
    - `--version` flag → `context.WriteLine(Version)`, then return.
    - `--list-rules` flag → `context.WriteLine(RuleCatalog.ToJson())`, then return (dispatched
      before the banner, like `--version`, so stdout remains a single parseable JSON document).
    - Otherwise, `PrintBanner` is called first unless linting JSON output was requested; then:
-     - `--help` flag → `PrintHelp(context)`, then return.
+     - `--help` flag → `PrintHelp(context)`, which ends with the pointer to the help command,
+       then return.
      - `--validate` flag → `Validation.Run(context)`.
      - No action flag → `Linter.Run(context)`.
-4. `Linter.Run` resolves the effective configuration path, loads `LintConfig`, loads the merged
+5. `Linter.Run` resolves the effective configuration path, loads `LintConfig`, loads the merged
    `LintDictionary`, resolves the Markdown file set, extracts prose segments, evaluates
    structural and dictionary rules, and reports diagnostics through `DiagnosticReporter`.
-5. `Validation.Run` or `Linter.Run` drives `Context.ExitCode` by calling `WriteError` or
+6. `Validation.Run` or `Linter.Run` drives `Context.ExitCode` by calling `WriteError` or
    `MarkFailure` when a failure condition is detected.
-6. `Program.Main` returns `context.ExitCode` (0 if no errors were reported, 1 otherwise).
+7. `Program.Main` returns `context.ExitCode` (0 if no errors were reported, 1 otherwise).
 
 ## Design Constraints
 
