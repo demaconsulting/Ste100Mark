@@ -147,6 +147,12 @@ sole argument; the combined output lists every root topic with its command, cont
 the tool exits with code 0. This scenario is tested by
 `Ste100Mark_HelpTopics_HelpVerb_ListsTopics`.
 
+**Ste100Mark_HelpTopics_FileNamedHelp_CheckedAsDotSlashHelp**: A working folder holds a file
+named `help` with a semicolon. The argument `./help` checks that file, so the tool reports
+`STE100-8.1` and exits with code 1; the bare argument `help` prints the topic index instead and
+exits with code 0. This scenario is tested by
+`Ste100Mark_HelpTopics_FileNamedHelp_CheckedAsDotSlashHelp`.
+
 **Ste100Mark_HelpTopics_UnknownTopic_ReturnsUsageError**: The arguments
 `help no-such-topic` name a topic that does not exist; the tool exits with code 2 and the
 combined output names the topic. This scenario is tested by

@@ -29,6 +29,9 @@ examples:
       profiles:
         - glob: "procedure*.md"
           mode: procedure
+          dictionary:
+            allow-in-phrase:
+              - check valve
         - glob: "paragraph.md"
           rules:
             max-sentences-paragraph: 0
@@ -55,6 +58,11 @@ examples:
             - pos: verb
               alternatives: [use]
               note: Prefer the plain verb.
+        glossary-file: []
+        deprecated-file: []
+        glossary-mode: hard
+        glossary:
+          Zorbix: The brand name of the pump.
   - name: procedure
     kind: command
     language: shell
@@ -79,7 +87,8 @@ examples:
 The tool reads `.ste100mark.yaml` from the current folder only, or the
 file that `--config` names. Without one, it checks `**/*.md` with the
 defaults. [[#sample]] prints a complete file; its `rules` and
-`dictionary` values are the defaults, apart from the lists.
+`dictionary` values are the defaults, apart from the lists and the
+glossary.
 
 | Key | Meaning |
 | --- | --- |

@@ -1275,6 +1275,36 @@ public class IntegrationTests
     }
 
     /// <summary>
+    ///     Test that a file named <c>help</c> is checked when it is named as <c>./help</c>, while the
+    ///     bare word <c>help</c> stays the help command.
+    /// </summary>
+    [Fact]
+    public void Ste100Mark_HelpTopics_FileNamedHelp_CheckedAsDotSlashHelp()
+    {
+        // Arrange: an isolated working directory with a non-compliant file named 'help'
+        var workingDirectory = Directory.CreateTempSubdirectory("ste100mark-integration-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(workingDirectory, "help"), "# Title\n\nOpen the panel; then close it.\n");
+
+            // Act: run the tool with './help' and with the bare 'help' verb
+            var fileExit = Runner.RunInDirectory(out var fileOutput, workingDirectory, "dotnet", _dllPath, "./help");
+            var helpExit = Runner.RunInDirectory(out var helpOutput, workingDirectory, "dotnet", _dllPath, "help");
+
+            // Assert: './help' checks the file and reports the finding; 'help' prints the topic index
+            Assert.Equal(1, fileExit);
+            Assert.Contains("STE100-8.1", fileOutput);
+            Assert.Equal(0, helpExit);
+            Assert.Contains($"{HelpCommand.ToolName} help {HelpCommand.RootCardIds[0]}", helpOutput);
+            Assert.DoesNotContain("STE100-8.1", helpOutput);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, true);
+        }
+    }
+
+    /// <summary>
     ///     Test that every command example in the help cards gives the result that its card states.
     /// </summary>
     [Fact]

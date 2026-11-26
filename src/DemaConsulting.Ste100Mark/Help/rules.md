@@ -29,15 +29,17 @@ examples:
     expect: '[WARN] STE100-ADV-PASSIVE'
 ---
 Each finding names a rule code. Official rules are ASD-STE100 rules and
-are errors. Advisory rules are heuristics of this tool, not ASD-STE100
-rules, and are warnings by default.
+are errors. The mechanical rule `STE100-DICT` is a word check of this
+tool, not a numbered ASD-STE100 rule, and is an error. Advisory rules are
+heuristics of this tool, not ASD-STE100 rules, and are warnings by
+default. The Kind column is the `classification` that [[#list]] reports.
 
 | Code | Kind | Severity | Change it in `rules` |
 | --- | --- | --- | --- |
 | `STE100-4.1` | official | error | `max-words-descriptive`, `max-words-procedure` |
 | `STE100-8.1` | official | error | `allow-semicolons: true` |
 | `STE100-4.2` | official | error | `allow-contractions: true` |
-| `STE100-DICT` | dictionary | error | `enabled: false` in `dictionary` |
+| `STE100-DICT` | mechanical | error | `enabled: false` in `dictionary` |
 | `STE100-ADV-PARA` | advisory | warn | `max-sentences-paragraph: 0` |
 | `STE100-ADV-PASSIVE` | advisory | warn | `passive-voice: off`, `warn`, `error` |
 | `STE100-ADV-COMPLEXVERB` | advisory | warn | `complex-verb: off`, `warn`, `error` |

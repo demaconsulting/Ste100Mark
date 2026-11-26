@@ -88,6 +88,8 @@ later entry replaces an earlier one for the same word. `allow` and
 inflected forms such as `utilized` are also reported.
 
 **Glossary** ([[#glossary]]). Approved terms, which are never reported.
+Name glossary files with `glossary-file`, or list the terms inline
+under `glossary`, in the same form.
 An entry is `term: definition`, or a map with `definition` (required),
 `pos` (`noun`, `verb`, `adjective`, `adverb`, or `proper-noun`),
 `variants`, and `visible`. A term of several words also protects the

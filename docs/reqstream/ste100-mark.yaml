@@ -50,6 +50,7 @@ sections:
           - Ste100Mark-Cli-HelpTopics
         tests:
           - Ste100Mark_HelpTopics_HelpVerb_ListsTopics
+          - Ste100Mark_HelpTopics_FileNamedHelp_CheckedAsDotSlashHelp
 
       - id: Ste100Mark-System-HelpUnknownTopic
         title: The tool shall exit with code 2 when the `help` command names an unknown topic.
