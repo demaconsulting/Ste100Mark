@@ -14,6 +14,7 @@ needs-review:
   - "docs/verification/**/*.md"   # Verification documentation files
   - "docs/user_guide/**/*.md"     # User guide documentation
   - "docs/sysml2/**/*.sysml"      # SysML2 architecture model
+  - "src/**/Help/**"               # Built-in help cards
   - "!**/obj/**"                  # Exclude build output
   - "!**/bin/**"                  # Exclude build output
   - "!node_modules/**"            # Exclude npm dependencies
@@ -126,6 +127,20 @@ reviews:
       - "docs/verification/ste100-mark/cli/context.md"
       - "src/**/Cli/Context.cs"
       - "test/**/Cli/ContextTests.cs"
+  - id: Ste100Mark-Cli-HelpCommand
+    title: Review of Ste100Mark HelpCommand unit implementation
+    context:
+      - docs/design/ste100-mark.md
+      - docs/reqstream/ste100-mark.yaml
+      - docs/design/ste100-mark/cli.md
+      - docs/reqstream/ste100-mark/cli.yaml
+    paths:
+      - "docs/reqstream/ste100-mark/cli/help-command.yaml"
+      - "docs/design/ste100-mark/cli/help-command.md"
+      - "docs/verification/ste100-mark/cli/help-command.md"
+      - "src/**/Cli/HelpCommand.cs"
+      - "src/**/Help/**"
+      - "test/**/Cli/HelpCommandTests.cs"
 
   # Ste100Mark - SelfTest
   - id: Ste100Mark-SelfTest
@@ -215,6 +230,12 @@ reviews:
       - "docs/reqstream/ots/file-system-globbing.yaml"
       - "docs/design/ots/file-system-globbing.md"
       - "docs/verification/ots/file-system-globbing.md"
+  - id: OTS-HelpCards
+    title: Review of HelpCards OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/help-cards.yaml"
+      - "docs/design/ots/help-cards.md"
+      - "docs/verification/ots/help-cards.md"
 
   - id: OTS-Pandoc
     title: Review of Pandoc OTS verification evidence
