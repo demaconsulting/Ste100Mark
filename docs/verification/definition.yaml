@@ -15,6 +15,7 @@ input-files:
   - docs/verification/ste100-mark/program.md
   - docs/verification/ste100-mark/cli.md
   - docs/verification/ste100-mark/cli/context.md
+  - docs/verification/ste100-mark/cli/help-command.md
   - docs/verification/ste100-mark/linting.md
   - docs/verification/ste100-mark/self-test.md
   - docs/verification/ste100-mark/self-test/validation.md
@@ -24,6 +25,7 @@ input-files:
   - docs/verification/ots/buildmark.md
   - docs/verification/ots/fileassert.md
   - docs/verification/ots/file-system-globbing.md
+  - docs/verification/ots/help-cards.md
   - docs/verification/ots/pandoc.md
   - docs/verification/ots/part-of-speech.md
   - docs/verification/ots/reqstream.md

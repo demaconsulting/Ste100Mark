@@ -22,6 +22,7 @@ This user guide covers:
 - Installation instructions
 - Markdown linting usage and output formats
 - `.ste100mark.yaml` configuration and dictionary setup
+- The built-in `ste100mark help` command
 - Self-validation usage
 - Command-line options and practical examples
 
@@ -615,6 +616,28 @@ Display usage information:
 ste100mark --help
 ```
 
+The usage information ends with a pointer to the built-in help.
+
+## Built-in Help
+
+The `help` command prints help topics that explain each task with worked examples, for people and
+for AI agents that have only the installed tool: how to fix each rule code, how to configure the
+checker and its dictionaries, how to accept a false positive, and how to run it in CI. List the
+topics, then print one with its examples:
+
+```bash
+ste100mark help
+ste100mark help rules
+ste100mark help rules ste100-adv-passive
+```
+
+After `rules`, a rule code in lower case, such as `ste100-adv-passive` or `ste100-4-1`, finds the
+card that explains how to rewrite the text. Add `--search <words>` to find a topic, `--example <name>` to
+print one example of a topic, and `--json` to get any help answer as JSON. `help` is a command, not
+an option: it must be the first argument, and `--silent` and `--log` do not apply to it. To lint a
+file named `help`, write it as `./help`. The command exits with code 0 on success, and with code 2
+after printing a hint for an unknown topic or a wrong help argument (see Error Handling).
+
 ## Self-Validation
 
 Self-validation produces a report demonstrating that Ste100Mark is functioning
@@ -717,7 +740,8 @@ Error: Unsupported argument '--unknown'
 ```
 
 This behavior enables automated scripts and CI/CD pipelines to detect and surface
-misconfiguration failures automatically.
+misconfiguration failures automatically. Argument errors are found before `--silent` and `--log`
+take effect, so they are always printed and never logged.
 
 Exit codes are: `0` for a clean pass (including a pass with only warn-severity findings when
 `--strict` is not active), `1` when an error-severity lint finding was reported, a warn-severity
@@ -734,6 +758,9 @@ pass `--allow-empty` to accept it as a normal success:
 ```bash
 ste100mark docs/optional/**/*.md --allow-empty
 ```
+
+The `help` command also uses exit code `2`, for an unknown help topic or a wrong help argument.
+The two meanings cannot occur in the same invocation, because a lint run never starts with `help`.
 
 # Command-Line Options
 

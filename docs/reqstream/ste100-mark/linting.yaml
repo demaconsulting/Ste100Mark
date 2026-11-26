@@ -7,847 +7,849 @@
 # - Subsystem requirements describe the externally visible lint behavior and rule enforcement
 
 sections:
-  - title: Linting Subsystem Requirements
-    requirements:
-      - id: Ste100Mark-Linting-WordLimits
-        title: >-
-          The Linting subsystem shall enforce ASD-STE100 Rule 4.1 sentence-length limits
-          using the Rule 8.4-8.7 counting behavior implemented by the tool.
-        justification: |
-          Sentence length is one of the primary mechanical constraints in ASD-STE100.
-          The tool must distinguish procedure and descriptive writing and count words
-          consistently for parentheticals, quoted text, hyphenated words, number-plus-unit
-          spans, and title-style proper-name sequences.
-        tests:
-          - Split_SingleSimpleSentence_ReturnsOneSentenceWithWordCount
-          - Split_MultipleSentences_ReturnsEachSentenceSeparately
-          - Split_ColonFollowedByCapital_TreatedAsSentenceTerminator
-          - CountWords_ParentheticalSpan_CountsAsOneWord
-          - Split_ParentheticalFormingCompleteSentence_ExtractedSeparately
-          - CountWords_HyphenatedWord_CountsAsOneWord
-          - CountWords_NumberWithUnit_CountsAsOneWord
-          - CountWords_QuotedText_CountsAsOneWord
-          - CountWords_TitleCaseSequence_CountsAsOneWord
-          - Evaluate_SentenceWithinDescriptiveLimit_NoWordLimitDiagnostic
-          - Evaluate_SentenceExceedingDescriptiveLimit_FlagsWordLimitDiagnostic
-          - Evaluate_SentenceExceedingProcedureLimit_FlagsOnlyInProcedureMode
+  - title: Ste100Mark Requirements
+    sections:
+      - title: Linting Subsystem Requirements
+        requirements:
+          - id: Ste100Mark-Linting-WordLimits
+            title: >-
+              The Linting subsystem shall enforce ASD-STE100 Rule 4.1 sentence-length limits
+              using the Rule 8.4-8.7 counting behavior implemented by the tool.
+            justification: |
+              Sentence length is one of the primary mechanical constraints in ASD-STE100.
+              The tool must distinguish procedure and descriptive writing and count words
+              consistently for parentheticals, quoted text, hyphenated words, number-plus-unit
+              spans, and title-style proper-name sequences.
+            tests:
+              - Split_SingleSimpleSentence_ReturnsOneSentenceWithWordCount
+              - Split_MultipleSentences_ReturnsEachSentenceSeparately
+              - Split_ColonFollowedByCapital_TreatedAsSentenceTerminator
+              - CountWords_ParentheticalSpan_CountsAsOneWord
+              - Split_ParentheticalFormingCompleteSentence_ExtractedSeparately
+              - CountWords_HyphenatedWord_CountsAsOneWord
+              - CountWords_NumberWithUnit_CountsAsOneWord
+              - CountWords_QuotedText_CountsAsOneWord
+              - CountWords_TitleCaseSequence_CountsAsOneWord
+              - Evaluate_SentenceWithinDescriptiveLimit_NoWordLimitDiagnostic
+              - Evaluate_SentenceExceedingDescriptiveLimit_FlagsWordLimitDiagnostic
+              - Evaluate_SentenceExceedingProcedureLimit_FlagsOnlyInProcedureMode
 
-      - id: Ste100Mark-Linting-Semicolons
-        title: >-
-          The Linting subsystem shall report semicolons in prose as Rule 8.1 violations unless the
-          rule is explicitly disabled.
-        justification: |
-          ASD-STE100 Rule 8.1 prohibits semicolons in controlled prose. The subsystem must
-          report the violation consistently while still allowing projects to disable the
-          check when they intentionally choose not to enforce that rule.
-        tests:
-          - Evaluate_Semicolon_FlagsSemicolonDiagnostic
-          - Evaluate_SemicolonWithAllowSemicolons_NoDiagnostic
-          - Run_FileWithSemicolon_ProducesFailureExitCode
-          - Ste100Mark_LintFileWithSemicolon_ReportsErrorAndReturnsNonZero
+          - id: Ste100Mark-Linting-Semicolons
+            title: >-
+              The Linting subsystem shall report semicolons in prose as Rule 8.1 violations unless the
+              rule is explicitly disabled.
+            justification: |
+              ASD-STE100 Rule 8.1 prohibits semicolons in controlled prose. The subsystem must
+              report the violation consistently while still allowing projects to disable the
+              check when they intentionally choose not to enforce that rule.
+            tests:
+              - Evaluate_Semicolon_FlagsSemicolonDiagnostic
+              - Evaluate_SemicolonWithAllowSemicolons_NoDiagnostic
+              - Run_FileWithSemicolon_ProducesFailureExitCode
+              - Ste100Mark_LintFileWithSemicolon_ReportsErrorAndReturnsNonZero
 
-      - id: Ste100Mark-Linting-Contractions
-        title: >-
-          The Linting subsystem shall report contractions in prose as Rule 4.2 violations unless
-          the rule is explicitly disabled.
-        justification: |
-          ASD-STE100 Rule 4.2 requires expanded forms rather than contractions. The
-          subsystem must detect common contraction forms and report them as build-breaking
-          diagnostics when the check is enabled.
-        tests:
-          - Evaluate_Contraction_FlagsContractionDiagnostic
-          - Evaluate_ContractionWithAllowContractions_NoDiagnostic
+          - id: Ste100Mark-Linting-Contractions
+            title: >-
+              The Linting subsystem shall report contractions in prose as Rule 4.2 violations unless
+              the rule is explicitly disabled.
+            justification: |
+              ASD-STE100 Rule 4.2 requires expanded forms rather than contractions. The
+              subsystem must detect common contraction forms and report them as build-breaking
+              diagnostics when the check is enabled.
+            tests:
+              - Evaluate_Contraction_FlagsContractionDiagnostic
+              - Evaluate_ContractionWithAllowContractions_NoDiagnostic
 
-      - id: Ste100Mark-Linting-ParagraphAdvisory
-        title: The Linting subsystem shall provide an advisory paragraph-length check with a configurable sentence cap.
-        justification: |
-          Long paragraphs reduce readability even when every individual sentence is legal.
-          The advisory paragraph-length heuristic gives projects a configurable readability
-          signal without treating it as an official ASD-STE100 rule.
-        tests:
-          - Evaluate_ParagraphExceedingSentenceCap_FlagsAdvisoryWarning
-          - Evaluate_ParagraphLengthDisabled_NoAdvisoryDiagnostic
-          - Evaluate_HeadingSegment_ExemptFromParagraphLengthCheck
+          - id: Ste100Mark-Linting-ParagraphAdvisory
+            title: The Linting subsystem shall provide an advisory paragraph-length check with a configurable sentence cap.
+            justification: |
+              Long paragraphs reduce readability even when every individual sentence is legal.
+              The advisory paragraph-length heuristic gives projects a configurable readability
+              signal without treating it as an official ASD-STE100 rule.
+            tests:
+              - Evaluate_ParagraphExceedingSentenceCap_FlagsAdvisoryWarning
+              - Evaluate_ParagraphLengthDisabled_NoAdvisoryDiagnostic
+              - Evaluate_HeadingSegment_ExemptFromParagraphLengthCheck
 
-      - id: Ste100Mark-Linting-PassiveVoiceAdvisory
-        title: >-
-          The Linting subsystem shall detect the passive-voice heuristic pattern, report it at
-          default severity `Warn`, and let projects override that severity with the
-          `rules.passive-voice` configuration knob.
-        justification: |
-          Active voice is often preferred for clear technical instructions, but passive-voice
-          detection is heuristic rather than an official ASD-STE100 rule. Stating the detectable
-          pattern boundary, the default `Warn` severity, and the controlling
-          `rules.passive-voice` setting makes the advisory behavior objective and testable while
-          still allowing projects to disable or escalate it.
-        tests:
-          - Evaluate_PassiveVoicePattern_FlagsAdvisoryAtConfiguredSeverity
-          - Evaluate_PassiveVoiceOff_NoDiagnostic
-          - Evaluate_PassiveVoiceError_FlagsAtErrorSeverity
-          - Evaluate_WasOpened_StillFlagsPassiveVoice
-          - Evaluate_PassiveVoiceDeclarativeCoordinatedBareSubject_StillFlagged
-          - Evaluate_PassiveVoiceImperativeCoordinatedBareObject_NotFlagged
-          - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithLaterStateCheck_NotFlagged
-          - Evaluate_PassiveVoiceImperativeSecondCoordinatedVerb_StillFlagged
-          - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithAdjectiveAmbiguousVerb_NotFlagged
-          - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithStopAsAdjective_NotFlagged
-          - Evaluate_PassiveVoiceImperativeAmbiguousLeadCoordinatedWithAmbiguousVerb_NotFlagged
-          - Evaluate_PassiveVoiceDeclarativeCoordinatedAdjectivalSubject_KnownFalseNegative
+          - id: Ste100Mark-Linting-PassiveVoiceAdvisory
+            title: >-
+              The Linting subsystem shall detect the passive-voice heuristic pattern, report it at
+              default severity `Warn`, and let projects override that severity with the
+              `rules.passive-voice` configuration knob.
+            justification: |
+              Active voice is often preferred for clear technical instructions, but passive-voice
+              detection is heuristic rather than an official ASD-STE100 rule. Stating the detectable
+              pattern boundary, the default `Warn` severity, and the controlling
+              `rules.passive-voice` setting makes the advisory behavior objective and testable while
+              still allowing projects to disable or escalate it.
+            tests:
+              - Evaluate_PassiveVoicePattern_FlagsAdvisoryAtConfiguredSeverity
+              - Evaluate_PassiveVoiceOff_NoDiagnostic
+              - Evaluate_PassiveVoiceError_FlagsAtErrorSeverity
+              - Evaluate_WasOpened_StillFlagsPassiveVoice
+              - Evaluate_PassiveVoiceDeclarativeCoordinatedBareSubject_StillFlagged
+              - Evaluate_PassiveVoiceImperativeCoordinatedBareObject_NotFlagged
+              - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithLaterStateCheck_NotFlagged
+              - Evaluate_PassiveVoiceImperativeSecondCoordinatedVerb_StillFlagged
+              - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithAdjectiveAmbiguousVerb_NotFlagged
+              - Evaluate_PassiveVoiceImperativeCoordinatedObjectWithStopAsAdjective_NotFlagged
+              - Evaluate_PassiveVoiceImperativeAmbiguousLeadCoordinatedWithAmbiguousVerb_NotFlagged
+              - Evaluate_PassiveVoiceDeclarativeCoordinatedAdjectivalSubject_KnownFalseNegative
 
-      - id: Ste100Mark-Linting-ComplexVerbAdvisory
-        title: >-
-          The Linting subsystem shall detect perfect-tense and modal-perfect-tense verb patterns,
-          report them at default severity `Warn`, and let projects override that severity with the
-          `rules.complex-verb` configuration knob.
-        justification: |
-          Perfect and modal-perfect tense verb constructions (for example "has opened" or
-          "would have written") are discouraged by ASD-STE100 in favor of simple present,
-          past, or future tense verbs, but detecting them is heuristic rather than an official
-          rule. Stating the detectable pattern boundary, the default `Warn` severity, and the
-          controlling `rules.complex-verb` setting makes the advisory behavior objective and
-          testable. The subsystem must also avoid double-reporting the same construction as both
-          complex-verb and passive-voice findings.
-        tests:
-          - Evaluate_PerfectTensePattern_FlagsComplexVerbAdvisory
-          - Evaluate_ModalPerfectTensePattern_FlagsComplexVerbAdvisory
-          - Evaluate_ComplexVerbOff_NoDiagnostic
-          - Evaluate_ComplexVerbOnlyInsideInlineCode_NoDiagnostic
-          - Evaluate_HasBeenOpened_FlagsComplexVerbOnlyNotPassiveVoice
+          - id: Ste100Mark-Linting-ComplexVerbAdvisory
+            title: >-
+              The Linting subsystem shall detect perfect-tense and modal-perfect-tense verb patterns,
+              report them at default severity `Warn`, and let projects override that severity with the
+              `rules.complex-verb` configuration knob.
+            justification: |
+              Perfect and modal-perfect tense verb constructions (for example "has opened" or
+              "would have written") are discouraged by ASD-STE100 in favor of simple present,
+              past, or future tense verbs, but detecting them is heuristic rather than an official
+              rule. Stating the detectable pattern boundary, the default `Warn` severity, and the
+              controlling `rules.complex-verb` setting makes the advisory behavior objective and
+              testable. The subsystem must also avoid double-reporting the same construction as both
+              complex-verb and passive-voice findings.
+            tests:
+              - Evaluate_PerfectTensePattern_FlagsComplexVerbAdvisory
+              - Evaluate_ModalPerfectTensePattern_FlagsComplexVerbAdvisory
+              - Evaluate_ComplexVerbOff_NoDiagnostic
+              - Evaluate_ComplexVerbOnlyInsideInlineCode_NoDiagnostic
+              - Evaluate_HasBeenOpened_FlagsComplexVerbOnlyNotPassiveVoice
 
-      - id: Ste100Mark-Linting-IngFormAdvisory
-        title: >-
-          The Linting subsystem shall detect mid-sentence words ending in `-ing`, report them at
-          default severity `Warn`, and let projects override that severity with the
-          `rules.ing-form` configuration knob.
-        justification: |
-          ASD-STE100 restricts "-ing" forms to technical nouns and adjectives, not
-          present-participle verb forms, but distinguishing the two automatically is heuristic
-          rather than an official rule. Stating the detectable pattern boundary, the default
-          `Warn` severity, and the controlling `rules.ing-form` setting makes the advisory
-          behavior objective and testable. The subsystem must still avoid flagging words that
-          touch a sentence-ending period, since those are less likely to be present-participle
-          verb forms.
-        tests:
-          - Evaluate_IngWordMidSentence_FlagsIngFormAdvisory
-          - Evaluate_IngWordFollowedByCatenativeVerb_NotFlagged
-          - Evaluate_IngWordTouchingSentenceEndingPeriod_NotFlagged
-          - Evaluate_IngWordPrecededByPeriod_NotFlagged
-          - Evaluate_IngFormOff_NoDiagnostic
-          - Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic
+          - id: Ste100Mark-Linting-IngFormAdvisory
+            title: >-
+              The Linting subsystem shall detect mid-sentence words ending in `-ing`, report them at
+              default severity `Warn`, and let projects override that severity with the
+              `rules.ing-form` configuration knob.
+            justification: |
+              ASD-STE100 restricts "-ing" forms to technical nouns and adjectives, not
+              present-participle verb forms, but distinguishing the two automatically is heuristic
+              rather than an official rule. Stating the detectable pattern boundary, the default
+              `Warn` severity, and the controlling `rules.ing-form` setting makes the advisory
+              behavior objective and testable. The subsystem must still avoid flagging words that
+              touch a sentence-ending period, since those are less likely to be present-participle
+              verb forms.
+            tests:
+              - Evaluate_IngWordMidSentence_FlagsIngFormAdvisory
+              - Evaluate_IngWordFollowedByCatenativeVerb_NotFlagged
+              - Evaluate_IngWordTouchingSentenceEndingPeriod_NotFlagged
+              - Evaluate_IngWordPrecededByPeriod_NotFlagged
+              - Evaluate_IngFormOff_NoDiagnostic
+              - Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic
 
-      - id: Ste100Mark-Linting-Dictionary
-        title: >-
-          The Linting subsystem shall enforce an effective disallow dictionary built from the
-          configured dictionary sources.
-        justification: |
-          Vocabulary control is central to Simplified Technical English usage. The subsystem
-          must merge the embedded illustrative baseline, any project-supplied dictionary file,
-          and inline allow/disallow/ignore settings into one case-insensitive effective
-          dictionary and report matched terms with suggested alternatives.
-        tests:
-          - Load_DefaultConfig_IncludesEmbeddedEntries
-          - Load_MultiSenseEmbeddedTerm_IncludesBothSenses
-          - Load_UseEmbeddedFalse_ExcludesEmbeddedEntries
-          - Load_InlineDisallowEntry_AddedToMergedDictionary
-          - Load_InlineDisallowOverridesEmbeddedTerm_ReplacesAllSenses
-          - Load_AllowListedTerm_RemovedFromMergedDictionary
-          - Load_IgnoreListedTerm_RemovedFromMergedDictionary
-          - Load_ProjectDictionaryFile_MergedOverEmbedded
-          - Load_MissingProjectDictionaryFile_ThrowsInvalidOperationException
-          - TryGetEntry_DifferentCasing_MatchesEntry
-          - Evaluate_DisallowedEmbeddedTerm_FlagsDiagnosticWithSuggestion
-          - Evaluate_MultiWordPhrase_FlagsDiagnostic
-          - Evaluate_DifferentCasing_StillFlagsDiagnostic
-          - Evaluate_TermEmbeddedInLongerWord_NotFlagged
-          - Evaluate_NoDisallowedTerms_ReturnsNoDiagnostics
-          - Evaluate_InlineOverriddenTerm_UsesOverriddenSuggestion
-          - Evaluate_AllowListedTerm_NotFlagged
+          - id: Ste100Mark-Linting-Dictionary
+            title: >-
+              The Linting subsystem shall enforce an effective disallow dictionary built from the
+              configured dictionary sources.
+            justification: |
+              Vocabulary control is central to Simplified Technical English usage. The subsystem
+              must merge the embedded illustrative baseline, any project-supplied dictionary file,
+              and inline allow/disallow/ignore settings into one case-insensitive effective
+              dictionary and report matched terms with suggested alternatives.
+            tests:
+              - Load_DefaultConfig_IncludesEmbeddedEntries
+              - Load_MultiSenseEmbeddedTerm_IncludesBothSenses
+              - Load_UseEmbeddedFalse_ExcludesEmbeddedEntries
+              - Load_InlineDisallowEntry_AddedToMergedDictionary
+              - Load_InlineDisallowOverridesEmbeddedTerm_ReplacesAllSenses
+              - Load_AllowListedTerm_RemovedFromMergedDictionary
+              - Load_IgnoreListedTerm_RemovedFromMergedDictionary
+              - Load_ProjectDictionaryFile_MergedOverEmbedded
+              - Load_MissingProjectDictionaryFile_ThrowsInvalidOperationException
+              - TryGetEntry_DifferentCasing_MatchesEntry
+              - Evaluate_DisallowedEmbeddedTerm_FlagsDiagnosticWithSuggestion
+              - Evaluate_MultiWordPhrase_FlagsDiagnostic
+              - Evaluate_DifferentCasing_StillFlagsDiagnostic
+              - Evaluate_TermEmbeddedInLongerWord_NotFlagged
+              - Evaluate_NoDisallowedTerms_ReturnsNoDiagnostics
+              - Evaluate_InlineOverriddenTerm_UsesOverriddenSuggestion
+              - Evaluate_AllowListedTerm_NotFlagged
 
-      - id: Ste100Mark-Linting-DictionaryWordForms
-        title: >-
-          The Linting subsystem shall, by default, match inflected spellings of dictionary
-          terms (verb third-person, past, participle, and gerund forms including a small
-          documented irregular table; noun plurals; the head verb of a phrasal verb) as whole
-          words, case-insensitively, subject to the same role compatibility check as the base
-          term, and shall not inflect adjective, adverb, or general senses.
-        justification: |
-          A vocabulary check that only matches the base spelling misses "produced" or
-          "permits" when "produce" and "permit" are disallowed. Generating the inflected
-          spellings and applying the existing part-of-speech gating catches them without
-          flagging a noun use of a verb-only homograph.
-        tests:
-          - Generate_Verb_ProducesExpectedForms
-          - Generate_RegularVerbPastEqualsParticiple_MergesForms
-          - Generate_Noun_ProducesPlural
-          - Generate_PhrasalVerb_InflectsHeadOnly
-          - Generate_NotInflectedCases_ReturnEmpty
-          - Inflect_CasePattern_IsPreserved
-          - Inflect_IrregularAndPhrasalAlternatives_Inflect
-          - Inflect_UnsafeCases_ReturnNull
-          - Evaluate_VerbWordForm_FlaggedWithInflectedAlternative
-          - Evaluate_EmbeddedProduceForms_Flagged
-          - Evaluate_EmbeddedPermitForms_FollowResolvedRole
-          - Evaluate_InflectedFormOfEmbeddedTerm_FlaggedWithProductionResolver
-          - Evaluate_NounPlural_GatedByResolvedRole
-          - Evaluate_VerbForm_NotFlaggedWhenResolvedAsNoun
-          - Evaluate_PhrasalVerbForms_HeadVerbInflects
-          - IsParticipial_ClassifiesFlagCombinations
-          - Evaluate_NonNounVerbSense_NotInflected
-          - Evaluate_InflectedFormBoundaries_RespectedAndCaseInsensitive
-          - Evaluate_LargeSegment_CompletesAndMatches
-          - Ste100Mark_LintInflectedDictionaryTerm_FlaggedUnlessWordFormsDisabled
+          - id: Ste100Mark-Linting-DictionaryWordForms
+            title: >-
+              The Linting subsystem shall, by default, match inflected spellings of dictionary
+              terms (verb third-person, past, participle, and gerund forms including a small
+              documented irregular table; noun plurals; the head verb of a phrasal verb) as whole
+              words, case-insensitively, subject to the same role compatibility check as the base
+              term, and shall not inflect adjective, adverb, or general senses.
+            justification: |
+              A vocabulary check that only matches the base spelling misses "produced" or
+              "permits" when "produce" and "permit" are disallowed. Generating the inflected
+              spellings and applying the existing part-of-speech gating catches them without
+              flagging a noun use of a verb-only homograph.
+            tests:
+              - Generate_Verb_ProducesExpectedForms
+              - Generate_RegularVerbPastEqualsParticiple_MergesForms
+              - Generate_Noun_ProducesPlural
+              - Generate_PhrasalVerb_InflectsHeadOnly
+              - Generate_NotInflectedCases_ReturnEmpty
+              - Inflect_CasePattern_IsPreserved
+              - Inflect_IrregularAndPhrasalAlternatives_Inflect
+              - Inflect_UnsafeCases_ReturnNull
+              - Evaluate_VerbWordForm_FlaggedWithInflectedAlternative
+              - Evaluate_EmbeddedProduceForms_Flagged
+              - Evaluate_EmbeddedPermitForms_FollowResolvedRole
+              - Evaluate_InflectedFormOfEmbeddedTerm_FlaggedWithProductionResolver
+              - Evaluate_NounPlural_GatedByResolvedRole
+              - Evaluate_VerbForm_NotFlaggedWhenResolvedAsNoun
+              - Evaluate_PhrasalVerbForms_HeadVerbInflects
+              - IsParticipial_ClassifiesFlagCombinations
+              - Evaluate_NonNounVerbSense_NotInflected
+              - Evaluate_InflectedFormBoundaries_RespectedAndCaseInsensitive
+              - Evaluate_LargeSegment_CompletesAndMatches
+              - Ste100Mark_LintInflectedDictionaryTerm_FlaggedUnlessWordFormsDisabled
 
-      - id: Ste100Mark-Linting-DictionaryWordForms-ParticipleRole
-        title: >-
-          The Linting subsystem shall flag a generated -ed, -d, -ing, or irregular past or
-          past-participle form of a dictionary verb only when the part-of-speech resolver
-          confidently resolves a verb at the match (a phrasal verb being resolved on its head
-          word), and shall not flag it when the role is ambiguous or inconclusive or is
-          confidently a noun, adjective, or adverb, while the base form and the third-person
-          and plural forms keep their existing behavior.
-        justification: |
-          A participle is often used as an adjective ("the produced item") or a noun, and an
-          low-confidence tagger cannot tell the uses apart. Requiring a confident verb removes
-          those false positives while keeping the clear verb uses and all other forms.
-        tests:
-          - Evaluate_ParticipleInNonVerbRole_NotFlagged
-          - Evaluate_ParticipleResolvedAsVerb_Flagged
-          - Evaluate_IrregularParticiple_FlaggedOnlyAsVerb
-          - Evaluate_ParticipleWithInconclusiveRole_NotFlagged
-          - Evaluate_ThirdPersonAndBaseWithInconclusiveRole_StillFlagged
-          - Evaluate_NounVerbEntryWithInconclusiveRole_ParticipialOriginDropped
-          - Evaluate_PhrasalParticiple_FlaggedOnlyForVerbHead
-          - Evaluate_ParticipleWithProductionResolver_VerbFlaggedAdjectiveNot
-          - IsParticipial_ClassifiesFlagCombinations
+          - id: Ste100Mark-Linting-DictionaryWordForms-ParticipleRole
+            title: >-
+              The Linting subsystem shall flag a generated -ed, -d, -ing, or irregular past or
+              past-participle form of a dictionary verb only when the part-of-speech resolver
+              confidently resolves a verb at the match (a phrasal verb being resolved on its head
+              word), and shall not flag it when the role is ambiguous or inconclusive or is
+              confidently a noun, adjective, or adverb, while the base form and the third-person
+              and plural forms keep their existing behavior.
+            justification: |
+              A participle is often used as an adjective ("the produced item") or a noun, and an
+              low-confidence tagger cannot tell the uses apart. Requiring a confident verb removes
+              those false positives while keeping the clear verb uses and all other forms.
+            tests:
+              - Evaluate_ParticipleInNonVerbRole_NotFlagged
+              - Evaluate_ParticipleResolvedAsVerb_Flagged
+              - Evaluate_IrregularParticiple_FlaggedOnlyAsVerb
+              - Evaluate_ParticipleWithInconclusiveRole_NotFlagged
+              - Evaluate_ThirdPersonAndBaseWithInconclusiveRole_StillFlagged
+              - Evaluate_NounVerbEntryWithInconclusiveRole_ParticipialOriginDropped
+              - Evaluate_PhrasalParticiple_FlaggedOnlyForVerbHead
+              - Evaluate_ParticipleWithProductionResolver_VerbFlaggedAdjectiveNot
+              - IsParticipial_ClassifiesFlagCombinations
 
-      - id: Ste100Mark-Linting-DictionaryWordForms-Precedence
-        title: >-
-          The Linting subsystem shall not flag an inflected spelling that the project allows
-          (allow or ignore list, per-file allowance, allowed phrase, or glossary term or
-          variant) or that is itself an explicit dictionary key, and allowing a base term
-          shall also allow its inflected forms.
-        justification: |
-          An explicit project decision about a spelling must override a generated guess.
-        tests:
-          - Evaluate_AllowedInflectedSpelling_WinsOverGeneratedForm
-          - Evaluate_ExtraAllowedInflectedSpelling_WinsOverGeneratedForm
-          - Evaluate_AllowedBaseTerm_SuppressesAllForms
-          - Evaluate_InflectedFormInsideAllowedPhrase_NotFlagged
-          - Evaluate_ExplicitInflectedKey_WinsOverGeneratedForm
-          - Run_GlossaryVariantEqualsInflectedSpelling_NotFlagged
+          - id: Ste100Mark-Linting-DictionaryWordForms-Precedence
+            title: >-
+              The Linting subsystem shall not flag an inflected spelling that the project allows
+              (allow or ignore list, per-file allowance, allowed phrase, or glossary term or
+              variant) or that is itself an explicit dictionary key, and allowing a base term
+              shall also allow its inflected forms.
+            justification: |
+              An explicit project decision about a spelling must override a generated guess.
+            tests:
+              - Evaluate_AllowedInflectedSpelling_WinsOverGeneratedForm
+              - Evaluate_ExtraAllowedInflectedSpelling_WinsOverGeneratedForm
+              - Evaluate_AllowedBaseTerm_SuppressesAllForms
+              - Evaluate_InflectedFormInsideAllowedPhrase_NotFlagged
+              - Evaluate_ExplicitInflectedKey_WinsOverGeneratedForm
+              - Run_GlossaryVariantEqualsInflectedSpelling_NotFlagged
 
-      - id: Ste100Mark-Linting-DictionaryWordForms-Diagnostics
-        title: >-
-          The Linting subsystem shall report an inflected match using the flagged spelling,
-          inflect each alternative to that form when it can do so safely (including when the
-          lexicon confirms the inflected spelling is a real form of the alternative in the
-          flagged sense's role), otherwise show the
-          alternative in its base form and say so, and leave base-form messages and citations
-          unchanged.
-        justification: |
-          A suggestion in the wrong tense misleads the writer, and a made-up word such as a
-          plural of a preposition misleads more; an honest fallback is better
-          than a wrong inflection.
-        tests:
-          - Evaluate_BaseForm_MessageUnchanged
-          - Evaluate_IrregularAlternative_InflectsForUnambiguousForm
-          - Evaluate_IrregularAlternative_FallsBackToBaseAndSaysSo
-          - Evaluate_NounPluralWithPrepositionAlternative_FallsBackToBase
-          - Inflect_NounSenseWithPrepositionAlternative_ReturnsNull
-          - Inflect_ParticipleAndAdjectiveAlternatives_ReturnNull
-          - Inflect_RealNounAndVerbAlternatives_StillInflect
+          - id: Ste100Mark-Linting-DictionaryWordForms-Diagnostics
+            title: >-
+              The Linting subsystem shall report an inflected match using the flagged spelling,
+              inflect each alternative to that form when it can do so safely (including when the
+              lexicon confirms the inflected spelling is a real form of the alternative in the
+              flagged sense's role), otherwise show the
+              alternative in its base form and say so, and leave base-form messages and citations
+              unchanged.
+            justification: |
+              A suggestion in the wrong tense misleads the writer, and a made-up word such as a
+              plural of a preposition misleads more; an honest fallback is better
+              than a wrong inflection.
+            tests:
+              - Evaluate_BaseForm_MessageUnchanged
+              - Evaluate_IrregularAlternative_InflectsForUnambiguousForm
+              - Evaluate_IrregularAlternative_FallsBackToBaseAndSaysSo
+              - Evaluate_NounPluralWithPrepositionAlternative_FallsBackToBase
+              - Inflect_NounSenseWithPrepositionAlternative_ReturnsNull
+              - Inflect_ParticipleAndAdjectiveAlternatives_ReturnNull
+              - Inflect_RealNounAndVerbAlternatives_StillInflect
 
-      - id: Ste100Mark-Linting-DictionaryWordForms-Switch
-        title: >-
-          The Linting subsystem shall let a project turn word-form matching off with
-          `dictionary.match-word-forms: false`, defaulting to on.
-        justification: |
-          Projects that want exact-spelling matching need a way to keep the earlier behavior.
-        tests:
-          - Load_MatchWordForms_DefaultsTrueAndBindsFalse
-          - Load_WordFormSettings_DefaultOnAndAllowedSpellingsRetained
-          - Evaluate_MatchWordFormsOff_OnlyBaseTermMatches
-          - Run_MatchWordFormsSwitch_ControlsInflectedMatches
+          - id: Ste100Mark-Linting-DictionaryWordForms-Switch
+            title: >-
+              The Linting subsystem shall let a project turn word-form matching off with
+              `dictionary.match-word-forms: false`, defaulting to on.
+            justification: |
+              Projects that want exact-spelling matching need a way to keep the earlier behavior.
+            tests:
+              - Load_MatchWordForms_DefaultsTrueAndBindsFalse
+              - Load_WordFormSettings_DefaultOnAndAllowedSpellingsRetained
+              - Evaluate_MatchWordFormsOff_OnlyBaseTermMatches
+              - Run_MatchWordFormsSwitch_ControlsInflectedMatches
 
-      - id: Ste100Mark-Linting-DictionaryWordForms-FragmentGuard
-        title: >-
-          The Linting subsystem shall not flag a past-participle, past, or -ing word-form match
-          in a heading or table cell when no auxiliary verb precedes it in the same segment.
-        justification: |
-          A heading or table cell is usually a noun-phrase fragment ("Performed checks"), where
-          a participle modifies a noun and is not a verb. Base and third-person forms and
-          paragraph text are unaffected.
-        tests:
-          - Evaluate_ParticipleInHeadingWithoutAuxiliary_NotFlagged
-          - Evaluate_ParticipleInTableCellWithoutAuxiliary_NotFlagged
-          - Evaluate_ParticipleInHeadingWithAuxiliary_Flagged
-          - Evaluate_ParticipleInParagraphWithoutAuxiliary_StillFlagged
-          - Evaluate_BaseAndThirdPersonInHeading_StillFlagged
-          - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
+          - id: Ste100Mark-Linting-DictionaryWordForms-FragmentGuard
+            title: >-
+              The Linting subsystem shall not flag a past-participle, past, or -ing word-form match
+              in a heading or table cell when no auxiliary verb precedes it in the same segment.
+            justification: |
+              A heading or table cell is usually a noun-phrase fragment ("Performed checks"), where
+              a participle modifies a noun and is not a verb. Base and third-person forms and
+              paragraph text are unaffected.
+            tests:
+              - Evaluate_ParticipleInHeadingWithoutAuxiliary_NotFlagged
+              - Evaluate_ParticipleInTableCellWithoutAuxiliary_NotFlagged
+              - Evaluate_ParticipleInHeadingWithAuxiliary_Flagged
+              - Evaluate_ParticipleInParagraphWithoutAuxiliary_StillFlagged
+              - Evaluate_BaseAndThirdPersonInHeading_StillFlagged
+              - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
 
-      - id: Ste100Mark-Linting-DictionaryWordForms-SplitPhrasal
-        title: >-
-          The Linting subsystem shall flag a phrasal-verb entry whose particle is separated from
-          the verb by up to three words, reporting the span from the verb to the particle.
-        justification: |
-          A phrasal verb is often split around its object ("carry the report out"); matching
-          only the contiguous phrase misses these uses.
-        tests:
-          - Evaluate_SplitPhrasalVerb_FlaggedWithFullSpan
-          - Evaluate_SplitPhrasalVerbWithPhrasalAlternative_ShownInBaseForm
-          - Evaluate_SplitPhrasalGapLimits_FourWordsNotFlagged
-          - Evaluate_SplitPhrasalGapOfThreeWords_Flagged
-          - Evaluate_SplitPhrasalWithSentencePunctuationInGap_NotFlagged
-          - Evaluate_MultiWordNonPhrasalTerm_NotSplit
-          - Evaluate_SplitPhrasalOverlap_ReportsHeadWordOnce
-          - IsPhrasalVerb_RequiresVerbTwoWordParticle
-          - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
+          - id: Ste100Mark-Linting-DictionaryWordForms-SplitPhrasal
+            title: >-
+              The Linting subsystem shall flag a phrasal-verb entry whose particle is separated from
+              the verb by up to three words, reporting the span from the verb to the particle.
+            justification: |
+              A phrasal verb is often split around its object ("carry the report out"); matching
+              only the contiguous phrase misses these uses.
+            tests:
+              - Evaluate_SplitPhrasalVerb_FlaggedWithFullSpan
+              - Evaluate_SplitPhrasalVerbWithPhrasalAlternative_ShownInBaseForm
+              - Evaluate_SplitPhrasalGapLimits_FourWordsNotFlagged
+              - Evaluate_SplitPhrasalGapOfThreeWords_Flagged
+              - Evaluate_SplitPhrasalWithSentencePunctuationInGap_NotFlagged
+              - Evaluate_MultiWordNonPhrasalTerm_NotSplit
+              - Evaluate_SplitPhrasalOverlap_ReportsHeadWordOnce
+              - IsPhrasalVerb_RequiresVerbTwoWordParticle
+              - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
 
-      - id: Ste100Mark-Linting-DictionaryWordForms-HyphenatedPrefix
-        title: >-
-          The Linting subsystem shall flag a verb-sense dictionary term and its word forms when
-          written with a hyphenated prefix from a fixed list, resolving the part of speech on
-          the stem.
-        justification: |
-          Forms such as "re-perform" contain a disallowed verb; the prefix list is fixed to
-          limit false positives, and the stem is resolved because the tagger does not know
-          the whole hyphenated token.
-        tests:
-          - Evaluate_HyphenatedPrefixForms_Flagged
-          - Evaluate_HyphenatedPrefix_ResolvesOnStem
-          - Evaluate_HyphenatedParticipleWithInconclusiveRole_OnlyBaseFlagged
-          - Evaluate_HyphenatedUnlistedPrefix_NotFlagged
-          - Evaluate_HyphenatedAllowedSpelling_NotFlagged
-          - Evaluate_HyphenatedPrefixOnNounEntryOrWithFormsOff_NotFlagged
-          - Evaluate_GenericCorpus_MeetsPerFormExpectations
-          - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
+          - id: Ste100Mark-Linting-DictionaryWordForms-HyphenatedPrefix
+            title: >-
+              The Linting subsystem shall flag a verb-sense dictionary term and its word forms when
+              written with a hyphenated prefix from a fixed list, resolving the part of speech on
+              the stem.
+            justification: |
+              Forms such as "re-perform" contain a disallowed verb; the prefix list is fixed to
+              limit false positives, and the stem is resolved because the tagger does not know
+              the whole hyphenated token.
+            tests:
+              - Evaluate_HyphenatedPrefixForms_Flagged
+              - Evaluate_HyphenatedPrefix_ResolvesOnStem
+              - Evaluate_HyphenatedParticipleWithInconclusiveRole_OnlyBaseFlagged
+              - Evaluate_HyphenatedUnlistedPrefix_NotFlagged
+              - Evaluate_HyphenatedAllowedSpelling_NotFlagged
+              - Evaluate_HyphenatedPrefixOnNounEntryOrWithFormsOff_NotFlagged
+              - Evaluate_GenericCorpus_MeetsPerFormExpectations
+              - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
 
-      - id: Ste100Mark-Linting-DictionaryWordForms-CompoundIrregular
-        title: >-
-          The Linting subsystem shall generate the irregular forms of a verb that is an
-          irregular base verb with a fixed prefix, such as "withstand".
-        justification: |
-          A compound of an irregular verb keeps its irregular forms ("withstood"); regular
-          rules would produce a wrong spelling and miss the real one.
-        tests:
-          - Generate_CompoundIrregularVerb_UsesStemForms
-          - Generate_CompoundIrregularExceptions_UseRegularRules
-          - Inflect_CompoundIrregular_Inflects
-          - Evaluate_CompoundIrregularParticiple_FlaggedAsWithstood
-          - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
+          - id: Ste100Mark-Linting-DictionaryWordForms-CompoundIrregular
+            title: >-
+              The Linting subsystem shall generate the irregular forms of a verb that is an
+              irregular base verb with a fixed prefix, such as "withstand".
+            justification: |
+              A compound of an irregular verb keeps its irregular forms ("withstood"); regular
+              rules would produce a wrong spelling and miss the real one.
+            tests:
+              - Generate_CompoundIrregularVerb_UsesStemForms
+              - Generate_CompoundIrregularExceptions_UseRegularRules
+              - Inflect_CompoundIrregular_Inflects
+              - Evaluate_CompoundIrregularParticiple_FlaggedAsWithstood
+              - Ste100Mark_LintWordFormCoverage_FlagsSplitHyphenAndCompoundForms
 
-      - id: Ste100Mark-Linting-DictionaryDisable
-        title: >-
-          The Linting subsystem shall let a project disable the dictionary/vocabulary check
-          entirely via `dictionary.enabled: false`, defaulting to enabled, without requiring a
-          dictionary file or the embedded baseline to be loaded.
-        justification: |
-          Some projects want the mechanical/structural ASD-STE100 checks (sentence length,
-          semicolons, contractions, passive voice, and similar) without enforcing ASD-STE100
-          vocabulary, for example because they have not licensed the standard's controlled
-          dictionary or intentionally use domain vocabulary outside its scope. `UseEmbedded:
-          false` only removes the embedded illustrative baseline while the dictionary check
-          itself still runs against any remaining sources; `dictionary.enabled: false` is a
-          distinct, coarser switch that skips the dictionary check altogether, avoiding any
-          requirement to load or supply a dictionary at all.
-        tests:
-          - Run_DictionaryDisabled_SuppressesDictionaryFindingsButKeepsStructuralChecks
-          - Run_NoDictionaryConfigSection_DictionaryCheckRunsByDefault
+          - id: Ste100Mark-Linting-DictionaryDisable
+            title: >-
+              The Linting subsystem shall let a project disable the dictionary/vocabulary check
+              entirely via `dictionary.enabled: false`, defaulting to enabled, without requiring a
+              dictionary file or the embedded baseline to be loaded.
+            justification: |
+              Some projects want the mechanical/structural ASD-STE100 checks (sentence length,
+              semicolons, contractions, passive voice, and similar) without enforcing ASD-STE100
+              vocabulary, for example because they have not licensed the standard's controlled
+              dictionary or intentionally use domain vocabulary outside its scope. `UseEmbedded:
+              false` only removes the embedded illustrative baseline while the dictionary check
+              itself still runs against any remaining sources; `dictionary.enabled: false` is a
+              distinct, coarser switch that skips the dictionary check altogether, avoiding any
+              requirement to load or supply a dictionary at all.
+            tests:
+              - Run_DictionaryDisabled_SuppressesDictionaryFindingsButKeepsStructuralChecks
+              - Run_NoDictionaryConfigSection_DictionaryCheckRunsByDefault
 
-      - id: Ste100Mark-Linting-InlineCodeSpans
-        title: >-
-          The Linting subsystem shall retain inline code spans verbatim in reported prose,
-          count each span as exactly one word toward Rule 4.1/8.4-8.7 limits, and exclude
-          inline-code-span content from the semicolon, contraction, passive-voice,
-          complex-verb, -ing form, and dictionary checks, while fenced code blocks remain
-          fully excluded from prose.
-        justification: |
-          Inline code spans frequently carry literal technical values (for example, a CLI flag
-          or file name) embedded mid-sentence. Stripping them breaks sentence readability and
-          undercounts words. Rule 8.6 already treats numbers, abbreviations, identifiers, and
-          quoted text as a single word each; extending that treatment to inline code spans
-          keeps word counting consistent while excluding non-prose technical literals from
-          grammar-sensitive checks that would otherwise produce false positives.
-        tests:
-          - Extract_InlineCodeSpan_KeptVerbatimInProse
-          - Extract_FencedCodeBlock_ExcludedFromProse
-          - CountWords_InlineCodeSpan_CountsAsOneWord
-          - Split_SentenceWithInlineCodeSpan_KeepsVerbatimText
-          - Evaluate_SemicolonOnlyInsideInlineCode_NoDiagnostic
-          - Evaluate_ContractionOnlyInsideInlineCode_NoDiagnostic
-          - Evaluate_PassiveVoiceOnlyInsideInlineCode_NoDiagnostic
-          - Evaluate_ComplexVerbOnlyInsideInlineCode_NoDiagnostic
-          - Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic
-          - Evaluate_WordLimitDiagnosticMessage_ShowsInlineCodeVerbatim
-          - Evaluate_DisallowedTermOnlyInsideInlineCode_NotFlagged
-          - Evaluate_DisallowedTermInsideAndOutsideInlineCode_FlagsOnlyProseOccurrence
+          - id: Ste100Mark-Linting-InlineCodeSpans
+            title: >-
+              The Linting subsystem shall retain inline code spans verbatim in reported prose,
+              count each span as exactly one word toward Rule 4.1/8.4-8.7 limits, and exclude
+              inline-code-span content from the semicolon, contraction, passive-voice,
+              complex-verb, -ing form, and dictionary checks, while fenced code blocks remain
+              fully excluded from prose.
+            justification: |
+              Inline code spans frequently carry literal technical values (for example, a CLI flag
+              or file name) embedded mid-sentence. Stripping them breaks sentence readability and
+              undercounts words. Rule 8.6 already treats numbers, abbreviations, identifiers, and
+              quoted text as a single word each; extending that treatment to inline code spans
+              keeps word counting consistent while excluding non-prose technical literals from
+              grammar-sensitive checks that would otherwise produce false positives.
+            tests:
+              - Extract_InlineCodeSpan_KeptVerbatimInProse
+              - Extract_FencedCodeBlock_ExcludedFromProse
+              - CountWords_InlineCodeSpan_CountsAsOneWord
+              - Split_SentenceWithInlineCodeSpan_KeepsVerbatimText
+              - Evaluate_SemicolonOnlyInsideInlineCode_NoDiagnostic
+              - Evaluate_ContractionOnlyInsideInlineCode_NoDiagnostic
+              - Evaluate_PassiveVoiceOnlyInsideInlineCode_NoDiagnostic
+              - Evaluate_ComplexVerbOnlyInsideInlineCode_NoDiagnostic
+              - Evaluate_IngWordOnlyInsideInlineCode_NoDiagnostic
+              - Evaluate_WordLimitDiagnosticMessage_ShowsInlineCodeVerbatim
+              - Evaluate_DisallowedTermOnlyInsideInlineCode_NotFlagged
+              - Evaluate_DisallowedTermInsideAndOutsideInlineCode_FlagsOnlyProseOccurrence
 
-      - id: Ste100Mark-Linting-FrontMatter
-        title: >-
-          The Linting subsystem shall recognize a leading YAML front matter block, delimited
-          by `---` as the document's literal first line and closed by a later `---` or `...`,
-          and exclude it entirely from prose checks.
-        justification: |
-          Front matter (the convention used by Jekyll, Hugo, and Pandoc) holds document
-          metadata such as titles, author names, and keywords, not technical prose. Checking
-          it as prose produces false-positive findings against placeholder names, keywords,
-          and other non-sentence content, and can suggest nonsensical "corrections" to
-          metadata values. The opening delimiter must be the document's literal first line, so
-          a `---` line elsewhere in the document (for example, a horizontal rule) is never
-          misidentified as front matter; a `---` first line with no closing delimiter falls
-          back to being treated as ordinary content rather than silently discarding the rest
-          of the document.
-        tests:
-          - Extract_LeadingFrontMatter_ExcludedFromProse
-          - Extract_LeadingFrontMatterClosedWithEllipsis_ExcludedFromProse
-          - Extract_LeadingFrontMatter_SubsequentSegmentReportsTrueLineNumber
-          - Extract_LeadingHyphenLineWithoutClosingDelimiter_NotTreatedAsFrontMatter
-          - Extract_HyphenLineNotOnFirstLine_NotTreatedAsFrontMatterStart
-          - Run_FrontMatter_ExcludedFromDictionaryCheck
+          - id: Ste100Mark-Linting-FrontMatter
+            title: >-
+              The Linting subsystem shall recognize a leading YAML front matter block, delimited
+              by `---` as the document's literal first line and closed by a later `---` or `...`,
+              and exclude it entirely from prose checks.
+            justification: |
+              Front matter (the convention used by Jekyll, Hugo, and Pandoc) holds document
+              metadata such as titles, author names, and keywords, not technical prose. Checking
+              it as prose produces false-positive findings against placeholder names, keywords,
+              and other non-sentence content, and can suggest nonsensical "corrections" to
+              metadata values. The opening delimiter must be the document's literal first line, so
+              a `---` line elsewhere in the document (for example, a horizontal rule) is never
+              misidentified as front matter; a `---` first line with no closing delimiter falls
+              back to being treated as ordinary content rather than silently discarding the rest
+              of the document.
+            tests:
+              - Extract_LeadingFrontMatter_ExcludedFromProse
+              - Extract_LeadingFrontMatterClosedWithEllipsis_ExcludedFromProse
+              - Extract_LeadingFrontMatter_SubsequentSegmentReportsTrueLineNumber
+              - Extract_LeadingHyphenLineWithoutClosingDelimiter_NotTreatedAsFrontMatter
+              - Extract_HyphenLineNotOnFirstLine_NotTreatedAsFrontMatterStart
+              - Run_FrontMatter_ExcludedFromDictionaryCheck
 
-      - id: Ste100Mark-Linting-DictionaryPos
-        title: >-
-          When a part-of-speech resolution is confident, the Linting subsystem shall report a
-          disallowed term using only the part-of-speech-tagged sense that matches the resolved
-          role (together with any role-independent sense).
-        justification: |
-          A single disallowed term can have distinct noun, verb, adjective, and adverb senses with different
-          approved alternatives (for example "impact" as a noun versus as a verb). Reporting
-          the wrong sense's alternative would be misleading. A resolution is confident when the
-          part-of-speech tagger chose a noun, verb, adjective, or adverb for the matched word, within its own
-          sentence, with a confidence of at least 0.90.
-        children:
-          - Ste100Mark-PartOfSpeechResolver-NounVerbResolution
-          - Ste100Mark-PartOfSpeechResolver-SentenceScope
-          - Ste100Mark-PartOfSpeechResolver-RepeatedWord
-          - Ste100Mark-PartOfSpeechResolver-MinimumConfidence
-          - Ste100Mark-PartOfSpeechResolver-ConsistentResults
-          - Ste100Mark-PartOfSpeechResolver-NullSegmentText
-          - Ste100Mark-PartOfSpeechResolver-MatchOutsideText
-          - Ste100Mark-OTS-PartOfSpeech
-        tests:
-          - Evaluate_InjectedResolverConfidentVerb_ReportsOnlyVerbSense
-          - Evaluate_MultiSenseTerm_NounContext_ReportsNounSense
-          - Evaluate_MultiSenseTerm_VerbContext_ReportsVerbSense
-          - Evaluate_AnyPosSingleSenseTerm_AlwaysReported
-          - Evaluate_ConfidentSenseSingleAlternative_NoOrInMessage
-          - Evaluate_ConfidentSenseTwoAlternatives_JoinsWithOrNoOxfordComma
-          - Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr
-          - Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage
-          - Evaluate_ConfidentSingleSenseTermWithNoAlternatives_SuggestionAndCitationsAreNull
-          - Evaluate_AdjectiveResolution_Last_ReportsAdjectiveReplacementOnly
-          - Evaluate_DefaultResolver_UnapprovedAdjectiveOrAdverb_ReportsMatchingSense
-          - Evaluate_DefaultResolver_UnapprovedBoth_ReportsGeneralSuggestion
+          - id: Ste100Mark-Linting-DictionaryPos
+            title: >-
+              When a part-of-speech resolution is confident, the Linting subsystem shall report a
+              disallowed term using only the part-of-speech-tagged sense that matches the resolved
+              role (together with any role-independent sense).
+            justification: |
+              A single disallowed term can have distinct noun, verb, adjective, and adverb senses with different
+              approved alternatives (for example "impact" as a noun versus as a verb). Reporting
+              the wrong sense's alternative would be misleading. A resolution is confident when the
+              part-of-speech tagger chose a noun, verb, adjective, or adverb for the matched word, within its own
+              sentence, with a confidence of at least 0.90.
+            children:
+              - Ste100Mark-PartOfSpeechResolver-NounVerbResolution
+              - Ste100Mark-PartOfSpeechResolver-SentenceScope
+              - Ste100Mark-PartOfSpeechResolver-RepeatedWord
+              - Ste100Mark-PartOfSpeechResolver-MinimumConfidence
+              - Ste100Mark-PartOfSpeechResolver-ConsistentResults
+              - Ste100Mark-PartOfSpeechResolver-NullSegmentText
+              - Ste100Mark-PartOfSpeechResolver-MatchOutsideText
+              - Ste100Mark-OTS-PartOfSpeech
+            tests:
+              - Evaluate_InjectedResolverConfidentVerb_ReportsOnlyVerbSense
+              - Evaluate_MultiSenseTerm_NounContext_ReportsNounSense
+              - Evaluate_MultiSenseTerm_VerbContext_ReportsVerbSense
+              - Evaluate_AnyPosSingleSenseTerm_AlwaysReported
+              - Evaluate_ConfidentSenseSingleAlternative_NoOrInMessage
+              - Evaluate_ConfidentSenseTwoAlternatives_JoinsWithOrNoOxfordComma
+              - Evaluate_ConfidentSenseThreeOrMoreAlternatives_JoinsWithOxfordCommaBeforeOr
+              - Evaluate_PureSelfReferentialEntry_ConfidentDisallowedUsage_UsesRoleRestrictionMessage
+              - Evaluate_ConfidentSingleSenseTermWithNoAlternatives_SuggestionAndCitationsAreNull
+              - Evaluate_AdjectiveResolution_Last_ReportsAdjectiveReplacementOnly
+              - Evaluate_DefaultResolver_UnapprovedAdjectiveOrAdverb_ReportsMatchingSense
+              - Evaluate_DefaultResolver_UnapprovedBoth_ReportsGeneralSuggestion
 
-      - id: Ste100Mark-Linting-DictionaryPos-Suppression
-        title: >-
-          When a part-of-speech resolution is confident and none of a disallowed term's senses
-          restrict the resolved role, the Linting subsystem shall not report the match.
-        justification: |
-          Some terms restrict only one grammatical role (for example a verb-only entry), and
-          technical writing is dense with noun phrases built from modifiers (for example "the
-          metering probe"). Reporting a term used in a role it does not restrict is a false
-          positive that erodes trust in the dictionary check. Only a confident resolution (a
-          noun, verb, adjective, adverb, or resolver-only determiner answer of at least 0.90
-          confidence) may suppress a match.
-        children:
-          - Ste100Mark-PartOfSpeechResolver-NounVerbResolution
-        tests:
-          - Evaluate_LegalNounUsage_VerbOnlyDisallowedEntry_NotFlagged
-          - Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged
-          - Evaluate_DefaultResolver_NounUsageOfVerbOnlyEntry_NotFlagged
-          - Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged
-          - Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged
-          - Evaluate_ApprovedAdjectiveNoReplacement_IsNotFlagged
-          - Evaluate_ApprovedAdverbNoReplacement_IsNotFlagged
-          - Evaluate_DefaultResolver_DeterminerUsageOfAdjectiveEntry_NotFlagged
+          - id: Ste100Mark-Linting-DictionaryPos-Suppression
+            title: >-
+              When a part-of-speech resolution is confident and none of a disallowed term's senses
+              restrict the resolved role, the Linting subsystem shall not report the match.
+            justification: |
+              Some terms restrict only one grammatical role (for example a verb-only entry), and
+              technical writing is dense with noun phrases built from modifiers (for example "the
+              metering probe"). Reporting a term used in a role it does not restrict is a false
+              positive that erodes trust in the dictionary check. Only a confident resolution (a
+              noun, verb, adjective, adverb, or resolver-only determiner answer of at least 0.90
+              confidence) may suppress a match.
+            children:
+              - Ste100Mark-PartOfSpeechResolver-NounVerbResolution
+            tests:
+              - Evaluate_LegalNounUsage_VerbOnlyDisallowedEntry_NotFlagged
+              - Evaluate_LegalVerbUsage_NounOnlyDisallowedEntry_NotFlagged
+              - Evaluate_DefaultResolver_NounUsageOfVerbOnlyEntry_NotFlagged
+              - Evaluate_SingleSenseVerbOnlyTerm_ConfidentNounContext_NotFlagged
+              - Evaluate_MultiSenseTerm_ConfidentRoleMatchesNoSense_NotFlagged
+              - Evaluate_ApprovedAdjectiveNoReplacement_IsNotFlagged
+              - Evaluate_ApprovedAdverbNoReplacement_IsNotFlagged
+              - Evaluate_DefaultResolver_DeterminerUsageOfAdjectiveEntry_NotFlagged
 
-      - id: Ste100Mark-Linting-DictionaryPos-Ambiguous
-        title: >-
-          When a part-of-speech resolution is inconclusive, the Linting subsystem shall report
-          every remaining sense of the disallowed term, labeled as ambiguous when the term has
-          more than one sense.
-        justification: |
-          A resolution is inconclusive when the confidence is
-          below 0.90, the tagger chose a part of speech other than noun, verb, adjective, adverb,
-          or determiner, the tagger chose a noun, verb or proper noun for a word that its lexicon
-          does not know, or the match covers more than one word. The subsystem must not guess in
-          these cases. It must fall
-          back to reporting every remaining sense, clearly labeled as ambiguous, so the author
-          can choose the correct alternative.
-        children:
-          - Ste100Mark-PartOfSpeechResolver-MinimumConfidence
-          - Ste100Mark-PartOfSpeechResolver-UnknownWord
-          - Ste100Mark-PartOfSpeechResolver-WordNotInLexicon
-          - Ste100Mark-PartOfSpeechResolver-OtherPartOfSpeech
-          - Ste100Mark-PartOfSpeechResolver-MultiWordMatch
-        tests:
-          - Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel
-          - Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous
-          - Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin
-          - Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment
-          - Evaluate_PureSelfReferentialCandidate_WithinAmbiguousResult_UsesRoleRestrictionClause
+          - id: Ste100Mark-Linting-DictionaryPos-Ambiguous
+            title: >-
+              When a part-of-speech resolution is inconclusive, the Linting subsystem shall report
+              every remaining sense of the disallowed term, labeled as ambiguous when the term has
+              more than one sense.
+            justification: |
+              A resolution is inconclusive when the confidence is
+              below 0.90, the tagger chose a part of speech other than noun, verb, adjective, adverb,
+              or determiner, the tagger chose a noun, verb or proper noun for a word that its lexicon
+              does not know, or the match covers more than one word. The subsystem must not guess in
+              these cases. It must fall
+              back to reporting every remaining sense, clearly labeled as ambiguous, so the author
+              can choose the correct alternative.
+            children:
+              - Ste100Mark-PartOfSpeechResolver-MinimumConfidence
+              - Ste100Mark-PartOfSpeechResolver-UnknownWord
+              - Ste100Mark-PartOfSpeechResolver-WordNotInLexicon
+              - Ste100Mark-PartOfSpeechResolver-OtherPartOfSpeech
+              - Ste100Mark-PartOfSpeechResolver-MultiWordMatch
+            tests:
+              - Evaluate_SingleSenseTerm_InconclusiveContext_ReportedWithoutPosLabel
+              - Evaluate_MultiSenseTerm_AmbiguousContext_ReportsAllSensesAmbiguous
+              - Evaluate_AmbiguousMultiSenseTerm_GroupsAlternativesPerSenseWithNaturalJoin
+              - Evaluate_AmbiguousTerm_CandidateWithNoAlternatives_SuggestionHasNoEmptyFragment
+              - Evaluate_PureSelfReferentialCandidate_WithinAmbiguousResult_UsesRoleRestrictionClause
 
-      - id: Ste100Mark-Linting-ProjectGlossary
-        title: >-
-          When the configuration lists glossary files or inline glossary entries, the Linting
-          subsystem shall load them, treat each approved term as allowed, use its part of speech
-          for sense decisions, and report any load or conflict problem as an error.
-        justification: |
-          Projects use product names and domain terms that the dictionary or the tagger does not
-          know. A project glossary lets a project approve those terms and fix their part of
-          speech, so that the tool reports fewer false findings and decides senses more
-          reliably. A missing file or a conflict must fail loudly, because a silently ignored
-          glossary hides the effect the project wanted.
-        children:
-          - Ste100Mark-LintGlossary-Entries
-          - Ste100Mark-LintGlossary-Paths
-          - Ste100Mark-LintGlossary-Unreachable
-          - Ste100Mark-LintGlossary-Conflicts
-          - Ste100Mark-LintGlossary-Tagging
-          - Ste100Mark-PartOfSpeechResolver-Glossary
-          - Ste100Mark-PartOfSpeechResolver-GlossaryCacheScope
-        tests:
-          - Run_GlossaryChangesSenseDecision_ReportsConfidentSense
-          - Run_GlossaryTerm_IsNotFlagged
-          - Run_GlossaryFileMissing_ReportsErrorAndFails
-          - Run_GlossaryConflictsWithDictionaryKey_ReportsErrorNamingTerm
-          - Run_DictionaryDisabled_DoesNotLoadGlossary
-          - Ste100Mark_LintWithGlossaryFile_TermNotFlaggedAndExitZero
-          - Ste100Mark_LintWithGlossaryAbsolutePath_Works
-          - Ste100Mark_LintWithConflictingGlossaryFiles_ReturnsNonZeroNamingTermAndPaths
-          - Ste100Mark_LintWithEmptyGlossaryGlob_ReturnsNonZero
+          - id: Ste100Mark-Linting-ProjectGlossary
+            title: >-
+              When the configuration lists glossary files or inline glossary entries, the Linting
+              subsystem shall load them, treat each approved term as allowed, use its part of speech
+              for sense decisions, and report any load or conflict problem as an error.
+            justification: |
+              Projects use product names and domain terms that the dictionary or the tagger does not
+              know. A project glossary lets a project approve those terms and fix their part of
+              speech, so that the tool reports fewer false findings and decides senses more
+              reliably. A missing file or a conflict must fail loudly, because a silently ignored
+              glossary hides the effect the project wanted.
+            children:
+              - Ste100Mark-LintGlossary-Entries
+              - Ste100Mark-LintGlossary-Paths
+              - Ste100Mark-LintGlossary-Unreachable
+              - Ste100Mark-LintGlossary-Conflicts
+              - Ste100Mark-LintGlossary-Tagging
+              - Ste100Mark-PartOfSpeechResolver-Glossary
+              - Ste100Mark-PartOfSpeechResolver-GlossaryCacheScope
+            tests:
+              - Run_GlossaryChangesSenseDecision_ReportsConfidentSense
+              - Run_GlossaryTerm_IsNotFlagged
+              - Run_GlossaryFileMissing_ReportsErrorAndFails
+              - Run_GlossaryConflictsWithDictionaryKey_ReportsErrorNamingTerm
+              - Run_DictionaryDisabled_DoesNotLoadGlossary
+              - Ste100Mark_LintWithGlossaryFile_TermNotFlaggedAndExitZero
+              - Ste100Mark_LintWithGlossaryAbsolutePath_Works
+              - Ste100Mark_LintWithConflictingGlossaryFiles_ReturnsNonZeroNamingTermAndPaths
+              - Ste100Mark_LintWithEmptyGlossaryGlob_ReturnsNonZero
 
-      - id: Ste100Mark-Linting-GlossaryPhraseAllowance
-        title: >-
-          When the dictionary check is enabled, the Linting subsystem shall treat each multi-word
-          approved glossary term and variant, including entries with visible false, as an implicit
-          allow-in-phrase entry, so that a dictionary hit entirely inside an occurrence of it is not
-          reported, ignoring letter case, while a hit that is not entirely inside it is reported.
-        justification: |
-          A product name such as a multi-word term can contain a word that the dictionary
-          disallows. The project approved the whole term, so the author should not need a second
-          allow-in-phrase entry. Only full containment is exempt, so the same word elsewhere, a
-          longer deprecated term, and a partial overlap are still reported.
-        children:
-          - Ste100Mark-LintGlossary-AllowedPhrases
-        tests:
-          - Run_GlossaryTermContainsDisallowedWord_NotFlaggedInsideTerm
-          - Run_GlossaryTermContainsDisallowedWord_StillFlaggedElsewhere
-          - Run_GlossaryVariantContainsDisallowedWord_NotFlagged
-          - Run_GlossaryVisibleFalseTerm_SuppressesContainedWord
-          - Run_GlossaryTermDifferentCasing_SuppressesContainedWord
-          - Run_GlossaryTermPartialOverlap_StillFlagged
-          - Run_DeprecatedLongerTermContainingApprovedTerm_StillFlagged
-          - Run_DeprecatedFileEntryInsideApprovedTerm_NotFlagged
-          - Run_DictionaryDisabled_GlossaryPhrasesHaveNoEffect
-          - Evaluate_GlossaryPhraseIndex_OverlappingPhrasesBothHonored
-          - Evaluate_ManyGlossaryPhrases_SuppressesOnlyContainedHits
-          - Contains_SpanInsidePhrase_ReturnsTrueOnlyInsidePhrase
-          - Contains_OverlappingPhrases_BothHonored
-          - Contains_WhitespaceRuns_Tolerated
-          - Contains_DifferentCase_Matches
-          - Contains_HyphenBeforePhrase_NotContained
-          - Contains_PhraseFollowedByWordCharacter_NotContained
-          - Contains_PhraseWithPunctuation_Matches
-          - Contains_PhraseAtTextEdges_Matches
-          - Contains_BlankPhraseOrNoPhrases_ReturnsFalse
-          - Contains_RandomizedCorpus_MatchesPerPhraseRegexOracle
+          - id: Ste100Mark-Linting-GlossaryPhraseAllowance
+            title: >-
+              When the dictionary check is enabled, the Linting subsystem shall treat each multi-word
+              approved glossary term and variant, including entries with visible false, as an implicit
+              allow-in-phrase entry, so that a dictionary hit entirely inside an occurrence of it is not
+              reported, ignoring letter case, while a hit that is not entirely inside it is reported.
+            justification: |
+              A product name such as a multi-word term can contain a word that the dictionary
+              disallows. The project approved the whole term, so the author should not need a second
+              allow-in-phrase entry. Only full containment is exempt, so the same word elsewhere, a
+              longer deprecated term, and a partial overlap are still reported.
+            children:
+              - Ste100Mark-LintGlossary-AllowedPhrases
+            tests:
+              - Run_GlossaryTermContainsDisallowedWord_NotFlaggedInsideTerm
+              - Run_GlossaryTermContainsDisallowedWord_StillFlaggedElsewhere
+              - Run_GlossaryVariantContainsDisallowedWord_NotFlagged
+              - Run_GlossaryVisibleFalseTerm_SuppressesContainedWord
+              - Run_GlossaryTermDifferentCasing_SuppressesContainedWord
+              - Run_GlossaryTermPartialOverlap_StillFlagged
+              - Run_DeprecatedLongerTermContainingApprovedTerm_StillFlagged
+              - Run_DeprecatedFileEntryInsideApprovedTerm_NotFlagged
+              - Run_DictionaryDisabled_GlossaryPhrasesHaveNoEffect
+              - Evaluate_GlossaryPhraseIndex_OverlappingPhrasesBothHonored
+              - Evaluate_ManyGlossaryPhrases_SuppressesOnlyContainedHits
+              - Contains_SpanInsidePhrase_ReturnsTrueOnlyInsidePhrase
+              - Contains_OverlappingPhrases_BothHonored
+              - Contains_WhitespaceRuns_Tolerated
+              - Contains_DifferentCase_Matches
+              - Contains_HyphenBeforePhrase_NotContained
+              - Contains_PhraseFollowedByWordCharacter_NotContained
+              - Contains_PhraseWithPunctuation_Matches
+              - Contains_PhraseAtTextEdges_Matches
+              - Contains_BlankPhraseOrNoPhrases_ReturnsFalse
+              - Contains_RandomizedCorpus_MatchesPerPhraseRegexOracle
 
-      - id: Ste100Mark-Linting-ExplicitPhraseAllowance
-        title: >-
-          When the configuration lists dictionary.allow-in-phrase entries, the Linting subsystem
-          shall not report a dictionary hit that lies entirely inside an occurrence of one of
-          them, ignoring letter case and tolerating whitespace variation, including every
-          occurrence of a phrase that overlaps another occurrence of the same phrase, and shall
-          apply only the entries that the file's own profiles contribute.
-        justification: |
-          A project approves a specific phrase as the name of a thing without permitting the
-          disallowed word anywhere else. The check must stay fast with thousands of entries, so
-          it uses one token index per distinct set of sources instead of one regular expression
-          per entry. Honoring every occurrence keeps explicit entries consistent with glossary
-          phrases, and a per-profile set must never leak into a file that the profile does not
-          match.
-        tests:
-          - Evaluate_TermInsideAllowedPhrase_NotFlaggedButSameTermElsewhereStillFlagged
-          - Evaluate_TermInsideAllowedPhraseDifferentCasing_StillSuppressesDiagnostic
-          - Evaluate_AllowedPhraseMatchesAcrossWhitespace_SuppressesDiagnostic
-          - Evaluate_SingleWordAllowedPhrase_SuppressesDiagnostic
-          - Evaluate_PunctuationTermInsideAllowedPhrase_SuppressesOnlyThere
-          - Run_ProfileAllowInPhrase_IsolatedPerProfileAndSharedAcrossFiles
-          - ResolveAllowedPhraseKey_DependsOnlyOnContributingProfiles
-          - Contains_SingleWordPhrase_MatchesWholeWordOnly
-          - Contains_LiteralTabInPhrase_MatchesOnlyTab
-          - Contains_LiteralNonBreakingSpaceInPhrase_MatchesOnlyThatCharacter
-          - Contains_SpaceInPhrase_MatchesNonBreakingSpaceInText
-          - Contains_DoubleSpaceInPhrase_RequiresTwoWhitespaceCharacters
-          - Contains_LeadingAndTrailingSpace_RequireWhitespaceAtEdges
-          - Contains_MetacharactersInPhrase_AreLiteral
-          - Contains_UnicodeLetters_MatchIgnoringCase
-          - Contains_SelfOverlappingOccurrences_AllHonored
-          - Contains_SpanStartingWithPunctuation_UsesFirstTokenInsideSpan
-          - Contains_PunctuationOnlySpan_UsesNeighboringTokens
-          - Contains_PunctuationOnlyPhrase_Ignored
+          - id: Ste100Mark-Linting-ExplicitPhraseAllowance
+            title: >-
+              When the configuration lists dictionary.allow-in-phrase entries, the Linting subsystem
+              shall not report a dictionary hit that lies entirely inside an occurrence of one of
+              them, ignoring letter case and tolerating whitespace variation, including every
+              occurrence of a phrase that overlaps another occurrence of the same phrase, and shall
+              apply only the entries that the file's own profiles contribute.
+            justification: |
+              A project approves a specific phrase as the name of a thing without permitting the
+              disallowed word anywhere else. The check must stay fast with thousands of entries, so
+              it uses one token index per distinct set of sources instead of one regular expression
+              per entry. Honoring every occurrence keeps explicit entries consistent with glossary
+              phrases, and a per-profile set must never leak into a file that the profile does not
+              match.
+            tests:
+              - Evaluate_TermInsideAllowedPhrase_NotFlaggedButSameTermElsewhereStillFlagged
+              - Evaluate_TermInsideAllowedPhraseDifferentCasing_StillSuppressesDiagnostic
+              - Evaluate_AllowedPhraseMatchesAcrossWhitespace_SuppressesDiagnostic
+              - Evaluate_SingleWordAllowedPhrase_SuppressesDiagnostic
+              - Evaluate_PunctuationTermInsideAllowedPhrase_SuppressesOnlyThere
+              - Run_ProfileAllowInPhrase_IsolatedPerProfileAndSharedAcrossFiles
+              - ResolveAllowedPhraseKey_DependsOnlyOnContributingProfiles
+              - Contains_SingleWordPhrase_MatchesWholeWordOnly
+              - Contains_LiteralTabInPhrase_MatchesOnlyTab
+              - Contains_LiteralNonBreakingSpaceInPhrase_MatchesOnlyThatCharacter
+              - Contains_SpaceInPhrase_MatchesNonBreakingSpaceInText
+              - Contains_DoubleSpaceInPhrase_RequiresTwoWhitespaceCharacters
+              - Contains_LeadingAndTrailingSpace_RequireWhitespaceAtEdges
+              - Contains_MetacharactersInPhrase_AreLiteral
+              - Contains_UnicodeLetters_MatchIgnoringCase
+              - Contains_SelfOverlappingOccurrences_AllHonored
+              - Contains_SpanStartingWithPunctuation_UsesFirstTokenInsideSpan
+              - Contains_PunctuationOnlySpan_UsesNeighboringTokens
+              - Contains_PunctuationOnlyPhrase_Ignored
 
-      - id: Ste100Mark-Linting-DeprecatedTerms
-        title: >-
-          When the configuration lists deprecated-term files, the Linting subsystem shall report
-          each use of a deprecated term with a suggestion to use its replacement.
-        justification: |
-          A project retires terms over time. A deprecated-terms file lets the tool tell authors
-          which term to use instead, in the same form as every other dictionary finding.
-        children:
-          - Ste100Mark-LintGlossary-Deprecated
-        tests:
-          - Run_DeprecatedTerm_ReportsUseReplacement
-          - Ste100Mark_LintWithDeprecatedFile_ReportsUseSuggestion
+          - id: Ste100Mark-Linting-DeprecatedTerms
+            title: >-
+              When the configuration lists deprecated-term files, the Linting subsystem shall report
+              each use of a deprecated term with a suggestion to use its replacement.
+            justification: |
+              A project retires terms over time. A deprecated-terms file lets the tool tell authors
+              which term to use instead, in the same form as every other dictionary finding.
+            children:
+              - Ste100Mark-LintGlossary-Deprecated
+            tests:
+              - Run_DeprecatedTerm_ReportsUseReplacement
+              - Ste100Mark_LintWithDeprecatedFile_ReportsUseSuggestion
 
-      - id: Ste100Mark-Linting-AccurateLineNumbers
-        title: >-
-          The Linting subsystem shall report each diagnostic against the source line on which its
-          violation actually occurs, even when the violation is found within a multi-line
-          paragraph, rather than always reporting the paragraph's first line.
-        justification: |
-          A Markdown paragraph spanning several source lines is folded into a single prose
-          segment for sentence and dictionary analysis. Reporting every finding at the segment's
-          first line regardless of where the violating sentence, word, or term actually appears
-          misleads the user about which line to edit, especially in long paragraphs. Diagnostics
-          for word-limit, semicolon, contraction, passive-voice, complex-verb, -ing form, and
-          dictionary findings must resolve the true source line from the character offset of the
-          match or sentence within the segment. A paragraph-length finding remains an exception,
-          since it concerns the whole paragraph and is correctly reported at its start line.
-        tests:
-          - Extract_MultiLineParagraph_ResolveLineReportsEachLinesOwnLineNumber
-          - Extract_SingleLineSegment_ResolveLineAlwaysReturnsSegmentLine
-          - Evaluate_LongSentenceOnLaterLineOfMultiLineParagraph_ReportsThatLine
-          - Evaluate_SemicolonOnLaterLineOfMultiLineParagraph_ReportsThatLine
-          - Evaluate_ContractionOnLaterLineOfMultiLineParagraph_ReportsThatLine
-          - Evaluate_IngFormOnLaterLineOfMultiLineParagraph_ReportsThatLine
-          - Evaluate_DisallowedTermOnLaterLineOfMultiLineParagraph_ReportsThatLine
+          - id: Ste100Mark-Linting-AccurateLineNumbers
+            title: >-
+              The Linting subsystem shall report each diagnostic against the source line on which its
+              violation actually occurs, even when the violation is found within a multi-line
+              paragraph, rather than always reporting the paragraph's first line.
+            justification: |
+              A Markdown paragraph spanning several source lines is folded into a single prose
+              segment for sentence and dictionary analysis. Reporting every finding at the segment's
+              first line regardless of where the violating sentence, word, or term actually appears
+              misleads the user about which line to edit, especially in long paragraphs. Diagnostics
+              for word-limit, semicolon, contraction, passive-voice, complex-verb, -ing form, and
+              dictionary findings must resolve the true source line from the character offset of the
+              match or sentence within the segment. A paragraph-length finding remains an exception,
+              since it concerns the whole paragraph and is correctly reported at its start line.
+            tests:
+              - Extract_MultiLineParagraph_ResolveLineReportsEachLinesOwnLineNumber
+              - Extract_SingleLineSegment_ResolveLineAlwaysReturnsSegmentLine
+              - Evaluate_LongSentenceOnLaterLineOfMultiLineParagraph_ReportsThatLine
+              - Evaluate_SemicolonOnLaterLineOfMultiLineParagraph_ReportsThatLine
+              - Evaluate_ContractionOnLaterLineOfMultiLineParagraph_ReportsThatLine
+              - Evaluate_IngFormOnLaterLineOfMultiLineParagraph_ReportsThatLine
+              - Evaluate_DisallowedTermOnLaterLineOfMultiLineParagraph_ReportsThatLine
 
-      - id: Ste100Mark-Linting-WrappedListItemPhraseMatching
-        title: >-
-          The Linting subsystem shall treat a bulleted or numbered list item's wrapped
-          continuation lines as part of that same list item's prose, so that a dictionary term or
-          an allow-in-phrase entry split across the line wrap is matched correctly, while a nested
-          list item or a genuinely separate list item is never folded into the wrong item.
-        justification: |
-          A Markdown author commonly wraps a long list item onto a following indented line with
-          no list marker of its own (a "lazy continuation", the same convention already applied to
-          paragraphs). Without merging these lines into the originating list item, the wrapped
-          text starts an unrelated new paragraph segment, so a phrase or term split across the
-          wrap (for example a configured allow-in-phrase entry) can never be recognized as a
-          single match. The merge must not bleed past a following line that itself starts a new
-          top-level or nested list item, a heading, or a table row, and an empty list marker line
-          (no visible text) must not lose its ListItem role or leak a stale line-offset entry into
-          whatever segment follows.
-        tests:
-          - Extract_ListItemWrappedAcrossLines_MergesIntoSingleListItemSegment
-          - Extract_TwoListItemsFirstWrapped_RemainSeparateSegments
-          - Extract_ListItemWithEmptyMarkerLineThenContinuation_KeepsListItemRole
-          - Extract_EmptyListMarkerThenSeparateItem_DoesNotLeakStaleLineOffset
-          - Extract_NestedListItem_DoesNotMergeIntoParentListItem
-          - Evaluate_AllowedPhraseSplitAcrossListItemLineWrap_SuppressesDiagnostic
+          - id: Ste100Mark-Linting-WrappedListItemPhraseMatching
+            title: >-
+              The Linting subsystem shall treat a bulleted or numbered list item's wrapped
+              continuation lines as part of that same list item's prose, so that a dictionary term or
+              an allow-in-phrase entry split across the line wrap is matched correctly, while a nested
+              list item or a genuinely separate list item is never folded into the wrong item.
+            justification: |
+              A Markdown author commonly wraps a long list item onto a following indented line with
+              no list marker of its own (a "lazy continuation", the same convention already applied to
+              paragraphs). Without merging these lines into the originating list item, the wrapped
+              text starts an unrelated new paragraph segment, so a phrase or term split across the
+              wrap (for example a configured allow-in-phrase entry) can never be recognized as a
+              single match. The merge must not bleed past a following line that itself starts a new
+              top-level or nested list item, a heading, or a table row, and an empty list marker line
+              (no visible text) must not lose its ListItem role or leak a stale line-offset entry into
+              whatever segment follows.
+            tests:
+              - Extract_ListItemWrappedAcrossLines_MergesIntoSingleListItemSegment
+              - Extract_TwoListItemsFirstWrapped_RemainSeparateSegments
+              - Extract_ListItemWithEmptyMarkerLineThenContinuation_KeepsListItemRole
+              - Extract_EmptyListMarkerThenSeparateItem_DoesNotLeakStaleLineOffset
+              - Extract_NestedListItem_DoesNotMergeIntoParentListItem
+              - Evaluate_AllowedPhraseSplitAcrossListItemLineWrap_SuppressesDiagnostic
 
-      - id: Ste100Mark-Linting-Configuration
-        title: >-
-          The Linting subsystem shall load YAML configuration for include/exclude patterns,
-          default mode, rule tuning, and dictionary settings.
-        justification: |
-          Projects need a repeatable way to control file scope, default writing mode, rule
-          severity, and vocabulary policy without recompiling the tool. YAML configuration
-          provides a human-editable, repository-local contract for those settings.
-        children:
-          - Ste100Mark-OTS-YamlDotNet
-        tests:
-          - Load_NullPath_ReturnsDefaultConfiguration
-          - Load_NonExistentPath_ThrowsInvalidOperationException
-          - Load_FullConfigurationFile_ParsesAllSections
-          - Load_MalformedYaml_ThrowsInvalidOperationException
+          - id: Ste100Mark-Linting-Configuration
+            title: >-
+              The Linting subsystem shall load YAML configuration for include/exclude patterns,
+              default mode, rule tuning, and dictionary settings.
+            justification: |
+              Projects need a repeatable way to control file scope, default writing mode, rule
+              severity, and vocabulary policy without recompiling the tool. YAML configuration
+              provides a human-editable, repository-local contract for those settings.
+            children:
+              - Ste100Mark-OTS-YamlDotNet
+            tests:
+              - Load_NullPath_ReturnsDefaultConfiguration
+              - Load_NonExistentPath_ThrowsInvalidOperationException
+              - Load_FullConfigurationFile_ParsesAllSections
+              - Load_MalformedYaml_ThrowsInvalidOperationException
 
-      - id: Ste100Mark-Linting-Profiles
-        title: >-
-          The Linting subsystem shall resolve per-file writing mode, rule tuning, and dictionary
-          allowances from glob-scoped profiles, using first-match-wins for mode and layered
-          deltas for rules and dictionary allowances.
-        justification: |
-          A repository often mixes document types with different requirements: procedural
-          guides need a shorter sentence limit, while a requirements folder legitimately uses
-          restricted words such as "shall" in every entry. Profiles let a project express these
-          differences per glob without duplicating the whole configuration file, and without
-          weakening vocabulary or rule enforcement for the rest of the project.
-        tests:
-          - ResolveMode_NoMatchingProfile_ReturnsDefaultMode
-          - ResolveMode_MatchingProfileGlob_ReturnsOverriddenMode
-          - ResolveMode_MultipleProfiles_UsesFirstMatch
-          - ResolveMode_MatchingProfileWithNullMode_FallsThroughToDefault
-          - ResolveRules_NoMatchingProfile_ReturnsGlobalRules
-          - ResolveRules_MatchingProfile_LayersDeltaOverGlobalRules
-          - ResolveRules_MultipleMatchingProfiles_LayersAllDeltasInOrder
-          - ResolveAllowedTerms_NoMatchingProfile_ReturnsGlobalTermsOnly
-          - ResolveAllowedTerms_MatchingProfile_UnionsWithGlobalAllowList
-          - Run_ProcedureModeOverride_AppliesStricterWordLimit
-          - Run_ProfileDictionaryAllowList_PermitsTermOnlyWithinProfileGlob
-          - Evaluate_TermInExtraAllowedTerms_NotFlagged
-          - Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic
-          - Evaluate_ExtraAllowedTermsUnrelatedTerm_StillFlagsOtherDisallowedTerm
+          - id: Ste100Mark-Linting-Profiles
+            title: >-
+              The Linting subsystem shall resolve per-file writing mode, rule tuning, and dictionary
+              allowances from glob-scoped profiles, using first-match-wins for mode and layered
+              deltas for rules and dictionary allowances.
+            justification: |
+              A repository often mixes document types with different requirements: procedural
+              guides need a shorter sentence limit, while a requirements folder legitimately uses
+              restricted words such as "shall" in every entry. Profiles let a project express these
+              differences per glob without duplicating the whole configuration file, and without
+              weakening vocabulary or rule enforcement for the rest of the project.
+            tests:
+              - ResolveMode_NoMatchingProfile_ReturnsDefaultMode
+              - ResolveMode_MatchingProfileGlob_ReturnsOverriddenMode
+              - ResolveMode_MultipleProfiles_UsesFirstMatch
+              - ResolveMode_MatchingProfileWithNullMode_FallsThroughToDefault
+              - ResolveRules_NoMatchingProfile_ReturnsGlobalRules
+              - ResolveRules_MatchingProfile_LayersDeltaOverGlobalRules
+              - ResolveRules_MultipleMatchingProfiles_LayersAllDeltasInOrder
+              - ResolveAllowedTerms_NoMatchingProfile_ReturnsGlobalTermsOnly
+              - ResolveAllowedTerms_MatchingProfile_UnionsWithGlobalAllowList
+              - Run_ProcedureModeOverride_AppliesStricterWordLimit
+              - Run_ProfileDictionaryAllowList_PermitsTermOnlyWithinProfileGlob
+              - Evaluate_TermInExtraAllowedTerms_NotFlagged
+              - Evaluate_ExtraAllowedTermsDifferentCasing_StillSuppressesDiagnostic
+              - Evaluate_ExtraAllowedTermsUnrelatedTerm_StillFlagsOtherDisallowedTerm
 
-      - id: Ste100Mark-Linting-CliIntegration
-        title: >-
-          The Linting subsystem shall accept positional globs and the lint-specific command-line
-          options required to drive one lint invocation.
-        justification: |
-          The default tool path must be controllable from the command line so users and CI
-          jobs can choose file scope, configuration file, output format, and strict-mode
-          behavior for each run.
-        children:
-          - Ste100Mark-OTS-FileSystemGlobbing
-        tests:
-          - Context_Create_NoArguments_ReturnsLintingDefaults
-          - Context_Create_PositionalArgument_CollectedAsGlob
-          - Context_Create_MultiplePositionalArguments_CollectedInOrder
-          - Context_Create_ConfigFlag_SetsConfigFile
-          - Context_Create_ConfigFlag_WithoutValue_ThrowsArgumentException
-          - Context_Create_FormatFlagJson_SetsJsonFormat
-          - Context_Create_FormatFlagText_SetsTextFormat
-          - Context_Create_FormatFlag_UnsupportedValue_ThrowsArgumentException
-          - Context_Create_FormatFlag_WithoutValue_ThrowsArgumentException
-          - Context_Create_StrictFlag_SetsStrictTrue
-          - Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue
-          - Program_Run_NoArguments_DisplaysDefaultBehavior
-          - Run_PositionalGlobs_OverrideConfigInclude
-          - Run_RelativeGlobPattern_MatchesConfiguredFiles
-          - Run_AbsoluteGlobPattern_MatchesConfiguredFiles
-          - Run_RelativeLiteralFilePath_MatchesSingleFile
-          - Run_AbsoluteLiteralFilePath_MatchesSingleFile
-          - Run_AbsoluteIncludeWithRelativeExclude_ExcludesMatchedFile
-          - Run_AbsoluteIncludeWithAbsoluteExclude_ExcludesMatchedFile
-          - Run_AbsoluteIncludeWithMismatchedCasingAndRelativeExclude_ExcludesMatchedFile
+          - id: Ste100Mark-Linting-CliIntegration
+            title: >-
+              The Linting subsystem shall accept positional globs and the lint-specific command-line
+              options required to drive one lint invocation.
+            justification: |
+              The default tool path must be controllable from the command line so users and CI
+              jobs can choose file scope, configuration file, output format, and strict-mode
+              behavior for each run.
+            children:
+              - Ste100Mark-OTS-FileSystemGlobbing
+            tests:
+              - Context_Create_NoArguments_ReturnsLintingDefaults
+              - Context_Create_PositionalArgument_CollectedAsGlob
+              - Context_Create_MultiplePositionalArguments_CollectedInOrder
+              - Context_Create_ConfigFlag_SetsConfigFile
+              - Context_Create_ConfigFlag_WithoutValue_ThrowsArgumentException
+              - Context_Create_FormatFlagJson_SetsJsonFormat
+              - Context_Create_FormatFlagText_SetsTextFormat
+              - Context_Create_FormatFlag_UnsupportedValue_ThrowsArgumentException
+              - Context_Create_FormatFlag_WithoutValue_ThrowsArgumentException
+              - Context_Create_StrictFlag_SetsStrictTrue
+              - Context_Create_AllowEmptyFlag_SetsAllowEmptyTrue
+              - Program_Run_NoArguments_DisplaysDefaultBehavior
+              - Run_PositionalGlobs_OverrideConfigInclude
+              - Run_RelativeGlobPattern_MatchesConfiguredFiles
+              - Run_AbsoluteGlobPattern_MatchesConfiguredFiles
+              - Run_RelativeLiteralFilePath_MatchesSingleFile
+              - Run_AbsoluteLiteralFilePath_MatchesSingleFile
+              - Run_AbsoluteIncludeWithRelativeExclude_ExcludesMatchedFile
+              - Run_AbsoluteIncludeWithAbsoluteExclude_ExcludesMatchedFile
+              - Run_AbsoluteIncludeWithMismatchedCasingAndRelativeExclude_ExcludesMatchedFile
 
-      - id: Ste100Mark-Linting-OutputFormats
-        title: The Linting subsystem shall report diagnostics in human-readable text and structured JSON formats.
-        justification: |
-          Human users need readable console diagnostics, while CI systems need a stable
-          machine-readable schema. The subsystem must provide both without mixing banner text
-          into JSON output.
-        tests:
-          - Report_TextFormat_WritesDiagnosticLinesAndSummary
-          - Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema
-          - Report_NoDiagnostics_WritesZeroCountSummary
-          - Report_NoFilesMatchedTrue_WritesFailureSummaryLine
-          - Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary
-          - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
-          - Report_JsonFormat_WritesCitationsForDictionaryDiagnostic
-          - Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument
+          - id: Ste100Mark-Linting-OutputFormats
+            title: The Linting subsystem shall report diagnostics in human-readable text and structured JSON formats.
+            justification: |
+              Human users need readable console diagnostics, while CI systems need a stable
+              machine-readable schema. The subsystem must provide both without mixing banner text
+              into JSON output.
+            tests:
+              - Report_TextFormat_WritesDiagnosticLinesAndSummary
+              - Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema
+              - Report_NoDiagnostics_WritesZeroCountSummary
+              - Report_NoFilesMatchedTrue_WritesFailureSummaryLine
+              - Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary
+              - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
+              - Report_JsonFormat_WritesCitationsForDictionaryDiagnostic
+              - Ste100Mark_LintWithJsonFormat_ProducesSingleValidJsonDocument
 
-      - id: Ste100Mark-Linting-ReportedFiles
-        title: >-
-          The JSON report shall list every file the effective file selection resolved to, so a
-          caller can learn exactly which files were checked without reimplementing the tool's
-          glob/include/exclude resolution.
-        justification: |
-          A caller that attributes findings to document sections, or otherwise needs to know
-          which files a run was scoped to, previously had only `filesChecked: N` to go on. That
-          count alone cannot answer "which files were these", forcing integrators to
-          independently reimplement the tool's glob and include/exclude semantics just to
-          recover the same information the tool already computed. Reporting the file list
-          removes that duplicated, drift-prone logic.
-        tests:
-          - Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema
-          - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
-          - Run_JsonFormat_FilesArrayListsCheckedFilesAndOmitsExcludedFiles
-          - Ste100Mark_LintWithJsonFormat_ReportsCheckedFilesArray
+          - id: Ste100Mark-Linting-ReportedFiles
+            title: >-
+              The JSON report shall list every file the effective file selection resolved to, so a
+              caller can learn exactly which files were checked without reimplementing the tool's
+              glob/include/exclude resolution.
+            justification: |
+              A caller that attributes findings to document sections, or otherwise needs to know
+              which files a run was scoped to, previously had only `filesChecked: N` to go on. That
+              count alone cannot answer "which files were these", forcing integrators to
+              independently reimplement the tool's glob and include/exclude semantics just to
+              recover the same information the tool already computed. Reporting the file list
+              removes that duplicated, drift-prone logic.
+            tests:
+              - Report_JsonFormat_WritesSingleJsonDocumentWithExpectedSchema
+              - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
+              - Run_JsonFormat_FilesArrayListsCheckedFilesAndOmitsExcludedFiles
+              - Ste100Mark_LintWithJsonFormat_ReportsCheckedFilesArray
 
-      - id: Ste100Mark-Linting-DetailedOutput
-        title: >-
-          The Linting subsystem shall, only when the json-detailed format is selected, write one
-          JSON document that carries a schema identifier, the context-lines setting, every
-          default report field for each diagnostic, and a detail object for each dictionary
-          finding.
-        justification: |
-          Tools and reviewers that decide whether a dictionary finding is correct need more than
-          a message: the sentence, the surrounding lines, the tagger evidence and a way to
-          suppress a false positive. A separate opt-in format gives them this without changing
-          the default report that existing integrations parse. A schema identifier lets a
-          consumer detect incompatible changes.
-        tests:
-          - Report_JsonDetailed_KeepsDefaultFieldsAndAddsDetail
-          - Run_JsonDetailed_ReportsDetailForEachBlockKind
-          - Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument
-          - Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions
+          - id: Ste100Mark-Linting-DetailedOutput
+            title: >-
+              The Linting subsystem shall, only when the json-detailed format is selected, write one
+              JSON document that carries a schema identifier, the context-lines setting, every
+              default report field for each diagnostic, and a detail object for each dictionary
+              finding.
+            justification: |
+              Tools and reviewers that decide whether a dictionary finding is correct need more than
+              a message: the sentence, the surrounding lines, the tagger evidence and a way to
+              suppress a false positive. A separate opt-in format gives them this without changing
+              the default report that existing integrations parse. A schema identifier lets a
+              consumer detect incompatible changes.
+            tests:
+              - Report_JsonDetailed_KeepsDefaultFieldsAndAddsDetail
+              - Run_JsonDetailed_ReportsDetailForEachBlockKind
+              - Ste100Mark_LintWithJsonDetailed_WritesValidDetailedDocument
+              - Ste100Mark_LintWithJsonDetailed_ContextLinesRequiresDetailedAndHelpListsOptions
 
-      - id: Ste100Mark-Linting-DetailedOutput-Compatibility
-        title: >-
-          The Linting subsystem shall leave the default text output, the default JSON output and
-          the rule listing byte-identical when the json-detailed format is not selected.
-        justification: |
-          Existing pipelines parse the default outputs. Adding a new opt-in format must not
-          change a single byte of them, so the default outputs are held against reference
-          documents.
-        tests:
-          - Report_JsonDefault_ByteIdenticalToGolden
-          - Report_JsonDefaultWithDetails_IgnoresDetail
-          - Run_JsonDetailed_ZeroContextOmitsContext_DefaultFormatsHaveNoDetail
-          - Ste100Mark_LintDefaultOutputs_Unchanged
-          - Ste100Mark_LintWithJsonDetailed_DefaultTextAndJsonUnchanged
+          - id: Ste100Mark-Linting-DetailedOutput-Compatibility
+            title: >-
+              The Linting subsystem shall leave the default text output, the default JSON output and
+              the rule listing byte-identical when the json-detailed format is not selected.
+            justification: |
+              Existing pipelines parse the default outputs. Adding a new opt-in format must not
+              change a single byte of them, so the default outputs are held against reference
+              documents.
+            tests:
+              - Report_JsonDefault_ByteIdenticalToGolden
+              - Report_JsonDefaultWithDetails_IgnoresDetail
+              - Run_JsonDetailed_ZeroContextOmitsContext_DefaultFormatsHaveNoDetail
+              - Ste100Mark_LintDefaultOutputs_Unchanged
+              - Ste100Mark_LintWithJsonDetailed_DefaultTextAndJsonUnchanged
 
-      - id: Ste100Mark-Linting-ExitCode
-        title: >-
-          The Linting subsystem shall return a non-zero exit code for error-severity findings,
-          expected configuration failures, and warn-severity findings when `--strict` is active.
-        justification: |
-          CI/CD pipelines must be able to fail builds on lint problems and configuration
-          defects programmatically. Strict mode also lets a project temporarily promote all
-          warnings to failing conditions without changing the reported severities.
-        tests:
-          - Run_CleanMarkdownFile_ProducesSuccessExitCode
-          - Run_FileWithSemicolon_ProducesFailureExitCode
-          - Run_WarnOnlyFinding_WithoutStrict_ProducesSuccessExitCode
-          - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
-          - Run_MissingExplicitConfigFile_ReportsErrorWithoutThrowing
-          - Context_MarkFailure_SetsExitCodeWithoutConsoleOutput
-          - Ste100Mark_LintCleanFile_ReturnsZeroExitCode
-          - Ste100Mark_LintWithStrictFlag_PromotesWarningsToFailure
-          - Ste100Mark_LintWithMissingConfigFile_ReturnsNonZeroWithErrorMessage
+          - id: Ste100Mark-Linting-ExitCode
+            title: >-
+              The Linting subsystem shall return a non-zero exit code for error-severity findings,
+              expected configuration failures, and warn-severity findings when `--strict` is active.
+            justification: |
+              CI/CD pipelines must be able to fail builds on lint problems and configuration
+              defects programmatically. Strict mode also lets a project temporarily promote all
+              warnings to failing conditions without changing the reported severities.
+            tests:
+              - Run_CleanMarkdownFile_ProducesSuccessExitCode
+              - Run_FileWithSemicolon_ProducesFailureExitCode
+              - Run_WarnOnlyFinding_WithoutStrict_ProducesSuccessExitCode
+              - Run_WarnOnlyFinding_WithStrict_ProducesFailureExitCode
+              - Run_MissingExplicitConfigFile_ReportsErrorWithoutThrowing
+              - Context_MarkFailure_SetsExitCodeWithoutConsoleOutput
+              - Ste100Mark_LintCleanFile_ReturnsZeroExitCode
+              - Ste100Mark_LintWithStrictFlag_PromotesWarningsToFailure
+              - Ste100Mark_LintWithMissingConfigFile_ReturnsNonZeroWithErrorMessage
 
-      - id: Ste100Mark-Linting-EmptyFileSet
-        title: >-
-          The Linting subsystem shall treat a file selection that matches zero files as a
-          distinct failure condition, signaled through a dedicated exit code and JSON/text
-          indicators, unless `--allow-empty` is specified.
-        justification: |
-          A file selection (CLI globs, or configured include/exclude patterns) that matches
-          zero files is otherwise indistinguishable, via exit code alone, from a genuine clean
-          pass over zero files. A typo'd glob, a misconfigured include pattern, or a moved
-          directory could then silently "pass" a CI job that verified nothing. A dedicated
-          exit code, an explicit JSON field, and distinct text wording let automation detect
-          this condition, while `--allow-empty` provides an opt-out for legitimately empty
-          selections.
-        tests:
-          - Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode
-          - Run_NoFilesMatchViaConfigInclude_ProducesNoFilesMatchedExitCode
-          - Run_NoFilesMatchViaConfigIncludeExcludeSubtraction_ProducesNoFilesMatchedExitCode
-          - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode
-          - Report_NoFilesMatchedTrue_WritesFailureSummaryLine
-          - Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary
-          - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
-          - Ste100Mark_LintWithNoMatchingFiles_ReturnsNoFilesMatchedExitCode
-          - Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode
-          - Ste100Mark_LintWithNoMatchingFilesJsonFormat_ReportsNoFilesMatchedTrue
+          - id: Ste100Mark-Linting-EmptyFileSet
+            title: >-
+              The Linting subsystem shall treat a file selection that matches zero files as a
+              distinct failure condition, signaled through a dedicated exit code and JSON/text
+              indicators, unless `--allow-empty` is specified.
+            justification: |
+              A file selection (CLI globs, or configured include/exclude patterns) that matches
+              zero files is otherwise indistinguishable, via exit code alone, from a genuine clean
+              pass over zero files. A typo'd glob, a misconfigured include pattern, or a moved
+              directory could then silently "pass" a CI job that verified nothing. A dedicated
+              exit code, an explicit JSON field, and distinct text wording let automation detect
+              this condition, while `--allow-empty` provides an opt-out for legitimately empty
+              selections.
+            tests:
+              - Run_NoFilesMatchViaGlobs_ProducesNoFilesMatchedExitCode
+              - Run_NoFilesMatchViaConfigInclude_ProducesNoFilesMatchedExitCode
+              - Run_NoFilesMatchViaConfigIncludeExcludeSubtraction_ProducesNoFilesMatchedExitCode
+              - Run_NoFilesMatchWithAllowEmpty_ProducesSuccessExitCode
+              - Report_NoFilesMatchedTrue_WritesFailureSummaryLine
+              - Report_NoFilesMatchedFalseWithZeroFilesChecked_WritesZeroCountSummary
+              - Report_JsonFormat_NoFilesMatchedTrue_IncludesNoFilesMatchedField
+              - Ste100Mark_LintWithNoMatchingFiles_ReturnsNoFilesMatchedExitCode
+              - Ste100Mark_LintWithNoMatchingFilesAndAllowEmpty_ReturnsZeroExitCode
+              - Ste100Mark_LintWithNoMatchingFilesJsonFormat_ReportsNoFilesMatchedTrue
 
-      - id: Ste100Mark-Linting-RuleCatalog
-        title: >-
-          The Linting subsystem shall provide a central catalog of every rule code it can emit,
-          each with a title, classification (official, mechanical, or advisory), suggestion
-          kind, and applicable mode(s), serializable as a single JSON document.
-        justification: |
-          Callers building tooling or documentation around the linter's rule codes need a
-          reliable, machine-readable way to discover every rule code the tool can emit without
-          reading the tool's source code or reverse-engineering its behavior across multiple
-          releases.
-        tests:
-          - RuleCatalog_Entries_ContainsEveryEmittedRuleCode
-          - RuleCatalog_Entries_ClassifiesOfficialMechanicalAndAdvisoryRulesCorrectly
-          - RuleCatalog_Entries_ClassifiesSuggestionKindCorrectly
-          - RuleCatalog_Entries_ModesIncludeBothWritingModes
-          - RuleCatalog_ToJson_ProducesValidCamelCaseJsonArray
+          - id: Ste100Mark-Linting-RuleCatalog
+            title: >-
+              The Linting subsystem shall provide a central catalog of every rule code it can emit,
+              each with a title, classification (official, mechanical, or advisory), suggestion
+              kind, and applicable mode(s), serializable as a single JSON document.
+            justification: |
+              Callers building tooling or documentation around the linter's rule codes need a
+              reliable, machine-readable way to discover every rule code the tool can emit without
+              reading the tool's source code or reverse-engineering its behavior across multiple
+              releases.
+            tests:
+              - RuleCatalog_Entries_ContainsEveryEmittedRuleCode
+              - RuleCatalog_Entries_ClassifiesOfficialMechanicalAndAdvisoryRulesCorrectly
+              - RuleCatalog_Entries_ClassifiesSuggestionKindCorrectly
+              - RuleCatalog_Entries_ModesIncludeBothWritingModes
+              - RuleCatalog_ToJson_ProducesValidCamelCaseJsonArray

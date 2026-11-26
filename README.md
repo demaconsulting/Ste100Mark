@@ -35,6 +35,8 @@ Ste100Mark provides:
 - 🔤 **Word-Form Matching**: Catches "produced" and "produces" as well as "produce"
 - 🧩 **Project Glossary**: Approves project terms and reports deprecated ones
 - ✅ **Self-Validation**: Built-in validation tests with TRX and JUnit output
+- 💡 **Built-in Help**: `ste100mark help` explains each rule code, the configuration, and CI use, with
+  runnable examples ([DemaConsulting.HelpCards][link-helpcards])
 - 🖥️ **Multi-Platform Support**: Builds and runs on Windows, Linux, macOS
 - ⚙️ **Multi-Runtime Support**: Targets .NET 10 and 11 runtimes
 - 🔁 **Comprehensive CI/CD**: GitHub Actions workflows for quality checks, builds, tests
@@ -64,6 +66,10 @@ ste100mark docs/**/*.md --strict
 
 # Show the machine-readable rule catalog
 ste100mark --list-rules
+
+# List the built-in help topics, then read how to fix a rule
+ste100mark help
+ste100mark help rules
 ```
 
 A minimal `.ste100mark.yaml`:
@@ -185,6 +191,7 @@ By contributing to this project, you agree that your contributions will be licen
 [link-security]: https://sonarcloud.io/dashboard?id=demaconsulting_Ste100Mark
 [link-nuget]: https://www.nuget.org/packages/DemaConsulting.Ste100Mark
 [link-continuous-compliance]: https://github.com/demaconsulting/ContinuousCompliance
+[link-helpcards]: https://www.nuget.org/packages/DemaConsulting.HelpCards
 [link-guide]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md
 [link-guide-config]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#configuration-file
 [link-guide-profiles]: https://github.com/demaconsulting/Ste100Mark/blob/main/docs/user_guide/introduction.md#profiles

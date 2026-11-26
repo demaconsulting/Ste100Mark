@@ -15,6 +15,7 @@ The following OTS items have integration design documentation:
 
 - BuildMark (*buildmark.md*) - build-notes documentation tool
 - FileAssert (*fileassert.md*) - document assertion tool
+- HelpCards (*help-cards.md*) - built-in help library (runtime)
 - Microsoft.Extensions.FileSystemGlobbing (*file-system-globbing.md*) - glob matching library
 - Pandoc (*pandoc.md*) - Markdown-to-HTML conversion tool
 - PartOfSpeech (*part-of-speech.md*) - part-of-speech tagging library

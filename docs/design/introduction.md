@@ -23,6 +23,7 @@ OTS items:
 
 - **BuildMark**: integration and usage design.
 - **FileAssert**: integration and usage design.
+- **HelpCards**: integration and usage design.
 - **Microsoft.Extensions.FileSystemGlobbing**: integration and usage design.
 - **Pandoc**: integration and usage design.
 - **PartOfSpeech**: integration and usage design.
@@ -50,7 +51,7 @@ for the system, subsystem, and unit hierarchy. AI agents should query the SysML2
 this document. Any hand-maintained prose in this introduction that describes structure or item
 relationships is illustrative and explanatory only; if it differs from the model, the model takes
 precedence. The model captures the shipped system's runtime composition, including the OTS runtime
-dependencies (PartOfSpeech, YamlDotNet, and FileSystemGlobbing), which are modeled as OTS parts in
+dependencies (PartOfSpeech, YamlDotNet, FileSystemGlobbing, and HelpCards), which are modeled as OTS parts in
 `docs/sysml2/model/ots.sysml`. The remaining OTS items listed in Scope above are build-time or
 pipeline tooling and are not modeled as SysML2 parts; all OTS items are documented in
 `docs/design/ots.md`.
@@ -73,7 +74,8 @@ FileSystemGlobbing](architecture.svg)
 
 - **src/** - source files and projects
   - **DemaConsulting.Ste100Mark/** - main application source
-    - **Cli/** - command-line interface subsystem
+    - **Cli/** - command-line interface subsystem, including `HelpCommand.cs` for the built-in help
+    - **Help/** - built-in help cards (Markdown with front matter), embedded in the assembly
     - **Linting/** - Markdown linting subsystem
     - **SelfTest/** - self-validation subsystem
     - **Utilities/** - shared utilities subsystem

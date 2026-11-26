@@ -21,6 +21,7 @@ This document covers the verification design for the following software items:
   - **Program** — entry point and execution orchestrator
   - **Cli** subsystem
     - **Context** — argument parser and I/O owner
+    - **HelpCommand** — built-in help command
   - **Linting** subsystem
     - **PartOfSpeechResolver** — PartOfSpeech-based noun, verb, adjective, adverb, and resolver-only determiner
       resolution
@@ -33,6 +34,7 @@ This document covers the verification design for the following software items:
 
 - **BuildMark** — build-notes documentation tool
 - **FileAssert** — document assertion tool
+- **HelpCards** — built-in help library (runtime dependency)
 - **Microsoft.Extensions.FileSystemGlobbing** — glob pattern matching library
 - **Pandoc** — Markdown-to-HTML conversion tool
 - **PartOfSpeech** — part-of-speech tagging library (runtime dependency)

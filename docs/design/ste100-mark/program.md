@@ -5,8 +5,9 @@
 ### Purpose
 
 `Program` is the entry point and execution orchestrator for the Ste100Mark. Its single
-responsibility is to create a `Context` from the command-line arguments, dispatch to the
-appropriate handler based on the parsed flags, and return the exit code.
+responsibility is to hand the `help` command to `HelpCommand`, otherwise create a `Context`
+from the command-line arguments, dispatch to the appropriate handler based on the parsed flags,
+and return the exit code.
 
 ### Data Model
 
@@ -20,12 +21,16 @@ locally.
 **Main**: Entry point for the tool process.
 
 - *Parameters*: `string[] args` — command-line arguments from the host environment.
-- *Returns*: `int` — exit code; 0 for success, 1 for expected errors.
+- *Returns*: `int` — exit code; 0 for success, 1 for expected errors, 2 for a file selection
+  that matched zero files; for the `help` command, the exit code of `HelpCommand` (see *Help
+  Command* in the system design).
 - *Preconditions*: None.
 - *Postconditions*: Exit code reflects whether any errors were reported during execution.
 
-Creates a `Context` using `Context.Create(args)`, calls `Run(context)`, and returns
-`context.ExitCode`. Catches `ArgumentException` and `InvalidOperationException` — writes
+First calls `HelpCommand.Default.TryRun(args, out exitCode)`. The `help` command is not an
+option, so `Context.Create` would treat it as a glob; when the help command answers, `Main`
+returns its exit code. Otherwise creates a `Context` using `Context.Create(args)`, calls
+`Run(context)`, and returns `context.ExitCode`. Catches `ArgumentException` and `InvalidOperationException` — writes
 `"Error: {message}"` to stderr and returns 1. Catches any other `Exception` — writes
 `"Unexpected error: {message}"` to stderr and re-throws so the runtime can record it.
 
@@ -54,11 +59,13 @@ logic via `RunToolLogic(context)`. Exactly one path runs per invocation.
 - *Parameters*: `Context context` — output target.
 - *Returns*: `void`.
 
-**PrintHelp**: Writes the usage synopsis and the umbrella CLI options table to `context`,
+**PrintHelp**: Writes the usage synopsis (including `ste100mark help [topic]`) and the umbrella
+CLI options table to `context`,
 including the lint-related options `--config`, `--format`, `--strict`, `--allow-empty`,
 `--list-rules`, and the
 optional input glob arguments used by the main lint workflow, plus a summary of the three exit
-codes (0/1/2) and when `--allow-empty` changes that outcome.
+codes (0/1/2) and when `--allow-empty` changes that outcome. It ends with
+`HelpCommand.Default.Footer`, the pointer to the help command.
 
 - *Parameters*: `Context context` — output target.
 - *Returns*: `void`.
@@ -82,6 +89,8 @@ propagate to `Main`.
 
 ### Dependencies
 
+- **HelpCommand** — `Program.Main` offers the arguments to `HelpCommand.Default.TryRun` before
+  the options are parsed, and `PrintHelp` writes `HelpCommand.Default.Footer`.
 - **Context** — `Program` reads parsed flags from `Context` and calls `Context.WriteLine` and
   `Context.WriteError` for all output.
 - **RuleCatalog** — `Program.Run` calls `RuleCatalog.ToJson()` when `context.ListRules` is set.
